@@ -1,35 +1,53 @@
-version: "3.9"
 
-services:
-  mysql:
-    image: mysql:8.0
-    container_name: mysql
-    restart: always
-    env_file:
-      - .env
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
+  version: "3.9"
 
-  redis:
-    image: redis:7.2
-    container_name: redis
-    restart: always
-    ports:
-      - "6379:6379"
+  services:
+    mysql:
+      image: mysql:8.0
+      container_name: mysql
+      restart: always
+      env_file:
+        - .env
+      ports:
+        - "3306:3306"
+      volumes:
+        - mysql_data:/var/lib/mysql
+      healthcheck:
+        test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+        timeout: 20s
+        retries: 10
 
-  app:
-    build: .
-    container_name: spring-app
-    restart: always
-    depends_on:
-      - mysql
-      - redis
-    env_file:
-      - .env
-    ports:
-      - "80:8080"
+    redis:
+      image: redis:7.2
+      container_name: redis
+      restart: always
+      ports:
+        - "6379:6379"
+      healthcheck:
+        test: ["CMD", "redis-cli", "ping"]
+        interval: 30s
+        timeout: 3s
+        retries: 3
 
-volumes:
-  mysql_data:
+    app:
+      build: .
+      container_name: spring-app
+      restart: always
+      depends_on:
+        mysql:
+          condition: service_healthy
+        redis:
+          condition: service_healthy
+      env_file:
+        - .env
+      ports:
+        - "80:8080"
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+        interval: 30s
+        timeout: 10s
+        retries: 5
+        start_period: 40s
+
+  volumes:
+    mysql_data:
