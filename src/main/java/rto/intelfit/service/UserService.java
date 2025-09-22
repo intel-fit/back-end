@@ -2,6 +2,7 @@ package rto.intelfit.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,7 @@ import rto.intelfit.dto.SignUpDto;
 import rto.intelfit.exception.BusinessException;
 import rto.intelfit.exception.ErrorCode;
 import rto.intelfit.repository.UserRepository;
+import rto.intelfit.util.JwtUtil;
 
 import java.security.SecureRandom;
 import java.util.Set;
@@ -26,6 +28,10 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RedisTemplate<String, String> redisTemplate;
+    private final JwtUtil jwtUtil;
+
+    @Value("${jwt.access-token-expiration:3600000}")
+    private long accessTokenExpiration;
 
     private static final String EMAIL_VERIFICATION_PREFIX = "email_verification:";
     private static final String TEMP_PASSWORD_PREFIX = "temp_password:";
@@ -132,11 +138,82 @@ public class UserService {
             throw new BusinessException(ErrorCode.INVALID_LOGIN_CREDENTIALS);
         }
 
+        // JWT 토큰 생성
+        String accessToken = jwtUtil.generateAccessToken(user.getUserId(), user.getId());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getUserId(), user.getId());
+
+        log.info("로그인 성공 - 사용자 ID: {}, 사용자명: {}", user.getUserId(), user.getName());
+
         return LoginDto.Response.builder()
                 .success(true)
                 .message("로그인이 완료되었습니다")
                 .userId(user.getId())
                 .name(user.getName())
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .tokenType("Bearer")
+                .expiresIn(accessTokenExpiration / 1000) // 초 단위로 변환
+                .build();
+    }
+
+    public LoginDto.LogoutResponse logout(LoginDto.LogoutRequest request) {
+        String accessToken = request.getAccessToken();
+
+        // 토큰 유효성 검증
+        if (!jwtUtil.validateToken(accessToken)) {
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        }
+
+        // 사용자 ID 추출
+        String userId = jwtUtil.getUserIdFromToken(accessToken);
+
+        // Access Token을 블랙리스트에 추가
+        jwtUtil.blacklistToken(accessToken);
+
+        // Refresh Token 삭제
+        jwtUtil.deleteRefreshToken(userId);
+
+        log.info("로그아웃 완료 - 사용자 ID: {}", userId);
+
+        return LoginDto.LogoutResponse.builder()
+                .success(true)
+                .message("로그아웃이 완료되었습니다")
+                .build();
+    }
+
+    public LoginDto.TokenRefreshResponse refreshToken(LoginDto.TokenRefreshRequest request) {
+        String refreshToken = request.getRefreshToken();
+
+        // Refresh Token 유효성 검증
+        if (!jwtUtil.validateToken(refreshToken)) {
+            throw new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN);
+        }
+
+        // 토큰 타입 확인
+        if (!"refresh".equals(jwtUtil.getTokenType(refreshToken))) {
+            throw new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN);
+        }
+
+        // 사용자 정보 추출
+        String userId = jwtUtil.getUserIdFromToken(refreshToken);
+        Long userPk = jwtUtil.getUserPkFromToken(refreshToken);
+
+        // Redis에 저장된 Refresh Token과 비교
+        if (!jwtUtil.validateRefreshToken(refreshToken, userId)) {
+            throw new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN);
+        }
+
+        // 새로운 Access Token 생성
+        String newAccessToken = jwtUtil.generateAccessToken(userId, userPk);
+
+        log.info("토큰 재발급 완료 - 사용자 ID: {}", userId);
+
+        return LoginDto.TokenRefreshResponse.builder()
+                .success(true)
+                .message("토큰이 재발급되었습니다")
+                .accessToken(newAccessToken)
+                .tokenType("Bearer")
+                .expiresIn(accessTokenExpiration / 1000) // 초 단위로 변환
                 .build();
     }
 

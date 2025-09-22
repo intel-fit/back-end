@@ -44,6 +44,79 @@ public class LoginDto {
 
         @Schema(description = "사용자명", example = "홍길동")
         private String name;
+
+        @Schema(description = "액세스 토큰", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+        private String accessToken;
+
+        @Schema(description = "리프레시 토큰", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+        private String refreshToken;
+
+        @Schema(description = "토큰 타입", example = "Bearer")
+        private String tokenType;
+
+        @Schema(description = "액세스 토큰 만료 시간 (초)", example = "3600")
+        private long expiresIn;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "로그아웃 요청")
+    public static class LogoutRequest {
+
+        @Schema(description = "액세스 토큰", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+        @NotBlank(message = "액세스 토큰을 입력해주세요")
+        private String accessToken;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "로그아웃 응답")
+    public static class LogoutResponse {
+
+        @Schema(description = "성공 여부", example = "true")
+        private boolean success;
+
+        @Schema(description = "메시지", example = "로그아웃이 완료되었습니다")
+        private String message;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "토큰 재발급 요청")
+    public static class TokenRefreshRequest {
+
+        @Schema(description = "리프레시 토큰", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+        @NotBlank(message = "리프레시 토큰을 입력해주세요")
+        private String refreshToken;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "토큰 재발급 응답")
+    public static class TokenRefreshResponse {
+
+        @Schema(description = "성공 여부", example = "true")
+        private boolean success;
+
+        @Schema(description = "메시지", example = "토큰이 재발급되었습니다")
+        private String message;
+
+        @Schema(description = "새로운 액세스 토큰", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+        private String accessToken;
+
+        @Schema(description = "토큰 타입", example = "Bearer")
+        private String tokenType;
+
+        @Schema(description = "액세스 토큰 만료 시간 (초)", example = "3600")
+        private long expiresIn;
     }
 
     @Data

@@ -64,7 +64,7 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "로그인", description = "사용자 로그인을 처리합니다")
+    @Operation(summary = "로그인", description = "사용자 로그인을 처리하고 JWT 토큰을 발급합니다")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "로그인 성공"),
             @ApiResponse(responseCode = "401", description = "아이디 또는 비밀번호가 올바르지 않습니다")
@@ -74,6 +74,33 @@ public class UserController {
         log.info("로그인 요청 - 사용자 ID: {}", request.getUserId());
 
         LoginDto.Response response = userService.login(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "로그아웃", description = "사용자 로그아웃을 처리하고 토큰을 무효화합니다")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "로그아웃 성공"),
+            @ApiResponse(responseCode = "401", description = "유효하지 않은 토큰")
+    })
+    @PostMapping("/logout")
+    public ResponseEntity<LoginDto.LogoutResponse> logout(@Valid @RequestBody LoginDto.LogoutRequest request) {
+        log.info("로그아웃 요청");
+
+        LoginDto.LogoutResponse response = userService.logout(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "토큰 재발급", description = "리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급합니다")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "토큰 재발급 성공"),
+            @ApiResponse(responseCode = "401", description = "유효하지 않은 리프레시 토큰")
+    })
+    @PostMapping("/refresh-token")
+    public ResponseEntity<LoginDto.TokenRefreshResponse> refreshToken(
+            @Valid @RequestBody LoginDto.TokenRefreshRequest request) {
+        log.info("토큰 재발급 요청");
+
+        LoginDto.TokenRefreshResponse response = userService.refreshToken(request);
         return ResponseEntity.ok(response);
     }
 
@@ -111,7 +138,7 @@ public class UserController {
             @ApiResponse(responseCode = "400", description = "임시 비밀번호가 올바르지 않거나 만료되었습니다"),
             @ApiResponse(responseCode = "404", description = "임시 비밀번호에 해당하는 사용자를 찾을 수 없습니다")
     })
-    @PostMapping("/change-password")
+    @PutMapping("/change-password")
     public ResponseEntity<LoginDto.PasswordChangeResponse> changePassword(
             @Valid @RequestBody LoginDto.PasswordChangeRequest request) {
         log.info("비밀번호 변경 요청 - 임시비밀번호: {}", request.getTempPassword());
