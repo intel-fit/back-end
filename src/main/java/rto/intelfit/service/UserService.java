@@ -7,12 +7,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import rto.intelfit.domain.User;
+import rto.intelfit.dto.LoginDto;
 import rto.intelfit.dto.SignUpDto;
 import rto.intelfit.exception.BusinessException;
 import rto.intelfit.exception.ErrorCode;
 import rto.intelfit.repository.UserRepository;
 
 import java.security.SecureRandom;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -26,8 +28,11 @@ public class UserService {
     private final RedisTemplate<String, String> redisTemplate;
 
     private static final String EMAIL_VERIFICATION_PREFIX = "email_verification:";
+    private static final String TEMP_PASSWORD_PREFIX = "temp_password:";
     private static final int VERIFICATION_CODE_LENGTH = 6;
     private static final int VERIFICATION_CODE_EXPIRE_MINUTES = 5;
+    private static final int TEMP_PASSWORD_LENGTH = 6;
+    private static final int TEMP_PASSWORD_EXPIRE_MINUTES = 30;
 
     @Transactional
     public SignUpDto.Response signUp(SignUpDto.Request request) {
@@ -39,6 +44,16 @@ public class UserService {
         // 아이디 중복 확인
         if (userRepository.existsByUserId(request.getUserId())) {
             throw new BusinessException(ErrorCode.DUPLICATE_USER_ID);
+        }
+
+        // 이메일 중복 확인
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
+        }
+
+        // 전화번호 중복 확인
+        if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+            throw new BusinessException(ErrorCode.DUPLICATE_PHONE_NUMBER);
         }
 
         // 이메일 인증코드 확인
@@ -56,6 +71,7 @@ public class UserService {
                 .email(request.getEmail())
                 .password(encodedPassword)
                 .birthDate(request.getBirthDate())
+                .phoneNumber(request.getPhoneNumber())
                 .emailVerified(true) // 인증코드 확인 완료
                 .build();
 
@@ -106,6 +122,112 @@ public class UserService {
                 .build();
     }
 
+    public LoginDto.Response login(LoginDto.Request request) {
+        // 사용자 조회
+        User user = userRepository.findByUserId(request.getUserId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_LOGIN_CREDENTIALS));
+
+        // 비밀번호 확인
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new BusinessException(ErrorCode.INVALID_LOGIN_CREDENTIALS);
+        }
+
+        return LoginDto.Response.builder()
+                .success(true)
+                .message("로그인이 완료되었습니다")
+                .userId(user.getId())
+                .name(user.getName())
+                .build();
+    }
+
+    public LoginDto.FindUserIdResponse findUserId(String email) {
+        // 이메일로 사용자 조회
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND_BY_EMAIL));
+
+        // 아이디 마스킹 처리
+        String maskedUserId = maskUserId(user.getUserId());
+
+        // TODO: 실제 이메일 발송 로직 구현 예정
+        log.info("아이디 찾기 - 이메일: {}, 아이디: {}", email, user.getUserId());
+
+        return LoginDto.FindUserIdResponse.builder()
+                .success(true)
+                .message("아이디가 이메일로 발송되었습니다")
+                .maskedUserId(maskedUserId)
+                .build();
+    }
+
+    @Transactional
+    public LoginDto.PasswordResetResponse resetPassword(String email) {
+        // 이메일로 사용자 조회
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND_BY_EMAIL));
+
+        // 임시 비밀번호 생성
+        String tempPassword = generateTempPassword();
+
+        // Redis에 임시 비밀번호 저장 (30분 만료) - 평문으로 저장
+        String key = TEMP_PASSWORD_PREFIX + email;
+        redisTemplate.opsForValue().set(key, tempPassword, TEMP_PASSWORD_EXPIRE_MINUTES, TimeUnit.MINUTES);
+
+        // TODO: 실제 이메일 발송 로직 구현 예정
+        log.info("임시 비밀번호 발송 - 이메일: {}, 임시 비밀번호: {}", email, tempPassword);
+
+        return LoginDto.PasswordResetResponse.builder()
+                .success(true)
+                .message("임시 비밀번호가 이메일로 발송되었습니다")
+                .build();
+    }
+
+    @Transactional
+    public LoginDto.PasswordChangeResponse changePassword(LoginDto.PasswordChangeRequest request) {
+        // 새 비밀번호 확인
+        if (!request.getNewPassword().equals(request.getNewPasswordConfirm())) {
+            throw new BusinessException(ErrorCode.PASSWORD_MISMATCH, "새 비밀번호가 일치하지 않습니다");
+        }
+
+        // Redis에서 모든 임시 비밀번호 키를 확인하여 해당하는 이메일 찾기
+        String userEmail = null;
+        String tempPasswordPrefix = TEMP_PASSWORD_PREFIX + "*";
+
+        // Redis에서 패턴 매칭으로 모든 임시 비밀번호 키 검색
+        Set<String> keys = redisTemplate.keys(tempPasswordPrefix);
+
+        for (String key : keys) {
+            String storedTempPassword = redisTemplate.opsForValue().get(key);
+            if (request.getTempPassword().equals(storedTempPassword)) {
+                // 키에서 이메일 추출 (temp_password: 제거)
+                userEmail = key.substring(TEMP_PASSWORD_PREFIX.length());
+                break;
+            }
+        }
+
+        if (userEmail == null) {
+            throw new BusinessException(ErrorCode.INVALID_TEMP_PASSWORD);
+        }
+
+        // 이메일로 사용자 조회
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND_BY_EMAIL));
+
+        // 새 비밀번호로 변경
+        String encodedNewPassword = passwordEncoder.encode(request.getNewPassword());
+        user.setPassword(encodedNewPassword);
+        userRepository.save(user);
+
+        // 임시 비밀번호 삭제
+        String tempPasswordKey = TEMP_PASSWORD_PREFIX + userEmail;
+        redisTemplate.delete(tempPasswordKey);
+
+        log.info("비밀번호 변경 완료 - 이메일: {}", userEmail);
+
+        return LoginDto.PasswordChangeResponse.builder()
+                .success(true)
+                .message("비밀번호가 변경되었습니다")
+                .build();
+    }
+
     private boolean verifyEmailCode(String email, String code) {
         String key = EMAIL_VERIFICATION_PREFIX + email;
         String storedCode = redisTemplate.opsForValue().get(key);
@@ -126,5 +248,27 @@ public class UserService {
         }
 
         return sb.toString();
+    }
+
+    private String generateTempPassword() {
+        SecureRandom random = new SecureRandom();
+        StringBuilder sb = new StringBuilder();
+        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+        for (int i = 0; i < TEMP_PASSWORD_LENGTH; i++) {
+            sb.append(characters.charAt(random.nextInt(characters.length())));
+        }
+
+        return sb.toString();
+    }
+
+    private String maskUserId(String userId) {
+        if (userId.length() <= 4) {
+            return userId.substring(0, 2) + "**";
+        }
+
+        int maskLength = userId.length() - 4;
+        String maskedPart = "*".repeat(maskLength);
+        return userId.substring(0, 2) + maskedPart + userId.substring(userId.length() - 2);
     }
 }
