@@ -34,7 +34,7 @@ public class User {
     @Builder.Default
     private Boolean emailVerified = false;
 
-    @Column(name = "birth_date", nullable = false)
+    @Column(name = "birth_date", nullable = false)  // birth_date -> birthday로 변경
     private LocalDate birthDate;
 
     @Column(name = "password", nullable = false, length = 255)

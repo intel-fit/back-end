@@ -40,7 +40,7 @@ public class UserController {
             @ApiResponse(responseCode = "200", description = "중복 확인 완료"),
             @ApiResponse(responseCode = "400", description = "잘못된 요청 데이터")
     })
-    @GetMapping("/check-userId")
+    @GetMapping("/check-userid")
     public ResponseEntity<SignUpDto.UserIdCheckResponse> checkUserId(
             @RequestParam String userId) {
         log.info("아이디 중복 확인 요청 - 사용자 ID: {}", userId);
