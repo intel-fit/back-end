@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import rto.intelfit.domain.User;
 
 import jakarta.validation.constraints.*;
 import java.time.LocalDate;
@@ -60,6 +61,37 @@ public class SignUpDto {
         @NotBlank(message = "이메일 인증코드를 입력해주세요")
         @Pattern(regexp = "^\\d{6}$", message = "인증코드는 6자리 숫자여야 합니다")
         private String verificationCode;
+
+        // 초기 피트니스 설정 필드 추가
+        @Schema(description = "성별", example = "F", allowableValues = {"M", "F"})
+        @NotNull(message = "성별을 선택해주세요")
+        private User.Gender gender;
+
+        @Schema(description = "키 (cm)", example = "165")
+        @NotNull(message = "키를 입력해주세요")
+        @Min(value = 100, message = "키는 100cm 이상이어야 합니다")
+        @Max(value = 250, message = "키는 250cm 이하여야 합니다")
+        private Integer height;
+
+        @Schema(description = "현재 체중 (kg)", example = "53")
+        @NotNull(message = "체중을 입력해주세요")
+        @Min(value = 30, message = "체중은 30kg 이상이어야 합니다")
+        @Max(value = 200, message = "체중은 200kg 이하여야 합니다")
+        private Integer weight;
+
+        @Schema(description = "목표 체중 (kg)", example = "50")
+        @NotNull(message = "목표 체중을 입력해주세요")
+        @Min(value = 30, message = "목표 체중은 30kg 이상이어야 합니다")
+        @Max(value = 200, message = "목표 체중은 200kg 이하여야 합니다")
+        private Integer weightGoal;
+
+        @Schema(description = "운동 목표", example = "DIET", allowableValues = {"DIET", "BULK", "LEAN_MASS"})
+        @NotNull(message = "운동 목표를 선택해주세요")
+        private User.HealthGoal healthGoal;
+
+        @Schema(description = "주간 운동 일수", example = "3-4일")
+        @Size(max = 20, message = "주간 운동 일수는 20자 이내로 입력해주세요")
+        private String workoutDaysPerWeek;
     }
 
     @Data

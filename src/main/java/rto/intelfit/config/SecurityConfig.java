@@ -60,8 +60,6 @@ public class SecurityConfig {
                         ).permitAll()
                         // 인증이 필요한 사용자 API (로그아웃 등)
                         .requestMatchers("/api/users/logout").authenticated()
-                        // 인증이 필요한 초기 설정 API
-                        .requestMatchers("/api/setup/**").authenticated()
                         // 인증이 필요한 프로필 API
                         .requestMatchers("/api/profile/**").authenticated()
                         // Swagger UI 및 API 문서

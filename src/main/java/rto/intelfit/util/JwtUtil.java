@@ -98,12 +98,17 @@ public class JwtUtil {
     // 토큰 유효성 검증
     public boolean validateToken(String token) {
         try {
+            log.debug("토큰 검증 시작 - 토큰 길이: {}", token != null ? token.length() : 0);
+
             // 블랙리스트 확인
             if (isTokenBlacklisted(token)) {
+                log.warn("블랙리스트에 등록된 토큰");
                 return false;
             }
 
-            parseToken(token);
+            Claims claims = parseToken(token);
+            log.debug("토큰 파싱 성공 - 사용자: {}, 만료시간: {}",
+                    claims.getSubject(), claims.getExpiration());
             return true;
         } catch (Exception e) {
             log.error("토큰 검증 실패: {}", e.getMessage());

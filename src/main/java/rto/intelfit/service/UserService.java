@@ -70,7 +70,7 @@ public class UserService {
         // 비밀번호 암호화
         String encodedPassword = passwordEncoder.encode(request.getPassword());
 
-        // 사용자 생성
+        // 사용자 생성 (초기 피트니스 정보 포함)
         User user = User.builder()
                 .userId(request.getUserId())
                 .name(request.getName())
@@ -79,6 +79,13 @@ public class UserService {
                 .birthDate(request.getBirthDate())
                 .phoneNumber(request.getPhoneNumber())
                 .emailVerified(true) // 인증코드 확인 완료
+                // 초기 피트니스 정보 추가
+                .gender(request.getGender())
+                .height(request.getHeight())
+                .weight(request.getWeight())
+                .weightGoal(request.getWeightGoal())
+                .healthGoal(request.getHealthGoal())
+                .workoutDaysPerWeek(request.getWorkoutDaysPerWeek())
                 .build();
 
         User savedUser = userRepository.save(user);
@@ -137,6 +144,10 @@ public class UserService {
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new BusinessException(ErrorCode.INVALID_LOGIN_CREDENTIALS);
         }
+
+        // 마지막 로그인 시간 업데이트
+        user.updateLastLoginAt();
+        userRepository.save(user);
 
         // JWT 토큰 생성
         String accessToken = jwtUtil.generateAccessToken(user.getUserId(), user.getId());

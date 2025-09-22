@@ -57,9 +57,13 @@ logging:
   level:
     root: INFO
     rto.intelfit: DEBUG
+    rto.intelfit.security: DEBUG
+    rto.intelfit.util.JwtUtil: DEBUG
 
 # application.yml에 추가할 JWT 설정
 jwt:
   secret: mySecretKeyForJwtTokenGenerationAndValidation1234567890  # 최소 32자 이상
   access-token-expiration: 3600000   # 1시간 (ms)
   refresh-token-expiration: 604800000 # 7일 (ms)
+
+
