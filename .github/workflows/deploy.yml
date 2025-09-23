@@ -9,7 +9,7 @@ on:
 
 env:
   DOCKER_IMAGE: intelfit-backend
-  EC2_HOST: 15.165.68.196  # 여기에 실제 EC2 Public IP 입력
+  EC2_HOST: 15.165.68.196
   EC2_USER: ubuntu
 
 jobs:
@@ -21,13 +21,13 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: Admin123!
-          MYSQL_DATABASE: intelfit_test
+          MYSQL_DATABASE: intelfit  # 수정: intelfit_test → intelfit
         ports:
           - 3306:3306
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
       redis:
-        image: redis:7.2
+        image: redis:7.2-alpine  # 수정: 7.2 → 7.2-alpine (일관성)
         ports:
           - 6379:6379
         options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
@@ -54,13 +54,15 @@ jobs:
           done
 
       - name: Run tests
-        run: ./gradlew test
+        run: ./gradlew test --no-daemon  # 수정: --no-daemon 추가
         env:
-          SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/intelfit_test?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
+          SPRING_PROFILES_ACTIVE: test
+          SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/intelfit?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
           SPRING_DATASOURCE_USERNAME: root
           SPRING_DATASOURCE_PASSWORD: Admin123!
           SPRING_DATA_REDIS_HOST: localhost
           SPRING_DATA_REDIS_PORT: 6379
+          JWT_SECRET: intelfit-jwt-secret-key-for-production-use-minimum-32-characters-long-2024
 
   build-and-deploy:
     needs: test
@@ -83,14 +85,74 @@ jobs:
         run: |
           docker save ${{ env.DOCKER_IMAGE }}:latest | gzip > image.tar.gz
 
+      - name: Create deploy.sh
+        run: |
+          cat > deploy.sh << 'EOF'
+          #!/bin/bash
+          
+          # 색상 코드
+          RED='\033[0;31m'
+          GREEN='\033[0;32m'
+          YELLOW='\033[1;33m'
+          NC='\033[0m'
+          
+          # 로그 함수
+          log() {
+              echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')]${NC} $1"
+          }
+          
+          error() {
+              echo -e "${RED}[$(date '+%Y-%m-%d %H:%M:%S')]${NC} ❌ $1"
+          }
+          
+          # 배포 설정
+          DOCKER_IMAGE="intelfit-backend:latest"
+          CONTAINER_NAME="spring-app"
+          
+          # 배포 시작
+          log "🚀 배포를 시작합니다..."
+          
+          # 기존 컨테이너 정지
+          log "기존 컨테이너를 정지합니다..."
+          docker-compose down
+          
+          # 새 이미지로 컨테이너 시작
+          log "새 컨테이너를 시작합니다..."
+          docker-compose up -d
+          
+          # 헬스체크 (최대 30번 시도)
+          log "헬스체크를 시작합니다..."
+          MAX_ATTEMPTS=30
+          ATTEMPT=0
+          
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+              ATTEMPT=$((ATTEMPT + 1))
+          
+              if docker exec $CONTAINER_NAME curl -sf http://localhost:8080/actuator/health > /dev/null 2>&1; then
+                  log "✅ 헬스체크 성공!"
+                  docker-compose ps
+                  exit 0
+              else
+                  log "헬스체크 대기 중... ($ATTEMPT/$MAX_ATTEMPTS)"
+                  sleep 10
+              fi
+          done
+          
+          error "헬스체크 실패"
+          docker logs --tail 50 $CONTAINER_NAME
+          exit 1
+          EOF
+          chmod +x deploy.sh
+
       - name: Copy files to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ env.EC2_HOST }}
           username: ${{ env.EC2_USER }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
-          source: "image.tar.gz,compose.yaml,.env"
+          source: "image.tar.gz,docker-compose.yml,.env,deploy.sh"  # 수정: compose.yaml → docker-compose.yml
           target: "/home/ubuntu/back-end"
+          overwrite: true  # 추가: 파일 덮어쓰기
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
@@ -105,25 +167,25 @@ jobs:
             docker load < image.tar.gz
             rm image.tar.gz
             
-            # 무중단 배포 스크립트 실행
+            # 배포 스크립트 실행
             chmod +x deploy.sh
             ./deploy.sh
 
-      - name: Health Check
+      - name: Verify Deployment
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ env.EC2_HOST }}
           username: ${{ env.EC2_USER }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
           script: |
-            # 새 컨테이너 헬스체크 (최대 5분 대기)
-            for i in {1..30}; do
-              if curl -f http://localhost/actuator/health; then
-                echo "✅ Health check passed!"
-                exit 0
-              fi
-              echo "⏳ Waiting for application to be ready... ($i/30)"
-              sleep 10
-            done
-            echo "❌ Health check failed!"
-            exit 1
+            # 배포 확인
+            sleep 10
+            if curl -sf http://localhost/actuator/health; then
+              echo "✅ 배포 성공!"
+              echo "📊 컨테이너 상태:"
+              docker ps | grep -E "CONTAINER|spring-app|mysql|redis"
+            else
+              echo "❌ 배포 검증 실패"
+              docker logs --tail 30 spring-app
+              exit 1
+            fi
