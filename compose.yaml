@@ -1,53 +1,74 @@
+version: "3.9"
 
-  version: "3.9"
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: intelfit
+      MYSQL_ROOT_PASSWORD: Admin123!
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+      TZ: Asia/Seoul
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pAdmin123!"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - app-network
 
-  services:
-    mysql:
-      image: mysql:8.0
-      container_name: mysql
-      restart: always
-      env_file:
-        - .env
-      ports:
-        - "3306:3306"
-      volumes:
-        - mysql_data:/var/lib/mysql
-      healthcheck:
-        test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-        timeout: 20s
-        retries: 10
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - app-network
 
-    redis:
-      image: redis:7.2
-      container_name: redis
-      restart: always
-      ports:
-        - "6379:6379"
-      healthcheck:
-        test: ["CMD", "redis-cli", "ping"]
-        interval: 30s
-        timeout: 3s
-        retries: 3
+  app:
+    build: .
+    image: intelfit-backend:latest
+    container_name: spring-app
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      JAVA_OPTS: "-Xms512m -Xmx1024m"
+      TZ: Asia/Seoul
+    ports:
+      - "80:8080"
+    healthcheck:
+      # curl의 -s(silent) -f(fail) 옵션 사용
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s           # 30초마다 체크
+      timeout: 10s           # 10초 내에 응답 필요
+      retries: 10            # 10번 재시도
+      start_period: 90s      # 애플리케이션 시작 대기시간 90초로 증가
+    networks:
+      - app-network
 
-    app:
-      build: .
-      container_name: spring-app
-      restart: always
-      depends_on:
-        mysql:
-          condition: service_healthy
-        redis:
-          condition: service_healthy
-      env_file:
-        - .env
-      ports:
-        - "80:8080"
-      healthcheck:
-        test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
-        interval: 30s
-        timeout: 10s
-        retries: 5
-        start_period: 40s
+networks:
+  app-network:
+    driver: bridge
 
-  volumes:
-    mysql_data:
+volumes:
+  mysql_data:
+    driver: local

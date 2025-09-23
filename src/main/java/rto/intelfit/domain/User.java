@@ -96,4 +96,5 @@ public class User {
     public void updateLastLoginAt() {
         this.lastLoginAt = LocalDateTime.now();
     }
+
 }

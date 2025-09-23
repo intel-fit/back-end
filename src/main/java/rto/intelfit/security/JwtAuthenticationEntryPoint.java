@@ -20,10 +20,20 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
     public void commence(HttpServletRequest request, HttpServletResponse response,
                          AuthenticationException authException) throws IOException {
 
-        log.error("인증되지 않은 요청: {}", authException.getMessage());
+        String requestPath = request.getServletPath();
+
+        // Actuator 엔드포인트는 401 대신 200 반환 (헬스체크용)
+        if (requestPath.startsWith("/actuator/")) {
+            log.debug("Actuator 엔드포인트 접근: {}", requestPath);
+            response.setStatus(HttpServletResponse.SC_OK);
+            return;
+        }
+
+        log.error("인증되지 않은 요청: {} - {}", requestPath, authException.getMessage());
 
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setCharacterEncoding("UTF-8");
 
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .success(false)
