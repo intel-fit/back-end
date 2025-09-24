@@ -21,13 +21,13 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: Admin123!
-          MYSQL_DATABASE: intelfit  # 수정: intelfit_test → intelfit
+          MYSQL_DATABASE: intelfit
         ports:
           - 3306:3306
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
       redis:
-        image: redis:7.2-alpine  # 수정: 7.2 → 7.2-alpine (일관성)
+        image: redis:7.2-alpine
         ports:
           - 6379:6379
         options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
@@ -46,6 +46,12 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      # Gradle wrapper 버전 확인 및 의존성 새로고침
+      - name: Refresh dependencies and verify Gradle version
+        run: |
+          ./gradlew --version
+          ./gradlew clean --refresh-dependencies --no-daemon
+
       - name: Wait for MySQL to be ready
         run: |
           until mysqladmin ping -h 127.0.0.1 -u root -pAdmin123! --silent; do
@@ -54,7 +60,7 @@ jobs:
           done
 
       - name: Run tests
-        run: ./gradlew test --no-daemon  # 수정: --no-daemon 추가
+        run: ./gradlew test --no-daemon --refresh-dependencies
         env:
           SPRING_PROFILES_ACTIVE: test
           SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/intelfit?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
@@ -76,70 +82,169 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # Docker 빌드 캐시 클리어하여 최신 의존성 보장
       - name: Build Docker image
         run: |
-          docker build -t ${{ env.DOCKER_IMAGE }}:${{ github.sha }} .
+          echo "🔧 Building Docker image with no cache to ensure latest dependencies..."
+          docker build --no-cache --pull -t ${{ env.DOCKER_IMAGE }}:${{ github.sha }} .
           docker tag ${{ env.DOCKER_IMAGE }}:${{ github.sha }} ${{ env.DOCKER_IMAGE }}:latest
+          echo "✅ Docker image built successfully"
 
       - name: Save Docker image
         run: |
+          echo "📦 Saving Docker image..."
           docker save ${{ env.DOCKER_IMAGE }}:latest | gzip > image.tar.gz
+          ls -lh image.tar.gz
 
       - name: Create deploy.sh
         run: |
           cat > deploy.sh << 'EOF'
           #!/bin/bash
-          
+
           # 색상 코드
           RED='\033[0;31m'
           GREEN='\033[0;32m'
           YELLOW='\033[1;33m'
+          BLUE='\033[0;34m'
           NC='\033[0m'
-          
+
           # 로그 함수
           log() {
-              echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')]${NC} $1"
+              echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')]${NC} 📝 $1"
           }
-          
+
           error() {
               echo -e "${RED}[$(date '+%Y-%m-%d %H:%M:%S')]${NC} ❌ $1"
           }
-          
+
+          warn() {
+              echo -e "${YELLOW}[$(date '+%Y-%m-%d %H:%M:%S')]${NC} ⚠️ $1"
+          }
+
+          info() {
+              echo -e "${BLUE}[$(date '+%Y-%m-%d %H:%M:%S')]${NC} ℹ️ $1"
+          }
+
           # 배포 설정
           DOCKER_IMAGE="intelfit-backend:latest"
           CONTAINER_NAME="spring-app"
-          
+          MAX_ATTEMPTS=40
+          HEALTH_CHECK_INTERVAL=10
+
+          # 에러 발생 시 종료
+          set -e
+
           # 배포 시작
-          log "🚀 배포를 시작합니다..."
+          log "🚀 IntelFit 백엔드 배포를 시작합니다..."
+          log "📦 이미지: $DOCKER_IMAGE"
+          log "🏷️ 컨테이너: $CONTAINER_NAME"
+
+          # 현재 실행 중인 컨테이너 확인
+          if [ "$(docker ps -q -f name=$CONTAINER_NAME)" ]; then
+              warn "기존 컨테이너가 실행 중입니다."
+              log "기존 컨테이너를 안전하게 종료합니다..."
           
-          # 기존 컨테이너 정지
-          log "기존 컨테이너를 정지합니다..."
-          docker-compose down
+              # Graceful shutdown 시도 (30초 대기)
+              docker stop $CONTAINER_NAME --time=30 || true
           
-          # 새 이미지로 컨테이너 시작
-          log "새 컨테이너를 시작합니다..."
+              # 컨테이너 제거
+              docker rm $CONTAINER_NAME -f || true
+              log "✅ 기존 컨테이너가 종료되었습니다."
+          else
+              info "실행 중인 컨테이너가 없습니다."
+          fi
+
+          # Docker Compose로 전체 스택 재시작
+          log "🔄 전체 서비스 스택을 재시작합니다..."
+          docker-compose down --remove-orphans || warn "일부 서비스 종료 중 문제가 발생했습니다 (무시)"
+
+          # 이미지 정리 (선택적)
+          log "🧹 사용하지 않는 이미지를 정리합니다..."
+          docker image prune -f || warn "이미지 정리 중 문제가 발생했습니다 (무시)"
+
+          # 새 컨테이너 시작
+          log "🌟 새 서비스 스택을 시작합니다..."
           docker-compose up -d
-          
-          # 헬스체크 (최대 30번 시도)
-          log "헬스체크를 시작합니다..."
-          MAX_ATTEMPTS=30
+
+          # 컨테이너 시작 대기
+          log "⏳ 컨테이너 시작을 대기합니다..."
+          sleep 20
+
+          # MySQL과 Redis 헬스체크
+          log "🔍 MySQL 연결을 확인합니다..."
+          MYSQL_ATTEMPTS=0
+          while [ $MYSQL_ATTEMPTS -lt 30 ]; do
+              if docker exec mysql mysqladmin ping -h localhost -u root -pAdmin123! --silent 2>/dev/null; then
+                  log "✅ MySQL이 준비되었습니다."
+                  break
+              fi
+              MYSQL_ATTEMPTS=$((MYSQL_ATTEMPTS + 1))
+              sleep 2
+          done
+
+          log "🔍 Redis 연결을 확인합니다..."
+          REDIS_ATTEMPTS=0
+          while [ $REDIS_ATTEMPTS -lt 20 ]; do
+              if docker exec redis redis-cli ping > /dev/null 2>&1; then
+                  log "✅ Redis가 준비되었습니다."
+                  break
+              fi
+              REDIS_ATTEMPTS=$((REDIS_ATTEMPTS + 1))
+              sleep 1
+          done
+
+          # Spring Boot 애플리케이션 헬스체크
+          log "🏥 Spring Boot 애플리케이션 헬스체크를 시작합니다..."
           ATTEMPT=0
-          
+
           while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
               ATTEMPT=$((ATTEMPT + 1))
           
+              # 컨테이너 상태 확인
+              if ! docker ps | grep -q $CONTAINER_NAME; then
+                  error "컨테이너가 실행되지 않습니다!"
+                  docker logs --tail 50 $CONTAINER_NAME
+                  exit 1
+              fi
+          
+              # 헬스체크 시도
               if docker exec $CONTAINER_NAME curl -sf http://localhost:8080/actuator/health > /dev/null 2>&1; then
-                  log "✅ 헬스체크 성공!"
+                  log "✅ 헬스체크 성공! 애플리케이션이 정상 동작합니다."
+          
+                  # 최종 상태 확인
+                  log "📊 현재 서비스 상태:"
                   docker-compose ps
+          
+                  # 애플리케이션 정보 출력
+                  log "🌐 애플리케이션 접속 정보:"
+                  echo "   - Health Check: http://localhost/actuator/health"
+                  echo "   - Swagger UI: http://localhost/swagger-ui.html"
+                  echo "   - API Docs: http://localhost/v3/api-docs"
+          
+                  log "🎉 배포가 성공적으로 완료되었습니다!"
                   exit 0
               else
-                  log "헬스체크 대기 중... ($ATTEMPT/$MAX_ATTEMPTS)"
-                  sleep 10
+                  if [ $((ATTEMPT % 5)) -eq 0 ]; then
+                      warn "헬스체크 대기 중... ($ATTEMPT/$MAX_ATTEMPTS) - $(date '+%H:%M:%S')"
+                      # 5번마다 로그 일부 출력
+                      info "최근 로그:"
+                      docker logs --tail 10 $CONTAINER_NAME 2>/dev/null | tail -5 || echo "로그를 가져올 수 없습니다."
+                  fi
+                  sleep $HEALTH_CHECK_INTERVAL
               fi
           done
-          
-          error "헬스체크 실패"
-          docker logs --tail 50 $CONTAINER_NAME
+
+          # 헬스체크 실패 시
+          error "헬스체크 실패: 애플리케이션이 정상적으로 시작되지 않았습니다."
+          error "최근 로그를 확인해주세요:"
+          docker logs --tail 100 $CONTAINER_NAME
+
+          error "전체 서비스 상태:"
+          docker-compose ps
+
+          error "컨테이너 상태 상세 정보:"
+          docker inspect $CONTAINER_NAME --format='{{.State.Status}}: {{.State.Error}}'
+
           exit 1
           EOF
           chmod +x deploy.sh
@@ -150,9 +255,9 @@ jobs:
           host: ${{ env.EC2_HOST }}
           username: ${{ env.EC2_USER }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
-          source: "image.tar.gz,docker-compose.yml,.env,deploy.sh"  # 수정: compose.yaml → docker-compose.yml
+          source: "image.tar.gz,docker-compose.yml,.env,deploy.sh"
           target: "/home/ubuntu/back-end"
-          overwrite: true  # 추가: 파일 덮어쓰기
+          overwrite: true
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
@@ -163,11 +268,20 @@ jobs:
           script: |
             cd /home/ubuntu/back-end
             
+            echo "🚀 EC2 배포 프로세스를 시작합니다..."
+            
             # Docker 이미지 로드
+            echo "📦 Docker 이미지를 로드합니다..."
             docker load < image.tar.gz
             rm image.tar.gz
+            echo "✅ Docker 이미지 로드 완료"
+            
+            # 현재 이미지 확인
+            echo "🔍 현재 Docker 이미지 목록:"
+            docker images | grep -E "REPOSITORY|intelfit"
             
             # 배포 스크립트 실행
+            echo "🎯 배포 스크립트를 실행합니다..."
             chmod +x deploy.sh
             ./deploy.sh
 
@@ -178,14 +292,31 @@ jobs:
           username: ${{ env.EC2_USER }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
           script: |
-            # 배포 확인
-            sleep 10
-            if curl -sf http://localhost/actuator/health; then
-              echo "✅ 배포 성공!"
-              echo "📊 컨테이너 상태:"
-              docker ps | grep -E "CONTAINER|spring-app|mysql|redis"
+            echo "🔍 최종 배포 검증을 시작합니다..."
+            cd /home/ubuntu/back-end
+            
+            # 잠시 대기 후 검증
+            sleep 15
+            
+            # 헬스체크 재확인
+            if curl -sf http://localhost/actuator/health > /dev/null; then
+              echo "✅ 최종 배포 검증 성공!"
+              echo ""
+              echo "📊 최종 서비스 상태:"
+              docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+              echo ""
+              echo "🌐 서비스 접속 정보:"
+              echo "  - 메인 API: http://15.165.68.196/"
+              echo "  - Health Check: http://15.165.68.196/actuator/health"
+              echo "  - Swagger UI: http://15.165.68.196/swagger-ui.html"
+              echo ""
+              echo "🎉 IntelFit 백엔드가 성공적으로 배포되었습니다!"
             else
-              echo "❌ 배포 검증 실패"
-              docker logs --tail 30 spring-app
+              echo "❌ 최종 배포 검증 실패"
+              echo "📋 컨테이너 로그 (마지막 50줄):"
+              docker logs --tail 50 spring-app || echo "로그를 가져올 수 없습니다."
+              echo ""
+              echo "📊 현재 컨테이너 상태:"
+              docker ps -a | grep -E "CONTAINER|spring-app|mysql|redis"
               exit 1
             fi

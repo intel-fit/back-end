@@ -1,32 +1,47 @@
-# Build stage
-FROM gradle:8.10.2-jdk21 AS builder
+# Build stage - Spring Boot 3.2.10 호환 버전으로 변경
+FROM gradle:8.5-jdk21 AS builder
 WORKDIR /app
 
-# Gradle 파일 복사 (와일드카드 사용으로 파일이 없어도 에러 없음)
-COPY build.gradle* settings.gradle* ./
-COPY gradle gradle
+# 환경변수 설정 (Spring Boot 버전 고정)
+ENV SPRING_BOOT_VERSION=3.2.10
 
-# 의존성 먼저 다운로드 (캐싱 활용)
-RUN gradle dependencies --no-daemon || true
+# Gradle wrapper 파일들 먼저 복사
+COPY gradle gradle
+COPY gradlew gradlew.bat build.gradle settings.gradle ./
+
+# 권한 설정
+RUN chmod +x ./gradlew
+
+# 의존성 다운로드 (캐싱 최적화)
+RUN ./gradlew dependencies --no-daemon --refresh-dependencies
 
 # 소스 코드 복사 및 빌드
 COPY src src
-RUN gradle clean bootJar --no-daemon
+RUN ./gradlew clean bootJar --no-daemon --refresh-dependencies
 
 # Runtime stage
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# curl 설치 (헬스체크용)
-RUN apk add --no-cache curl
-
-# JAR 파일 복사
-COPY --from=builder /app/build/libs/*.jar app.jar
+# 필요한 패키지 설치
+RUN apk add --no-cache curl tzdata
 
 # 시간대 설정
 ENV TZ=Asia/Seoul
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+# 앱 실행용 사용자 생성 (보안)
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
+
+# JAR 파일 복사
+COPY --from=builder --chown=appuser:appgroup /app/build/libs/*.jar app.jar
+
+# 헬스체크 추가
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8080/actuator/health || exit 1
 
 EXPOSE 8080
 
-# 프로파일 설정 (환경변수로 제어 가능)
-ENTRYPOINT ["sh", "-c", "java -jar -Dspring.profiles.active=${SPRING_PROFILES_ACTIVE:-docker} app.jar"]
+# JVM 튜닝 옵션 추가
+ENTRYPOINT ["sh", "-c", "java -Xms512m -Xmx1024m -XX:+UseG1GC -XX:+UseContainerSupport -Dspring.profiles.active=${SPRING_PROFILES_ACTIVE:-docker} -jar app.jar"]
