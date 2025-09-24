@@ -5,9 +5,9 @@ WORKDIR /app
 # 환경변수 설정 (Spring Boot 버전 고정)
 ENV SPRING_BOOT_VERSION=3.2.10
 
-# Gradle wrapper 파일들 먼저 복사
+# Gradle 관련 파일들 복사 (Kotlin DSL 지원)
 COPY gradle gradle
-COPY gradlew gradlew.bat build.gradle settings.gradle ./
+COPY gradlew gradlew.bat build.gradle* settings.gradle* ./
 
 # 권한 설정
 RUN chmod +x ./gradlew
