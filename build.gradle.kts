@@ -24,6 +24,19 @@ repositories {
 	mavenCentral()
 }
 
+// Spring Boot BOM 명시적 관리
+dependencyManagement {
+	imports {
+		mavenBom("org.springframework.boot:spring-boot-dependencies:3.2.10")
+	}
+
+	dependencies {
+		dependency("org.springframework.boot:spring-boot:3.2.10")
+		dependency("org.springframework.boot:spring-boot-starter:3.2.10")
+		dependency("org.springframework.boot:spring-boot-autoconfigure:3.2.10")
+	}
+}
+
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-data-redis")
@@ -36,7 +49,6 @@ dependencies {
 	implementation("io.jsonwebtoken:jjwt-api:0.11.5")
 	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
 	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
-
 
 	// MySQL - Spring Boot 3.2.10 권장 버전
 	runtimeOnly("com.mysql:mysql-connector-j")

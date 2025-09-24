@@ -1,5 +1,4 @@
-version: "3.9"
-
+# version 제거 (deprecated 경고 해결)
 services:
   mysql:
     image: mysql:8.0
@@ -53,15 +52,19 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_OPTS: "-Xms512m -Xmx1024m"
       TZ: Asia/Seoul
+      # 데이터베이스 연결 정보 명시적 설정
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/intelfit?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: Admin123!
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
     ports:
       - "80:8080"
     healthcheck:
-      # curl의 -s(silent) -f(fail) 옵션 사용
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/actuator/health || exit 1"]
-      interval: 30s           # 30초마다 체크
-      timeout: 10s           # 10초 내에 응답 필요
-      retries: 10            # 10번 재시도
-      start_period: 90s      # 애플리케이션 시작 대기시간 90초로 증가
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
     networks:
       - app-network
 
