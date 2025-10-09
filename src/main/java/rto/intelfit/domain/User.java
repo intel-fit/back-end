@@ -7,6 +7,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "users")
@@ -79,6 +81,11 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    // InBody와의 1:N 관계
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<InBody> inBodyRecords = new ArrayList<>();
+
     // 열거형 정의
     public enum MembershipType {
         FREE, PREMIUM
@@ -97,4 +104,14 @@ public class User {
         this.lastLoginAt = LocalDateTime.now();
     }
 
+    // InBody 관계 편의 메서드
+    public void addInBodyRecord(InBody inBody) {
+        inBodyRecords.add(inBody);
+        inBody.setUser(this);
+    }
+
+    public void removeInBodyRecord(InBody inBody) {
+        inBodyRecords.remove(inBody);
+        inBody.setUser(null);
+    }
 }
