@@ -17,11 +17,21 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${spring.mail.username}")
+    @Value("${spring.mail.username:}")
     private String fromEmail;
 
     @Value("${app.name:IntelFit}")
     private String appName;
+
+    /**
+     * 이메일 설정 유효성 검증
+     */
+    private void validateEmailConfig() {
+        if (fromEmail == null || fromEmail.trim().isEmpty()) {
+            log.error("이메일 발송 설정이 올바르지 않습니다. SPRING_MAIL_USERNAME 환경변수를 확인해주세요.");
+            throw new IllegalStateException("이메일 발송 설정이 완료되지 않았습니다");
+        }
+    }
 
     /**
      * 이메일 도메인 검증 (Gmail, Naver만 허용)
@@ -39,6 +49,9 @@ public class EmailService {
      */
     @Async
     public void sendVerificationCode(String toEmail, String verificationCode) {
+        // 이메일 설정 검증
+        validateEmailConfig();
+
         // 도메인 검증
         if (!isValidEmailDomain(toEmail)) {
             log.error("지원하지 않는 이메일 도메인 - 수신자: {}", toEmail);
@@ -70,6 +83,9 @@ public class EmailService {
      */
     @Async
     public void sendTempPassword(String toEmail, String tempPassword) {
+        // 이메일 설정 검증
+        validateEmailConfig();
+
         // 도메인 검증
         if (!isValidEmailDomain(toEmail)) {
             log.error("지원하지 않는 이메일 도메인 - 수신자: {}", toEmail);
@@ -101,6 +117,9 @@ public class EmailService {
      */
     @Async
     public void sendUserId(String toEmail, String userId) {
+        // 이메일 설정 검증
+        validateEmailConfig();
+
         // 도메인 검증
         if (!isValidEmailDomain(toEmail)) {
             log.error("지원하지 않는 이메일 도메인 - 수신자: {}", toEmail);
