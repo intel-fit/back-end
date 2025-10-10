@@ -270,7 +270,7 @@ jobs:
           host: ${{ env.EC2_HOST }}
           username: ${{ env.EC2_USER }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
-          source: "image.tar.gz,docker-compose.yml,.env,deploy.sh"
+          source: "image.tar.gz,compose.yaml,.env,deploy.sh"
           target: "/home/ubuntu/back-end"
           overwrite: true
 
