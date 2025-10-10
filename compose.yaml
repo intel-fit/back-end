@@ -43,7 +43,7 @@ services:
     container_name: spring-app
     restart: always
     env_file:
-      - .env
+      - .env   # ✅ 이것만 두면 충분함
     depends_on:
       mysql:
         condition: service_healthy
@@ -53,22 +53,10 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_OPTS: "-Xms512m -Xmx1024m"
       TZ: Asia/Seoul
-      # 데이터베이스 연결 정보
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/intelfit?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: Admin123!
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
-      # ✅ 추가: 이메일 설정 환경변수
-      SPRING_MAIL_HOST: ${SPRING_MAIL_HOST}
-      SPRING_MAIL_PORT: ${SPRING_MAIL_PORT}
-      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME}
-      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD}
-      # ✅ 추가: JWT 설정
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_ACCESS_TOKEN_EXPIRATION: ${JWT_ACCESS_TOKEN_EXPIRATION}
-      JWT_REFRESH_TOKEN_EXPIRATION: ${JWT_REFRESH_TOKEN_EXPIRATION}
-      # ✅ 추가: 앱 이름
-      APP_NAME: ${APP_NAME}
     ports:
       - "80:8080"
     healthcheck:

@@ -1,9 +1,14 @@
+
 server:
   port: 8081
 
 spring:
+  config:
+    activate:
+      on-profile: default   # ✅ 이 파일은 기본 프로필용
   application:
     name: intelfit
+
 
   datasource:
     url: jdbc:mysql://localhost:3306/intelfit?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true

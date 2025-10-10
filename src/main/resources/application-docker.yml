@@ -2,8 +2,12 @@ server:
   port: 8080
 
 spring:
+  config:
+    activate:
+      on-profile: docker    # ✅ 이 파일은 docker 프로필용
   application:
     name: intelfit
+
 
   datasource:
     url: jdbc:mysql://mysql:3306/intelfit?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&autoReconnect=true
