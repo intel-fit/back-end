@@ -1,16 +1,15 @@
 package rto.intelfit.config;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 
 import java.util.Properties;
 
 @Configuration
-@Lazy
 public class EmailConfig {
 
     @Value("${spring.mail.host}")
@@ -26,6 +25,7 @@ public class EmailConfig {
     private String password;
 
     @Bean
+    @ConditionalOnProperty(name = "spring.mail.username")
     public JavaMailSender javaMailSender() {
         JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
         mailSender.setHost(host);
