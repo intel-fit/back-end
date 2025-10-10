@@ -42,6 +42,8 @@ services:
     image: intelfit-backend:latest
     container_name: spring-app
     restart: always
+    env_file:
+      - .env
     depends_on:
       mysql:
         condition: service_healthy
