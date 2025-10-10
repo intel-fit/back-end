@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import rto.intelfit.domain.User;
+import rto.intelfit.validation.ValidEmailDomain;
 
 import jakarta.validation.constraints.*;
 import java.time.LocalDate;
@@ -30,10 +31,11 @@ public class SignUpDto {
         @Size(max = 50, message = "이름은 50자 이내로 입력해주세요")
         private String name;
 
-        @Schema(description = "이메일", example = "lkmm1108@gmail.com")
+        @Schema(description = "이메일 (Gmail 또는 Naver만 가능)", example = "lkmm1108@gmail.com") // ✅ 수정
         @NotBlank(message = "이메일을 입력해주세요")
         @Email(message = "올바른 이메일 형식이 아닙니다")
         @Size(max = 50, message = "이메일은 50자 이내로 입력해주세요")
+        @ValidEmailDomain(message = "Gmail 또는 Naver 이메일만 사용 가능합니다") // ✅ 추가
         private String email;
 
         @Schema(description = "비밀번호", example = "password123!")
@@ -132,9 +134,10 @@ public class SignUpDto {
     @Schema(description = "이메일 인증코드 발송 요청")
     public static class EmailVerificationRequest {
 
-        @Schema(description = "이메일", example = "lkmm1108@gmail.com")
+        @Schema(description = "이메일 (Gmail 또는 Naver만 가능)", example = "lkmm1108@gmail.com") // ✅ 수정
         @NotBlank(message = "이메일을 입력해주세요")
         @Email(message = "올바른 이메일 형식이 아닙니다")
+        @ValidEmailDomain(message = "Gmail 또는 Naver 이메일만 사용 가능합니다") // ✅ 추가
         private String email;
     }
 

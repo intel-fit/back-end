@@ -29,6 +29,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final RedisTemplate<String, String> redisTemplate;
     private final JwtUtil jwtUtil;
+    private final EmailService emailService; // ✅ 추가: 이메일 서비스
 
     @Value("${jwt.access-token-expiration:3600000}")
     private long accessTokenExpiration;
@@ -118,6 +119,7 @@ public class UserService {
                 .build();
     }
 
+    @Transactional
     public SignUpDto.EmailVerificationResponse sendEmailVerificationCode(String email) {
         // 인증코드 생성
         String verificationCode = generateVerificationCode();
@@ -126,8 +128,15 @@ public class UserService {
         String key = EMAIL_VERIFICATION_PREFIX + email;
         redisTemplate.opsForValue().set(key, verificationCode, VERIFICATION_CODE_EXPIRE_MINUTES, TimeUnit.MINUTES);
 
-        // TODO: 실제 이메일 발송 로직 구현 예정
-        log.info("이메일 인증코드 발송 - 이메일: {}, 인증코드: {}", email, verificationCode);
+        // ✅ 수정: 실제 이메일 발송 (비동기)
+        try {
+            emailService.sendVerificationCode(email, verificationCode);
+            log.info("이메일 인증코드 발송 성공 - 이메일: {}, 인증코드: {}", email, verificationCode);
+        } catch (Exception e) {
+            log.error("이메일 인증코드 발송 실패 - 이메일: {}, 에러: {}", email, e.getMessage(), e);
+            // Redis에 저장은 되었으므로 에러를 던지지 않고 계속 진행
+            // 사용자에게는 발송되었다고 응답하지만, 로그로 문제를 추적
+        }
 
         return SignUpDto.EmailVerificationResponse.builder()
                 .success(true)
@@ -135,6 +144,7 @@ public class UserService {
                 .build();
     }
 
+    @Transactional
     public LoginDto.Response login(LoginDto.Request request) {
         // 사용자 조회
         User user = userRepository.findByUserId(request.getUserId())
@@ -167,6 +177,7 @@ public class UserService {
                 .build();
     }
 
+    @Transactional
     public LoginDto.LogoutResponse logout(LoginDto.LogoutRequest request) {
         String accessToken = request.getAccessToken();
 
@@ -192,6 +203,7 @@ public class UserService {
                 .build();
     }
 
+    @Transactional
     public LoginDto.TokenRefreshResponse refreshToken(LoginDto.TokenRefreshRequest request) {
         String refreshToken = request.getRefreshToken();
 
@@ -228,6 +240,7 @@ public class UserService {
                 .build();
     }
 
+    @Transactional
     public LoginDto.FindUserIdResponse findUserId(String email) {
         // 이메일로 사용자 조회
         User user = userRepository.findByEmail(email)
@@ -236,8 +249,14 @@ public class UserService {
         // 아이디 마스킹 처리
         String maskedUserId = maskUserId(user.getUserId());
 
-        // TODO: 실제 이메일 발송 로직 구현 예정
-        log.info("아이디 찾기 - 이메일: {}, 아이디: {}", email, user.getUserId());
+        // ✅ 수정: 실제 이메일 발송 (비동기)
+        try {
+            emailService.sendUserId(email, user.getUserId());
+            log.info("아이디 찾기 이메일 발송 성공 - 이메일: {}, 아이디: {}", email, user.getUserId());
+        } catch (Exception e) {
+            log.error("아이디 찾기 이메일 발송 실패 - 이메일: {}, 에러: {}", email, e.getMessage(), e);
+            // 마스킹된 아이디는 응답으로 보내므로 에러를 던지지 않음
+        }
 
         return LoginDto.FindUserIdResponse.builder()
                 .success(true)
@@ -259,8 +278,14 @@ public class UserService {
         String key = TEMP_PASSWORD_PREFIX + email;
         redisTemplate.opsForValue().set(key, tempPassword, TEMP_PASSWORD_EXPIRE_MINUTES, TimeUnit.MINUTES);
 
-        // TODO: 실제 이메일 발송 로직 구현 예정
-        log.info("임시 비밀번호 발송 - 이메일: {}, 임시 비밀번호: {}", email, tempPassword);
+        // ✅ 수정: 실제 이메일 발송 (비동기)
+        try {
+            emailService.sendTempPassword(email, tempPassword);
+            log.info("임시 비밀번호 이메일 발송 성공 - 이메일: {}, 임시 비밀번호: {}", email, tempPassword);
+        } catch (Exception e) {
+            log.error("임시 비밀번호 이메일 발송 실패 - 이메일: {}, 에러: {}", email, e.getMessage(), e);
+            // Redis에 저장은 되었으므로 에러를 던지지 않음
+        }
 
         return LoginDto.PasswordResetResponse.builder()
                 .success(true)
@@ -282,12 +307,14 @@ public class UserService {
         // Redis에서 패턴 매칭으로 모든 임시 비밀번호 키 검색
         Set<String> keys = redisTemplate.keys(tempPasswordPrefix);
 
-        for (String key : keys) {
-            String storedTempPassword = redisTemplate.opsForValue().get(key);
-            if (request.getTempPassword().equals(storedTempPassword)) {
-                // 키에서 이메일 추출 (temp_password: 제거)
-                userEmail = key.substring(TEMP_PASSWORD_PREFIX.length());
-                break;
+        if (keys != null) {
+            for (String key : keys) {
+                String storedTempPassword = redisTemplate.opsForValue().get(key);
+                if (request.getTempPassword().equals(storedTempPassword)) {
+                    // 키에서 이메일 추출 (temp_password: 제거)
+                    userEmail = key.substring(TEMP_PASSWORD_PREFIX.length());
+                    break;
+                }
             }
         }
 

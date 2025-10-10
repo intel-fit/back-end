@@ -41,6 +41,23 @@ spring:
           max-idle: 8
           min-idle: 0
 
+  # 이메일 설정
+  mail:
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME}
+    password: ${SPRING_MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          timeout: 5000
+          connectiontimeout: 5000
+        debug: false
+
 management:
   endpoints:
     web:
@@ -73,8 +90,13 @@ logging:
     rto.intelfit: INFO
     org.springframework.web: INFO
     org.hibernate: WARN
+    org.springframework.mail: INFO
 
 jwt:
   secret: ${JWT_SECRET:intelfit-jwt-secret-key-for-production-use-minimum-32-characters-long-2024}
   access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:3600000}
   refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:604800000}
+
+# 앱 설정
+app:
+  name: IntelFit
