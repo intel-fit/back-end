@@ -137,7 +137,7 @@ jobs:
       - name: Create Caddyfile
         run: |
           cat > Caddyfile << 'EOF'
-          intelfit.com, www.intelfit.com {
+          intelfits.com, www.intelfits.com {
               reverse_proxy spring-app:8080
           }
           
@@ -255,8 +255,8 @@ jobs:
                   docker-compose ps
                   log "🌐 애플리케이션 접속 정보:"
                   echo "   - HTTP (IP): http://15.165.68.196/"
-                  echo "   - HTTPS: https://intelfit.com (도메인 설정 시)"
-                  echo "   - HTTPS: https://www.intelfit.com (도메인 설정 시)"
+                  echo "   - HTTPS: https://intelfits.com (도메인 설정 시)"
+                  echo "   - HTTPS: https://www.intelfits.com (도메인 설정 시)"
                   echo "   - Swagger UI: http://15.165.68.196/swagger-ui.html"
                   echo "   - Health Check: http://15.165.68.196/actuator/health"
                   log "🎉 배포가 성공적으로 완료되었습니다!"
@@ -335,7 +335,7 @@ jobs:
               echo ""
               echo "🌐 서비스 접속 정보:"
               echo "  - HTTP (IP): http://15.165.68.196/"
-              echo "  - HTTPS: https://intelfit.com (도메인 연결 시)"
+              echo "  - HTTPS: https://intelfits.com (도메인 연결 시)"
               echo "  - Swagger UI: http://15.165.68.196/swagger-ui.html"
               echo ""
               echo "🎉 IntelFit 백엔드가 성공적으로 배포되었습니다!"
