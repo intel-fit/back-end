@@ -42,6 +42,10 @@ public class Exercise {
     @Column(name = "sets")
     private Integer sets;
 
+    /** ✅ 계산된 칼로리 (운동 수행 시 소모 칼로리 kcal 단위) */
+    @Column(name = "calories")
+    private Double calories;
+
     /** ✅ 생성, 수정시간 자동기록 */
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

@@ -126,4 +126,90 @@ public class ExerciseDto {
         @Schema(description = "메시지", example = "운동이 삭제되었습니다.")
         private String message;
     }
+
+    // ==================== 외부 WGER 운동 응답 ====================
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "WGER 운동 리스트 응답 DTO")
+    public static class WgerResponse {
+
+        @Schema(description = "운동 ID", example = "73")
+        private Long id; // ✅ 추가됨
+
+        @Schema(description = "운동 이름", example = "Bench Press")
+        private String name;
+
+        @Schema(description = "운동 부위", example = "Chest")
+        private String category;
+
+        @Schema(description = "운동 이미지 URL")
+        private String imageUrl;
+    }
+
+    // ==================== 운동 칼로리 계산 요청 ====================
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    @Schema(description = "운동 칼로리 계산 요청 DTO")
+    public static class CalorieRequest {
+
+        @Schema(description = "사용자 ID", example = "3")
+        @NotNull(message = "사용자 ID는 필수입니다.")
+        private Long userId;
+
+        @Schema(description = "WGER 운동 ID", example = "73")
+        @NotNull(message = "운동 ID는 필수입니다.")
+        private Long exerciseId; // ✅ 오타 수정 + 역할 명확화
+
+        @Schema(description = "세트 수", example = "3")
+        @Min(value = 1, message = "세트 수는 1 이상이어야 합니다.")
+        private Integer sets;
+
+        @Schema(description = "반복 횟수", example = "12")
+        @Min(value = 1, message = "반복 횟수는 1 이상이어야 합니다.")
+        private Integer reps;
+
+        @Schema(description = "중량 (kg)", example = "60.5")
+        @DecimalMin(value = "0.0", message = "중량은 0 이상이어야 합니다.")
+        private Double weight;
+    }
+
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "WGER 운동 상세 정보 응답 DTO")
+    public static class WgerDetailResponse {
+        private Long id;
+        private String name;
+        private String description;
+        private String category;
+        private String imageUrl;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    @Schema(description = "운동 칼로리 계산 응답 DTO")
+    public static class CalorieResponse {
+
+        @Schema(description = "운동 이름", example = "Bench Press")
+        private String exerciseName;
+
+        @Schema(description = "운동 부위", example = "Chest")
+        private String category;
+
+        @Schema(description = "소모 칼로리 (kcal)", example = "42.5")
+        private double totalCalories;
+
+        @Schema(description = "저장 성공 여부", example = "true")
+        private boolean saved;
+    }
+
+
 }

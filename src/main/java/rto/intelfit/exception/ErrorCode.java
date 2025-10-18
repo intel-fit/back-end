@@ -31,8 +31,6 @@ public enum ErrorCode {
     TOKEN_NOT_FOUND(HttpStatus.UNAUTHORIZED, "JWT_005", "토큰이 제공되지 않았습니다"),
     BLACKLISTED_TOKEN(HttpStatus.UNAUTHORIZED, "JWT_006", "블랙리스트에 등록된 토큰입니다"),
 
-<<<<<<< Updated upstream
-=======
     // 인바디 관련 에러
     INBODY_NOT_FOUND(HttpStatus.NOT_FOUND, "INBODY_001", "인바디 기록을 찾을 수 없습니다"),
     INBODY_NO_RECORDS(HttpStatus.NOT_FOUND, "INBODY_002", "인바디 기록이 없습니다"),
@@ -43,7 +41,6 @@ public enum ErrorCode {
 
     //운동 종목 관련 에러
     EXERCISE_NOT_FOUND(HttpStatus.NOT_FOUND, "EXERCISE_001" ,"운동을 찾을 수 없습니다."),
->>>>>>> Stashed changes
     // 일반적인 에러
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "COMMON_001", "올바르지 않은 입력값입니다"),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_002", "서버 내부 오류가 발생했습니다"),

@@ -8,4 +8,5 @@ import java.util.List;
 
 public interface ExerciseRepository extends JpaRepository<Exercise, Long> {
     List<Exercise> findByUser(User user);
+    List<Exercise> findByUserOrderByCreatedAtDesc(User user); // 정렬하기
 }
