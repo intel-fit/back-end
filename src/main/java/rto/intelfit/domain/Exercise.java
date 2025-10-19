@@ -15,24 +15,26 @@ import java.time.LocalDateTime;
 @Builder
 public class Exercise {
 
+    /** 기본키, 자동 증가 */
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)  // MySQL의 AUTO_INCREMENT 방식
+    @Column(name = "id", updatable = false, nullable = false)
     private Long id;
 
-    /** ✅ User와 N:1 관계 (외래키 user_id → users.id) */
+    /** User와 N:1 관계 (외래키 user_id → users.id) */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    /** ✅ 운동명 (예: 벤치프레스, 스쿼트) */
+    /** 운동명 (예: 벤치프레스, 스쿼트) */
     @Column(name = "exercise_name", nullable = false, length = 100)
     private String exerciseName;
 
-    /** ✅ 운동 부위 (예: 가슴, 등, 하체 등) */
+    /** 운동 부위 (예: 가슴, 등, 하체 등) */
     @Column(name = "category", length = 50)
     private String category;
 
-    /** ✅ 중량, 횟수, 세트 */
+    /** 중량, 횟수, 세트 */
     @Column(name = "weight")
     private Double weight;
 
