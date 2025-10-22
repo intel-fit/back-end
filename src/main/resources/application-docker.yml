@@ -4,10 +4,9 @@ server:
 spring:
   config:
     activate:
-      on-profile: docker    # ✅ 이 파일은 docker 프로필용
+      on-profile: docker
   application:
     name: intelfit
-
 
   datasource:
     url: jdbc:mysql://mysql:3306/intelfit?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&autoReconnect=true
@@ -62,6 +61,13 @@ spring:
           connectiontimeout: 5000
         debug: false
 
+  # 파일 업로드 설정
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+
 management:
   endpoints:
     web:
@@ -100,6 +106,15 @@ jwt:
   secret: ${JWT_SECRET:intelfit-jwt-secret-key-for-production-use-minimum-32-characters-long-2024}
   access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:3600000}
   refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:604800000}
+
+# AI 서버 설정
+ai:
+  server:
+    url: ${AI_SERVER_URL:http://ai-server:8000}
+    api-key: ${AI_SERVER_API_KEY:}
+    timeout:
+      connect: 5000
+      read: 30000
 
 # 앱 설정
 app:

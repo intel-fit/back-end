@@ -4,10 +4,9 @@ server:
 spring:
   config:
     activate:
-      on-profile: default   # ✅ 이 파일은 기본 프로필용
+      on-profile: default
   application:
     name: intelfit
-
 
   datasource:
     url: jdbc:mysql://localhost:3306/intelfit?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
@@ -41,10 +40,10 @@ spring:
 
   # 이메일 설정
   mail:
-    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    host: ${SPRING_MAIL_HOST:smtp.naver.com}
     port: ${SPRING_MAIL_PORT:587}
-    username: ${SPRING_MAIL_USERNAME:}
-    password: ${SPRING_MAIL_PASSWORD:}
+    username: lkmm1108@naver.com
+    password: 7BJRP2P6F2LF
     properties:
       mail:
         smtp:
@@ -55,6 +54,13 @@ spring:
           timeout: 5000
           connectiontimeout: 5000
         debug: false
+
+  # 파일 업로드 설정 (AI 이미지 분석용)
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
 
 management:
   endpoints:
@@ -87,6 +93,15 @@ jwt:
   secret: mySecretKeyForJwtTokenGenerationAndValidation1234567890
   access-token-expiration: 3600000
   refresh-token-expiration: 604800000
+
+# AI 서버 설정
+ai:
+  server:
+    url: ${AI_SERVER_URL:http://localhost:8000}
+    api-key: ${AI_SERVER_API_KEY:}
+    timeout:
+      connect: 5000
+      read: 30000
 
 # 앱 설정
 app:
