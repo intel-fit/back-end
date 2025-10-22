@@ -133,14 +133,13 @@ jobs:
           APP_NAME=IntelFit
           EOF
 
-      # Caddyfile 추가
       - name: Create Caddyfile
         run: |
           cat > Caddyfile << 'EOF'
           intelfits.com, www.intelfits.com {
               reverse_proxy spring-app:8080
           }
-          
+
           :80 {
               respond /health "OK" 200
               reverse_proxy spring-app:8080
@@ -158,7 +157,8 @@ jobs:
           YELLOW='\033[1;33m'
           BLUE='\033[0;34m'
           NC='\033[0m'
-           # 🚀 docker compose 감지 및 호환 설정
+
+          # 🚀 docker compose 감지 및 호환 설정
           if ! docker compose version &> /dev/null && command -v docker-compose &> /dev/null; then
               alias docker-compose='docker compose'
           fi
@@ -203,13 +203,13 @@ jobs:
           fi
 
           log "🔄 전체 서비스 스택을 재시작합니다..."
-          docker-compose down --remove-orphans || warn "일부 서비스 종료 중 문제가 발생했습니다 (무시)"
+          docker compose down --remove-orphans || warn "일부 서비스 종료 중 문제가 발생했습니다 (무시)"
 
           log "🧹 사용하지 않는 이미지를 정리합니다..."
           docker image prune -f || warn "이미지 정리 중 문제가 발생했습니다 (무시)"
 
           log "🌟 새 서비스 스택을 시작합니다..."
-          docker-compose up -d
+          docker compose up -d
 
           log "⏳ 컨테이너 시작을 대기합니다..."
           sleep 20
@@ -236,7 +236,6 @@ jobs:
               sleep 1
           done
 
-          # Caddy 체크 추가
           if docker ps | grep -q caddy; then
               log "✅ Caddy 프록시가 실행 중입니다."
           fi
@@ -246,17 +245,17 @@ jobs:
 
           while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
               ATTEMPT=$((ATTEMPT + 1))
-          
+
               if ! docker ps | grep -q $CONTAINER_NAME; then
                   error "컨테이너가 실행되지 않습니다!"
                   docker logs --tail 50 $CONTAINER_NAME
                   exit 1
               fi
-          
+
               if docker exec $CONTAINER_NAME curl -sf http://localhost:8080/actuator/health > /dev/null 2>&1; then
                   log "✅ 헬스체크 성공! 애플리케이션이 정상 동작합니다."
                   log "📊 현재 서비스 상태:"
-                  docker-compose ps
+                  docker compose ps
                   log "🌐 애플리케이션 접속 정보:"
                   echo "   - HTTP (IP): http://43.200.173.74/"
                   echo "   - HTTPS: https://intelfits.com (도메인 설정 시)"
@@ -279,7 +278,7 @@ jobs:
           error "최근 로그를 확인해주세요:"
           docker logs --tail 100 $CONTAINER_NAME
           error "전체 서비스 상태:"
-          docker-compose ps
+          docker compose ps
           error "컨테이너 상태 상세 정보:"
           docker inspect $CONTAINER_NAME --format='{{.State.Status}}: {{.State.Error}}'
           exit 1
@@ -292,7 +291,7 @@ jobs:
           host: ${{ env.EC2_HOST }}
           username: ${{ env.EC2_USER }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
-          source: "image.tar.gz,compose.yaml,.env,deploy.sh,Caddyfile"  # Caddyfile 추가
+          source: "image.tar.gz,compose.yaml,.env,deploy.sh,Caddyfile"
           target: "/home/ubuntu/back-end"
           overwrite: true
 
@@ -304,17 +303,17 @@ jobs:
           key: ${{ secrets.EC2_PRIVATE_KEY }}
           script: |
             cd /home/ubuntu/back-end
-            
+
             echo "🚀 EC2 배포 프로세스를 시작합니다..."
-            
+
             echo "📦 Docker 이미지를 로드합니다..."
             docker load < image.tar.gz
             rm image.tar.gz
             echo "✅ Docker 이미지 로드 완료"
-            
+
             echo "🔍 현재 Docker 이미지 목록:"
             docker images | grep -E "REPOSITORY|intelfit"
-            
+
             echo "🎯 배포 스크립트를 실행합니다..."
             chmod +x deploy.sh
             ./deploy.sh
@@ -328,9 +327,9 @@ jobs:
           script: |
             echo "🔍 최종 배포 검증을 시작합니다..."
             cd /home/ubuntu/back-end
-            
+
             sleep 15
-            
+
             if curl -sf http://localhost/actuator/health > /dev/null; then
               echo "✅ 최종 배포 검증 성공!"
               echo ""
