@@ -8,7 +8,7 @@ on:
 
 env:
   DOCKER_IMAGE: intelfit-backend
-  EC2_HOST: 15.165.68.196
+  EC2_HOST: 43.200.173.74
   EC2_USER: ubuntu
 
 jobs:
@@ -254,11 +254,11 @@ jobs:
                   log "📊 현재 서비스 상태:"
                   docker-compose ps
                   log "🌐 애플리케이션 접속 정보:"
-                  echo "   - HTTP (IP): http://15.165.68.196/"
+                  echo "   - HTTP (IP): http://43.200.173.74/"
                   echo "   - HTTPS: https://intelfits.com (도메인 설정 시)"
                   echo "   - HTTPS: https://www.intelfits.com (도메인 설정 시)"
-                  echo "   - Swagger UI: http://15.165.68.196/swagger-ui.html"
-                  echo "   - Health Check: http://15.165.68.196/actuator/health"
+                  echo "   - Swagger UI: http://43.200.173.74/swagger-ui.html"
+                  echo "   - Health Check: http://43.200.173.74/actuator/health"
                   log "🎉 배포가 성공적으로 완료되었습니다!"
                   exit 0
               else
