@@ -127,7 +127,7 @@ public class InBodyService {
                 .build();
     }
 
-    // ==================== Private 메서드 ====================
+    //private 메서드
 
     private User findUserByPrincipal(CustomUserPrincipal userPrincipal) {
         return userRepository.findByUserId(userPrincipal.getUserId())
