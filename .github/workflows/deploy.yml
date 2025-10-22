@@ -1,4 +1,3 @@
-# .github/workflows/deploy.yml
 name: CI/CD Pipeline
 
 on:
@@ -9,7 +8,7 @@ on:
 
 env:
   DOCKER_IMAGE: intelfit-backend
-  EC2_HOST: 15.165.68.196  # 여기에 실제 EC2 Public IP 입력
+  EC2_HOST: 15.165.68.196
   EC2_USER: ubuntu
 
 jobs:
@@ -21,13 +20,13 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: Admin123!
-          MYSQL_DATABASE: intelfit_test
+          MYSQL_DATABASE: intelfit
         ports:
           - 3306:3306
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
       redis:
-        image: redis:7.2
+        image: redis:7.2-alpine
         ports:
           - 6379:6379
         options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
@@ -46,6 +45,11 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Refresh dependencies and verify Gradle version
+        run: |
+          ./gradlew --version
+          ./gradlew clean --refresh-dependencies --no-daemon
+
       - name: Wait for MySQL to be ready
         run: |
           until mysqladmin ping -h 127.0.0.1 -u root -pAdmin123! --silent; do
@@ -54,13 +58,19 @@ jobs:
           done
 
       - name: Run tests
-        run: ./gradlew test
+        run: ./gradlew test --no-daemon --refresh-dependencies
         env:
-          SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/intelfit_test?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
+          SPRING_PROFILES_ACTIVE: test
+          SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/intelfit?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
           SPRING_DATASOURCE_USERNAME: root
           SPRING_DATASOURCE_PASSWORD: Admin123!
           SPRING_DATA_REDIS_HOST: localhost
           SPRING_DATA_REDIS_PORT: 6379
+          JWT_SECRET: intelfit-jwt-secret-key-for-production-use-minimum-32-characters-long-2024
+          SPRING_MAIL_HOST: smtp.naver.com
+          SPRING_MAIL_PORT: 587
+          SPRING_MAIL_USERNAME: test@test.com
+          SPRING_MAIL_PASSWORD: test-password
 
   build-and-deploy:
     needs: test
@@ -76,12 +86,201 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t ${{ env.DOCKER_IMAGE }}:${{ github.sha }} .
+          echo "🔧 Building Docker image with no cache to ensure latest dependencies..."
+          docker build --no-cache --pull -t ${{ env.DOCKER_IMAGE }}:${{ github.sha }} .
           docker tag ${{ env.DOCKER_IMAGE }}:${{ github.sha }} ${{ env.DOCKER_IMAGE }}:latest
+          echo "✅ Docker image built successfully"
 
       - name: Save Docker image
         run: |
+          echo "📦 Saving Docker image..."
           docker save ${{ env.DOCKER_IMAGE }}:latest | gzip > image.tar.gz
+          ls -lh image.tar.gz
+
+      - name: Create .env file with secrets
+        run: |
+          cat > .env << EOF
+          # MySQL 설정
+          MYSQL_DATABASE=intelfit
+          MYSQL_ROOT_PASSWORD=Admin123!
+
+          # Spring Boot 환경변수
+          SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/intelfit?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
+          SPRING_DATASOURCE_USERNAME=root
+          SPRING_DATASOURCE_PASSWORD=Admin123!
+          SPRING_JPA_HIBERNATE_DDL_AUTO=update
+          SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.MySQL8Dialect
+
+          # Redis
+          SPRING_DATA_REDIS_HOST=redis
+          SPRING_DATA_REDIS_PORT=6379
+
+          # Server Port
+          SERVER_PORT=8080
+
+          # JWT 설정
+          JWT_SECRET=intelfit-jwt-secret-key-for-production-use-minimum-32-characters-long-2024
+          JWT_ACCESS_TOKEN_EXPIRATION=3600000
+          JWT_REFRESH_TOKEN_EXPIRATION=604800000
+
+          # 이메일 설정 (Naver)
+          SPRING_MAIL_HOST=smtp.naver.com
+          SPRING_MAIL_PORT=587
+          SPRING_MAIL_USERNAME=${{ secrets.SPRING_MAIL_USERNAME }}
+          SPRING_MAIL_PASSWORD=${{ secrets.SPRING_MAIL_PASSWORD }}
+
+          # 애플리케이션 설정
+          APP_NAME=IntelFit
+          EOF
+
+      # Caddyfile 추가
+      - name: Create Caddyfile
+        run: |
+          cat > Caddyfile << 'EOF'
+          intelfits.com, www.intelfits.com {
+              reverse_proxy spring-app:8080
+          }
+          
+          :80 {
+              respond /health "OK" 200
+              reverse_proxy spring-app:8080
+          }
+          EOF
+
+      - name: Create deploy.sh
+        run: |
+          cat > deploy.sh << 'EOF'
+          #!/bin/bash
+
+          # 색상 코드
+          RED='\033[0;31m'
+          GREEN='\033[0;32m'
+          YELLOW='\033[1;33m'
+          BLUE='\033[0;34m'
+          NC='\033[0m'
+
+          # 로그 함수
+          log() {
+              echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')]${NC} 📝 $1"
+          }
+
+          error() {
+              echo -e "${RED}[$(date '+%Y-%m-%d %H:%M:%S')]${NC} ❌ $1"
+          }
+
+          warn() {
+              echo -e "${YELLOW}[$(date '+%Y-%m-%d %H:%M:%S')]${NC} ⚠️ $1"
+          }
+
+          info() {
+              echo -e "${BLUE}[$(date '+%Y-%m-%d %H:%M:%S')]${NC} ℹ️ $1"
+          }
+
+          # 배포 설정
+          DOCKER_IMAGE="intelfit-backend:latest"
+          CONTAINER_NAME="spring-app"
+          MAX_ATTEMPTS=40
+          HEALTH_CHECK_INTERVAL=10
+
+          set -e
+
+          log "🚀 IntelFit 백엔드 배포를 시작합니다..."
+          log "📦 이미지: $DOCKER_IMAGE"
+          log "🏷️ 컨테이너: $CONTAINER_NAME"
+
+          if [ "$(docker ps -q -f name=$CONTAINER_NAME)" ]; then
+              warn "기존 컨테이너가 실행 중입니다."
+              log "기존 컨테이너를 안전하게 종료합니다..."
+              docker stop $CONTAINER_NAME --time=30 || true
+              docker rm $CONTAINER_NAME -f || true
+              log "✅ 기존 컨테이너가 종료되었습니다."
+          else
+              info "실행 중인 컨테이너가 없습니다."
+          fi
+
+          log "🔄 전체 서비스 스택을 재시작합니다..."
+          docker-compose down --remove-orphans || warn "일부 서비스 종료 중 문제가 발생했습니다 (무시)"
+
+          log "🧹 사용하지 않는 이미지를 정리합니다..."
+          docker image prune -f || warn "이미지 정리 중 문제가 발생했습니다 (무시)"
+
+          log "🌟 새 서비스 스택을 시작합니다..."
+          docker-compose up -d
+
+          log "⏳ 컨테이너 시작을 대기합니다..."
+          sleep 20
+
+          log "🔍 MySQL 연결을 확인합니다..."
+          MYSQL_ATTEMPTS=0
+          while [ $MYSQL_ATTEMPTS -lt 30 ]; do
+              if docker exec mysql mysqladmin ping -h localhost -u root -pAdmin123! --silent 2>/dev/null; then
+                  log "✅ MySQL이 준비되었습니다."
+                  break
+              fi
+              MYSQL_ATTEMPTS=$((MYSQL_ATTEMPTS + 1))
+              sleep 2
+          done
+
+          log "🔍 Redis 연결을 확인합니다..."
+          REDIS_ATTEMPTS=0
+          while [ $REDIS_ATTEMPTS -lt 20 ]; do
+              if docker exec redis redis-cli ping > /dev/null 2>&1; then
+                  log "✅ Redis가 준비되었습니다."
+                  break
+              fi
+              REDIS_ATTEMPTS=$((REDIS_ATTEMPTS + 1))
+              sleep 1
+          done
+
+          # Caddy 체크 추가
+          if docker ps | grep -q caddy; then
+              log "✅ Caddy 프록시가 실행 중입니다."
+          fi
+
+          log "🏥 Spring Boot 애플리케이션 헬스체크를 시작합니다..."
+          ATTEMPT=0
+
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+              ATTEMPT=$((ATTEMPT + 1))
+          
+              if ! docker ps | grep -q $CONTAINER_NAME; then
+                  error "컨테이너가 실행되지 않습니다!"
+                  docker logs --tail 50 $CONTAINER_NAME
+                  exit 1
+              fi
+          
+              if docker exec $CONTAINER_NAME curl -sf http://localhost:8080/actuator/health > /dev/null 2>&1; then
+                  log "✅ 헬스체크 성공! 애플리케이션이 정상 동작합니다."
+                  log "📊 현재 서비스 상태:"
+                  docker-compose ps
+                  log "🌐 애플리케이션 접속 정보:"
+                  echo "   - HTTP (IP): http://15.165.68.196/"
+                  echo "   - HTTPS: https://intelfits.com (도메인 설정 시)"
+                  echo "   - HTTPS: https://www.intelfits.com (도메인 설정 시)"
+                  echo "   - Swagger UI: http://15.165.68.196/swagger-ui.html"
+                  echo "   - Health Check: http://15.165.68.196/actuator/health"
+                  log "🎉 배포가 성공적으로 완료되었습니다!"
+                  exit 0
+              else
+                  if [ $((ATTEMPT % 5)) -eq 0 ]; then
+                      warn "헬스체크 대기 중... ($ATTEMPT/$MAX_ATTEMPTS) - $(date '+%H:%M:%S')"
+                      info "최근 로그:"
+                      docker logs --tail 10 $CONTAINER_NAME 2>/dev/null | tail -5 || echo "로그를 가져올 수 없습니다."
+                  fi
+                  sleep $HEALTH_CHECK_INTERVAL
+              fi
+          done
+
+          error "헬스체크 실패: 애플리케이션이 정상적으로 시작되지 않았습니다."
+          error "최근 로그를 확인해주세요:"
+          docker logs --tail 100 $CONTAINER_NAME
+          error "전체 서비스 상태:"
+          docker-compose ps
+          error "컨테이너 상태 상세 정보:"
+          docker inspect $CONTAINER_NAME --format='{{.State.Status}}: {{.State.Error}}'
+          exit 1
+          EOF
+          chmod +x deploy.sh
 
       - name: Copy files to EC2
         uses: appleboy/scp-action@v0.1.7
@@ -89,8 +288,9 @@ jobs:
           host: ${{ env.EC2_HOST }}
           username: ${{ env.EC2_USER }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
-          source: "image.tar.gz,compose.yaml,.env"
+          source: "image.tar.gz,compose.yaml,.env,deploy.sh,Caddyfile"  # Caddyfile 추가
           target: "/home/ubuntu/back-end"
+          overwrite: true
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
@@ -101,29 +301,50 @@ jobs:
           script: |
             cd /home/ubuntu/back-end
             
-            # Docker 이미지 로드
+            echo "🚀 EC2 배포 프로세스를 시작합니다..."
+            
+            echo "📦 Docker 이미지를 로드합니다..."
             docker load < image.tar.gz
             rm image.tar.gz
+            echo "✅ Docker 이미지 로드 완료"
             
-            # 무중단 배포 스크립트 실행
+            echo "🔍 현재 Docker 이미지 목록:"
+            docker images | grep -E "REPOSITORY|intelfit"
+            
+            echo "🎯 배포 스크립트를 실행합니다..."
             chmod +x deploy.sh
             ./deploy.sh
 
-      - name: Health Check
+      - name: Verify Deployment
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ env.EC2_HOST }}
           username: ${{ env.EC2_USER }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
           script: |
-            # 새 컨테이너 헬스체크 (최대 5분 대기)
-            for i in {1..30}; do
-              if curl -f http://localhost/actuator/health; then
-                echo "✅ Health check passed!"
-                exit 0
-              fi
-              echo "⏳ Waiting for application to be ready... ($i/30)"
-              sleep 10
-            done
-            echo "❌ Health check failed!"
-            exit 1
+            echo "🔍 최종 배포 검증을 시작합니다..."
+            cd /home/ubuntu/back-end
+            
+            sleep 15
+            
+            if curl -sf http://localhost/actuator/health > /dev/null; then
+              echo "✅ 최종 배포 검증 성공!"
+              echo ""
+              echo "📊 최종 서비스 상태:"
+              docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+              echo ""
+              echo "🌐 서비스 접속 정보:"
+              echo "  - HTTP (IP): http://15.165.68.196/"
+              echo "  - HTTPS: https://intelfits.com (도메인 연결 시)"
+              echo "  - Swagger UI: http://15.165.68.196/swagger-ui.html"
+              echo ""
+              echo "🎉 IntelFit 백엔드가 성공적으로 배포되었습니다!"
+            else
+              echo "❌ 최종 배포 검증 실패"
+              echo "📋 컨테이너 로그 (마지막 50줄):"
+              docker logs --tail 50 spring-app || echo "로그를 가져올 수 없습니다."
+              echo ""
+              echo "📊 현재 컨테이너 상태:"
+              docker ps -a | grep -E "CONTAINER|spring-app|mysql|redis|caddy"
+              exit 1
+            fi

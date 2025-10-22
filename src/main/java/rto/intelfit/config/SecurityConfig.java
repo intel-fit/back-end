@@ -62,6 +62,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/logout").authenticated()
                         // 인증이 필요한 프로필 API
                         .requestMatchers("/api/profile/**").authenticated()
+                        // 인증이 필요한 인바디 API
+                        .requestMatchers("/api/inbody/**").authenticated()
                         // Swagger UI 및 API 문서
                         .requestMatchers(
                                 "/swagger-ui/**",
@@ -86,7 +88,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(Arrays.asList("*"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
 
