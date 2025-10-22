@@ -8,7 +8,7 @@ on:
 
 env:
   DOCKER_IMAGE: intelfit-backend
-  EC2_HOST: 43.200.173.74
+  EC2_HOST: 43.200.40.140
   EC2_USER: ubuntu
 
 jobs:
