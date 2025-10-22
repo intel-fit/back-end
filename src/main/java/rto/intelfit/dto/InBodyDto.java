@@ -17,7 +17,7 @@ import java.time.Period;
 
 public class InBodyDto {
 
-    // ================d== 등록 요청 ====================
+    // ================d== 등록 요청 ====================d
     @Data
     @Builder
     @NoArgsConstructor
