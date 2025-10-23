@@ -24,3 +24,4 @@ public class RestTemplateConfig {
                 .build();
     }
 }
+    //추후 설계
