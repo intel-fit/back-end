@@ -97,55 +97,6 @@ jobs:
           docker save ${{ env.DOCKER_IMAGE }}:latest | gzip > image.tar.gz
           ls -lh image.tar.gz
 
-      - name: Create .env file with secrets
-        run: |
-          cat > .env << EOF
-          # MySQL 설정
-          MYSQL_DATABASE=intelfit
-          MYSQL_ROOT_PASSWORD=Admin123!
-
-          # Spring Boot 환경변수
-          SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/intelfit?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
-          SPRING_DATASOURCE_USERNAME=root
-          SPRING_DATASOURCE_PASSWORD=Admin123!
-          SPRING_JPA_HIBERNATE_DDL_AUTO=update
-          SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.MySQL8Dialect
-
-          # Redis
-          SPRING_DATA_REDIS_HOST=redis
-          SPRING_DATA_REDIS_PORT=6379
-
-          # Server Port
-          SERVER_PORT=8080
-
-          # JWT 설정
-          JWT_SECRET=intelfit-jwt-secret-key-for-production-use-minimum-32-characters-long-2024
-          JWT_ACCESS_TOKEN_EXPIRATION=3600000
-          JWT_REFRESH_TOKEN_EXPIRATION=604800000
-
-          # 이메일 설정 (Naver)
-          SPRING_MAIL_HOST=smtp.naver.com
-          SPRING_MAIL_PORT=587
-          SPRING_MAIL_USERNAME=${{ secrets.SPRING_MAIL_USERNAME }}
-          SPRING_MAIL_PASSWORD=${{ secrets.SPRING_MAIL_PASSWORD }}
-
-          # 애플리케이션 설정
-          APP_NAME=IntelFit
-          EOF
-
-      - name: Create Caddyfile
-        run: |
-          cat > Caddyfile << 'EOF'
-          intelfits.com, www.intelfits.com {
-              reverse_proxy spring-app:8080
-          }
-
-          :80 {
-              respond /health "OK" 200
-              reverse_proxy spring-app:8080
-          }
-          EOF
-
       - name: Create deploy.sh
         run: |
           cat > deploy.sh << 'EOF'
@@ -291,7 +242,7 @@ jobs:
           host: ${{ env.EC2_HOST }}
           username: ${{ env.EC2_USER }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
-          source: "image.tar.gz,compose.yaml,.env,deploy.sh,Caddyfile"
+          source: "image.tar.gz,compose.yaml,deploy.sh,Caddyfile"
           target: "/home/ubuntu/back-end"
           overwrite: true
 
