@@ -38,7 +38,7 @@ public class Meal {
     @Column(name = "meal_type", nullable = false)
     private MealType mealType;
 
-    // 총 영양소 정보 (해당 식사의 모든 음식 합계)
+    // 총 영양소 정보 (해당 식사의 모든 음식 합계)..
     @Column(name = "total_calories", precision = 8, scale = 2)
     @Builder.Default
     private BigDecimal totalCalories = BigDecimal.ZERO;
