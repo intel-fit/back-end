@@ -40,8 +40,8 @@ spring:
 
   # 이메일 설정
   mail:
-    host: ${SPRING_MAIL_HOST:smtp.naver.com}
-    port: ${SPRING_MAIL_PORT:587}
+    host: smtp.naver.com
+    port: 587
     username: lkmm1108@naver.com
     password: 7BJRP2P6F2LF
     properties:
