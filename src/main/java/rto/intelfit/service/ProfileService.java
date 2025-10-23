@@ -10,7 +10,7 @@ import rto.intelfit.domain.User;
 import rto.intelfit.dto.ProfileDto;
 import rto.intelfit.exception.BusinessException;
 import rto.intelfit.exception.ErrorCode;
-import rto.intelfit.repository.UserRepository;
+import rto.intelfit.repository.*;
 import rto.intelfit.security.CustomUserPrincipal;
 import rto.intelfit.util.JwtUtil;
 
@@ -23,6 +23,11 @@ public class ProfileService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final InBodyRepository inBodyRepository;
+    private final UserFoodPreferenceRepository userFoodPreferenceRepository;
+    private final DailyNutritionGoalRepository dailyNutritionGoalRepository;
+    private final MealRepository mealRepository;
+    private final RecommendedMealPlanRepository recommendedMealPlanRepository;
 
     public ProfileDto.ProfileResponse getProfile(CustomUserPrincipal userPrincipal) {
         User user = findUserByPrincipal(userPrincipal);
@@ -96,7 +101,30 @@ public class ProfileService {
         // 사용자의 모든 토큰 무효화
         jwtUtil.deleteRefreshToken(user.getUserId());
 
-        // 사용자 삭제
+        // User와 연관된 모든 데이터를 명시적으로 삭제 (FK 제약 조건 문제 해결)
+        log.info("회원 탈퇴 시작 - 사용자 ID: {}, 연관 데이터 삭제 시작", user.getUserId());
+
+        // 1. InBody 레코드 삭제
+        inBodyRepository.deleteAllByUser(user);
+        log.debug("InBody 레코드 삭제 완료");
+
+        // 2. 음식 선호도 삭제
+        userFoodPreferenceRepository.deleteAllByUser(user);
+        log.debug("음식 선호도 삭제 완료");
+
+        // 3. 영양 목표 삭제
+        dailyNutritionGoalRepository.deleteAllByUser(user);
+        log.debug("영양 목표 삭제 완료");
+
+        // 4. 식사 기록 삭제
+        mealRepository.deleteAllByUser(user);
+        log.debug("식사 기록 삭제 완료");
+
+        // 5. 추천 식단 삭제
+        recommendedMealPlanRepository.deleteAllByUser(user);
+        log.debug("추천 식단 삭제 완료");
+
+        // 6. 마지막으로 사용자 삭제
         userRepository.delete(user);
 
         log.info("회원 탈퇴 완료 - 사용자 ID: {}, 탈퇴 사유: {}",

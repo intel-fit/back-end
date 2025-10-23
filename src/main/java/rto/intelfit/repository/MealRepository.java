@@ -69,4 +69,7 @@ public interface MealRepository extends JpaRepository<Meal, Long> {
 
     // 사용자의 전체 식사 기록 수
     long countByUser(User user);
+
+    // 사용자의 모든 식사 기록 삭제 (회원 탈퇴 시)
+    void deleteAllByUser(User user);
 }

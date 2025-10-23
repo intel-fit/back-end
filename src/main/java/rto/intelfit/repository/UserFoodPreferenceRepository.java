@@ -56,4 +56,7 @@ public interface UserFoodPreferenceRepository extends JpaRepository<UserFoodPref
     List<UserFoodPreference> findTopPreferredFoods(
             @Param("user") User user,
             @Param("types") List<UserFoodPreference.PreferenceType> types);
+
+    // 사용자의 모든 음식 선호도 삭제 (회원 탈퇴 시)
+    void deleteAllByUser(User user);
 }

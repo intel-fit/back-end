@@ -25,7 +25,7 @@ public class DailyNutritionGoal {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
-
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private User user;
 
     // 일일 목표 영양소 (사용자 신체 정보 기반 자동 계산 또는 수동 설정)

@@ -30,4 +30,7 @@ public interface InBodyRepository extends JpaRepository<InBody, Long> {
 
     // 사용자의 특정 인바디 기록 존재 여부 확인
     boolean existsByUserAndId(User user, Long id);
+
+    // 사용자의 모든 인바디 기록 삭제 (회원 탈퇴 시)
+    void deleteAllByUser(User user);
 }

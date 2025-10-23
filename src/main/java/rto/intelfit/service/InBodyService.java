@@ -180,6 +180,9 @@ public class InBodyService {
         if (request.getLeftLegFat() != null) {
             inBody.setLeftLegFat(request.getLeftLegFat());
         }
+        if (request.getRightLegFat() != null) {
+            inBody.setRightLegFat(request.getRightLegFat());
+        }
         if (request.getTotalBodyWater() != null) {
             inBody.setTotalBodyWater(request.getTotalBodyWater());
         }

@@ -18,4 +18,7 @@ public interface RecommendedMealPlanRepository extends JpaRepository<Recommended
 
     // 사용자의 저장된 추천 식단 개수
     long countByUserAndIsSavedTrue(User user);
+
+    // 사용자의 모든 추천 식단 삭제 (회원 탈퇴 시)
+    void deleteAllByUser(User user);
 }

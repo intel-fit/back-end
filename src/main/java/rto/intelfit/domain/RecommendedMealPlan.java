@@ -26,7 +26,7 @@ public class RecommendedMealPlan {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private User user;
 
     @Column(name = "plan_name", nullable = false, length = 200)

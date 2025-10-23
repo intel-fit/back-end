@@ -25,7 +25,7 @@ public class UserFoodPreference {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private User user;
 
     @Column(name = "food_name", nullable = false, length = 200)
