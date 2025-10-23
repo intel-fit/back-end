@@ -46,10 +46,10 @@ spring:
 
   # 이메일 설정
   mail:
-    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    host: ${SPRING_MAIL_HOST:smtp.naver.com}
     port: ${SPRING_MAIL_PORT:587}
-    username: ${SPRING_MAIL_USERNAME:}
-    password: ${SPRING_MAIL_PASSWORD:}
+    username: lkmm1108@naver.com
+    password: 7BJRP2P6F2LF
     properties:
       mail:
         smtp:
