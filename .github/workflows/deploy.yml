@@ -69,8 +69,8 @@ jobs:
           JWT_SECRET: intelfit-jwt-secret-key-for-production-use-minimum-32-characters-long-2024
           SPRING_MAIL_HOST: smtp.naver.com
           SPRING_MAIL_PORT: 587
-          SPRING_MAIL_USERNAME: test@test.com
-          SPRING_MAIL_PASSWORD: test-password
+          SPRING_MAIL_USERNAME: lkmm1108@naver.com
+          SPRING_MAIL_PASSWORD: 7BJRP2P6F2LF
 
   build-and-deploy:
     needs: test
