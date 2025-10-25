@@ -47,8 +47,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .authorizeHttpRequests(authz -> authz
-                        // ==================== 인증 없이 접근 가능한 API ====================
-                        // 사용자 인증 관련 API
+                        // 인증 없이 접근 가능한 사용자 API
                         .requestMatchers(
                                 "/api/users/signup",
                                 "/api/users/login",
@@ -58,7 +57,16 @@ public class SecurityConfig {
                                 "/api/users/reset-password",
                                 "/api/users/change-password",
                                 "/api/users/refresh-token"
+
                         ).permitAll()
+                        // 인증이 필요한 사용자 API (로그아웃 등)
+                        .requestMatchers("/api/users/logout").authenticated()
+                        // 인증이 필요한 프로필 API
+                        .requestMatchers("/api/profile/**").authenticated()
+                        // 인증이 필요한 인바디 API
+                        .requestMatchers("/api/inbody/**").authenticated()
+                        // 인증이 필요한 총 칼로리&운동 달성률 API
+                        .requestMatchers("/api/daily-progress/**").authenticated()
 
                         // Swagger UI 및 API 문서
                         .requestMatchers(
@@ -68,35 +76,10 @@ public class SecurityConfig {
                                 "/swagger-resources/**",
                                 "/webjars/**"
                         ).permitAll()
-
                         // Actuator Health check
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-
                         // 기타 공개 페이지
                         .requestMatchers("/", "/error").permitAll()
-
-                        // ==================== 인증이 필요한 API ====================
-                        // 사용자 API
-                        .requestMatchers("/api/users/logout").authenticated()
-
-                        // 프로필 API
-                        .requestMatchers("/api/profile/**").authenticated()
-
-                        // 인바디 API
-                        .requestMatchers("/api/inbody/**").authenticated()
-
-                        // 식단 API
-                        .requestMatchers("/api/meals/**").authenticated()
-
-                        // 영양 목표 API
-                        .requestMatchers("/api/nutrition-goals/**").authenticated()
-
-                        // 추천 식단 API
-                        .requestMatchers("/api/recommended-meals/**").authenticated()
-
-                        // 선호 음식 API (신규)
-                        .requestMatchers("/api/food-preferences/**").authenticated()
-
                         // 나머지는 인증 필요
                         .anyRequest().authenticated()
                 )

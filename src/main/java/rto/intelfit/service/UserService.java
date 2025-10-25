@@ -13,6 +13,7 @@ import rto.intelfit.dto.SignUpDto;
 import rto.intelfit.exception.BusinessException;
 import rto.intelfit.exception.ErrorCode;
 import rto.intelfit.repository.UserRepository;
+import rto.intelfit.security.CustomUserPrincipal;
 import rto.intelfit.util.JwtUtil;
 
 import java.security.SecureRandom;
@@ -386,4 +387,27 @@ public class UserService {
         String maskedPart = "*".repeat(maskLength);
         return userId.substring(0, 2) + maskedPart + userId.substring(userId.length() - 2);
     }
+
+    public User findByPrincipal(CustomUserPrincipal principal) {
+        return userRepository.findByUserId(principal.getUserId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    @Transactional
+    public User findOrCreateDummyUser() {
+        return userRepository.findByUserId("testUser")
+                .orElseGet(() -> {
+                    User dummy = User.builder()
+                            .userId("testUser")
+                            .name("테스트유저")
+                            .email("test@example.com")
+                            .password("encoded_pw")
+                            .height(170)
+                            .weight(65)
+                            .build();
+                    return userRepository.save(dummy);
+                });
+    }
+
+
 }

@@ -20,7 +20,10 @@ out/
 .DS_Store
 Thumbs.db
 
-
+# H2 / Local test config
+application-test.yml
+data.sql
+guide.txt
 
 ### Environment ###
 .env
