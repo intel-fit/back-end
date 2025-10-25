@@ -10,13 +10,14 @@ COPY gradle gradle
 COPY gradlew gradlew.bat build.gradle* settings.gradle* ./
 
 # 권한 설정
+COPY src src
+
 RUN chmod +x ./gradlew
 
 # 의존성 다운로드 (캐싱 최적화)
 RUN ./gradlew dependencies --no-daemon --refresh-dependencies
 
 # 소스 코드 복사 및 빌드
-COPY src src
 RUN ./gradlew clean bootJar --no-daemon --refresh-dependencies
 
 # Runtime stage

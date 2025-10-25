@@ -116,6 +116,9 @@ public enum ErrorCode {
     EXTERNAL_API_TIMEOUT(HttpStatus.REQUEST_TIMEOUT, "API_002", "외부 API 응답 시간이 초과되었습니다"),
     EXTERNAL_API_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "API_003", "외부 API를 사용할 수 없습니다"),
 
+    //운동 종목 기록 관련 에러
+    EXERCISE_NOT_FOUND(HttpStatus.NOT_FOUND, "EXERCISE_001" ,"운동을 찾을 수 없습니다."),
+
     // ==================== 일반적인 에러 ====================
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "COMMON_001", "올바르지 않은 입력값입니다"),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_002", "서버 내부 오류가 발생했습니다"),

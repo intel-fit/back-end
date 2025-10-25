@@ -1,0 +1,3 @@
+:80 {
+    reverse_proxy spring-app:8080
+}
