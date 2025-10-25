@@ -392,5 +392,5 @@ public class UserService {
         return userRepository.findByUserId(principal.getUserId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
-    
+
 }
