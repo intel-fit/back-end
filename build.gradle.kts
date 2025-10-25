@@ -66,8 +66,6 @@ dependencies {
 	testImplementation("org.springframework.security:spring-security-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
-	// ✅ 테스트용 H2 데이터베이스
-	implementation("com.h2database:h2:2.2.224")
 }
 
 tasks.withType<Test> {

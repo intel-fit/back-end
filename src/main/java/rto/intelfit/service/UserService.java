@@ -392,22 +392,5 @@ public class UserService {
         return userRepository.findByUserId(principal.getUserId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
-
-    @Transactional
-    public User findOrCreateDummyUser() {
-        return userRepository.findByUserId("testUser")
-                .orElseGet(() -> {
-                    User dummy = User.builder()
-                            .userId("testUser")
-                            .name("테스트유저")
-                            .email("test@example.com")
-                            .password("encoded_pw")
-                            .height(170)
-                            .weight(65)
-                            .build();
-                    return userRepository.save(dummy);
-                });
-    }
-
-
+    
 }
