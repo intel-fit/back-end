@@ -24,6 +24,7 @@ Thumbs.db
 application-test.yml
 data.sql
 guide.txt
+ExerciseDto.java
 
 ### Environment ###
 .env
