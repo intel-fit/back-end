@@ -15,12 +15,11 @@ public interface FitnessExerciseCategoryRepository extends JpaRepository<Fitness
     Optional<FitnessExerciseCategoryDB> findByExternalId(String externalId);
 
     /** 운동 부위별 + 키워드 검색 (둘 다 optional) */
-    @Query("""
-        SELECT f FROM FitnessExerciseCategoryDB f
-        WHERE (:bodyPart IS NULL OR LOWER(f.bodyPart) = LOWER(:bodyPart))
-        AND (:keyword IS NULL OR LOWER(f.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
-        ORDER BY f.name ASC
-    """)
+    @Query("SELECT f FROM FitnessExerciseCategoryDB f " +
+            "WHERE (:bodyPart IS NULL OR LOWER(f.bodyPart) = LOWER(:bodyPart)) " +
+            "AND (:keyword IS NULL OR LOWER(f.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+            "ORDER BY f.name ASC")
+
     Page<FitnessExerciseCategoryDB> searchExercises(
             @Param("bodyPart") String bodyPart,
             @Param("keyword") String keyword,

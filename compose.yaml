@@ -9,10 +9,16 @@ services:
       MYSQL_CHARACTER_SET_SERVER: utf8mb4
       MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
       TZ: Asia/Seoul
+      command: >
+        --character-set-server=utf8mb4
+        --collation-server=utf8mb4_unicode_ci
+        --init-connect='SET NAMES utf8mb4'
+
     ports:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+      - ./docker/mysql/db:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pAdmin123!"]
       interval: 10s

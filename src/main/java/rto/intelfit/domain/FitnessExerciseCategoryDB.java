@@ -9,9 +9,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-
 @Entity
-@Table(name = "fitness_exercise_category_db")
+@Table(name = "exerciseCategory") // ✅ SQL 테이블명과 동일하게 맞춤
 @Getter
 @Setter
 @NoArgsConstructor
@@ -19,40 +18,31 @@ import java.time.LocalDateTime;
 @Builder
 public class FitnessExerciseCategoryDB {
 
-    /** 내부 PK */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long id; // ✅ SQL의 BIGINT AUTO_INCREMENT에 대응
 
-    /** ExerciseDB 원본 JSON의 고유 ID (예: 9Z23cLE) */
     @Column(name = "external_id", unique = true)
     private String externalId;
 
-    /** 운동명 (예: 바벨 인클라인 벤치프레스(앉은 자세)) */
     @Column(nullable = false, length = 200)
     private String name;
 
-    /** 운동 부위 (예: 가슴, 어깨, 하체 등) */
-    @Column(length = 50)
+    @Column(name = "body_part", length = 50)
     private String bodyPart;
 
-    /** 주요 타겟 근육 (예: 대흉근, 이두근 등) */
-    @Column(length = 100)
+    @Column(name = "target_muscle", length = 100)
     private String targetMuscle;
 
-    /** 보조 근육 (예: 삼두근, 어깨 등 — 콤마로 구분) */
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "secondary_muscles", columnDefinition = "TEXT")
     private String secondaryMuscles;
 
-    /** 사용 장비 (예: 바벨, 덤벨 등) */
-    @Column(length = 100)
+    @Column(name = "equipment", length = 100)
     private String equipment;
 
-    /** 운동 이미지 또는 GIF URL */
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "image_url", columnDefinition = "TEXT")
     private String imageUrl;
 
-    /** 운동 단계별 설명 (1단계~n단계) */
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "instructions", columnDefinition = "TEXT")
     private String instructions;
 }
