@@ -16,10 +16,16 @@ public interface MealRepository extends JpaRepository<Meal, Long> {
 
     // 특정 사용자의 특정 날짜 모든 식사 조회
     List<Meal> findByUserAndMealDateOrderByMealTypeAsc(User user, LocalDate mealDate);
+    
+    // 특정 사용자의 특정 날짜 모든 식사 조회 (간단한 메소드)
+    List<Meal> findByUserAndMealDate(User user, LocalDate mealDate);
 
     // 특정 사용자의 특정 기간 모든 식사 조회
     List<Meal> findByUserAndMealDateBetweenOrderByMealDateAscMealTypeAsc(
             User user, LocalDate startDate, LocalDate endDate);
+    
+    // 특정 사용자의 특정 기간 모든 식사 조회 (간단한 메소드)
+    List<Meal> findByUserAndMealDateBetween(User user, LocalDate startDate, LocalDate endDate);
 
     // 특정 사용자의 특정 날짜, 특정 식사 타입 조회
     Optional<Meal> findByUserAndMealDateAndMealType(

@@ -60,6 +60,10 @@ public class User {
     @Column(name = "health_goal")
     private HealthGoal healthGoal;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "experience_level")
+    private ExperienceLevel experienceLevel;
+
     @Column(name = "workout_days_per_week", length = 20)
     private String workoutDaysPerWeek;
 
@@ -86,13 +90,25 @@ public class User {
     @Builder.Default
     private List<InBody> inBodyRecords = new ArrayList<>();
 
+
+
     // 열거형 정의
     public enum MembershipType {
         FREE, PREMIUM
     }
 
     public enum HealthGoal {
-        DIET, BULK, LEAN_MASS
+        DIET,           // 체중 감량
+        BULK,           // 벌크업
+        LEAN_MASS,      // 린매스
+        MUSCLE_GAIN,    // 근육 증가
+        MAINTENANCE     // 유지
+    }
+
+    public enum ExperienceLevel {
+        BEGINNER,      // 초보자
+        INTERMEDIATE,  // 중급자
+        ADVANCED       // 숙련자
     }
 
     public enum Gender {

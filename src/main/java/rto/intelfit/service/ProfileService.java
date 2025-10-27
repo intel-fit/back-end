@@ -28,6 +28,9 @@ public class ProfileService {
     private final DailyNutritionGoalRepository dailyNutritionGoalRepository;
     private final MealRepository mealRepository;
     private final RecommendedMealPlanRepository recommendedMealPlanRepository;
+    private final ExerciseRepository exerciseRepository;
+    private final RecommendedExercisePlanRepository recommendedExercisePlanRepository;
+    private final UserBadgeRepository userBadgeRepository;
 
     public ProfileDto.ProfileResponse getProfile(CustomUserPrincipal userPrincipal) {
         User user = findUserByPrincipal(userPrincipal);
@@ -124,7 +127,19 @@ public class ProfileService {
         recommendedMealPlanRepository.deleteAllByUser(user);
         log.debug("추천 식단 삭제 완료");
 
-        // 6. 마지막으로 사용자 삭제
+        // 6. 운동 기록 삭제
+        exerciseRepository.deleteAllByUser(user);
+        log.debug("운동 기록 삭제 완료");
+
+        // 7. 추천 운동 플랜 삭제
+        recommendedExercisePlanRepository.deleteAllByUser(user);
+        log.debug("추천 운동 플랜 삭제 완료");
+
+        // 8. 사용자 뱃지 삭제
+        userBadgeRepository.deleteAllByUser(user);
+        log.debug("사용자 뱃지 삭제 완료");
+
+        // 9. 마지막으로 사용자 삭제
         userRepository.delete(user);
 
         log.info("회원 탈퇴 완료 - 사용자 ID: {}, 탈퇴 사유: {}",
