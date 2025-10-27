@@ -128,7 +128,8 @@ public enum ErrorCode {
     SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "COMMON_009", "서비스를 일시적으로 사용할 수 없습니다"),
     MISSING_REQUIRED_FIELD(HttpStatus.BAD_REQUEST, "COMMON_010", "필수 항목이 누락되었습니다"),
     INVALID_PARAMETER(HttpStatus.BAD_REQUEST, "COMMON_011", "유효하지 않은 파라미터입니다"),
-    DATABASE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_012", "데이터베이스 오류가 발생했습니다");
+    DATABASE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_012", "데이터베이스 오류가 발생했습니다"),
+    NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON_013" ,"리소스를 찾을 수 없습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
