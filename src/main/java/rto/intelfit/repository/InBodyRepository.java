@@ -18,6 +18,13 @@ public interface InBodyRepository extends JpaRepository<InBody, Long> {
     // 사용자별 최신 인바디 기록 조회
     Optional<InBody> findFirstByUserOrderByMeasurementDateDesc(User user);
 
+    // 사용자별 최신 인바디 기록 조회 (Top 메소드)
+    Optional<InBody> findTopByUserOrderByMeasurementDateDesc(User user);
+
+    // 특정 날짜 이전의 가장 최근 인바디 기록 조회
+    Optional<InBody> findTopByUserAndMeasurementDateBeforeOrderByMeasurementDateDesc(
+            User user, LocalDate measurementDate);
+
     // 사용자와 측정 날짜로 조회 (중복 체크용)
     Optional<InBody> findByUserAndMeasurementDate(User user, LocalDate measurementDate);
 

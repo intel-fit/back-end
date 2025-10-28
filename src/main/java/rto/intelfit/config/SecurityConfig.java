@@ -49,7 +49,6 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authz -> authz
                         // ==================== 인증 없이 접근 가능한 API ====================
                         // 사용자 인증 관련 API
-                        // 인증 없이 접근 가능한 사용자 API
                         .requestMatchers(
                                 "/api/users/signup",
                                 "/api/users/login",
@@ -59,7 +58,6 @@ public class SecurityConfig {
                                 "/api/users/reset-password",
                                 "/api/users/change-password",
                                 "/api/users/refresh-token"
-
                         ).permitAll()
 
                         // Swagger UI 및 API 문서
@@ -70,10 +68,13 @@ public class SecurityConfig {
                                 "/swagger-resources/**",
                                 "/webjars/**"
                         ).permitAll()
+
                         // Actuator Health check
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+
                         // 기타 공개 페이지
                         .requestMatchers("/", "/error").permitAll()
+
                         // ==================== 인증이 필요한 API ====================
                         // 사용자 API
                         .requestMatchers("/api/users/logout").authenticated()
@@ -96,8 +97,17 @@ public class SecurityConfig {
                         // 선호 음식 API (신규)
                         .requestMatchers("/api/food-preferences/**").authenticated()
 
-                        // 총 칼로리&운동 달성률 API
-                        .requestMatchers("/api/daily-progress/**").authenticated()
+                        // 홈 화면 API
+                        .requestMatchers("/api/home/**").authenticated()
+
+                        // 운동 API
+                        .requestMatchers("/api/exercises/**").authenticated()
+
+                        // 추천 운동 API
+                        .requestMatchers("/api/exercise-recommendations/**").authenticated()
+
+                        // 뱃지 API
+                        .requestMatchers("/api/badges/**").authenticated()
 
                         // 나머지는 인증 필요
                         .anyRequest().authenticated()
