@@ -116,6 +116,20 @@ public enum ErrorCode {
     EXTERNAL_API_TIMEOUT(HttpStatus.REQUEST_TIMEOUT, "API_002", "외부 API 응답 시간이 초과되었습니다"),
     EXTERNAL_API_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "API_003", "외부 API를 사용할 수 없습니다"),
 
+    // ==================== 운동 기록 관련 에러 ====================
+    EXERCISE_NOT_FOUND(HttpStatus.NOT_FOUND, "EXERCISE_001", "운동 기록을 찾을 수 없습니다"),
+    EXERCISE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "EXERCISE_002", "본인의 운동 기록만 접근할 수 있습니다"),
+    INVALID_EXERCISE_DATA(HttpStatus.BAD_REQUEST, "EXERCISE_003", "유효하지 않은 운동 데이터입니다"),
+    EMPTY_EXERCISE_SETS(HttpStatus.BAD_REQUEST, "EXERCISE_004", "운동 세트가 비어있습니다"),
+    INVALID_EXERCISE_CATEGORY(HttpStatus.BAD_REQUEST, "EXERCISE_005", "유효하지 않은 운동 카테고리입니다"),
+    FUTURE_EXERCISE_DATE(HttpStatus.BAD_REQUEST, "EXERCISE_006", "미래 날짜의 운동은 등록할 수 없습니다"),
+
+    // ==================== 추천 운동 관련 에러 ====================
+    RECOMMENDED_EXERCISE_PLAN_NOT_FOUND(HttpStatus.NOT_FOUND, "REC_EXERCISE_001", "추천 운동 플랜을 찾을 수 없습니다"),
+    RECOMMENDED_EXERCISE_PLAN_ACCESS_DENIED(HttpStatus.FORBIDDEN, "REC_EXERCISE_002", "본인의 추천 운동 플랜만 접근할 수 있습니다"),
+    RECOMMENDED_EXERCISE_PLAN_ALREADY_SAVED(HttpStatus.CONFLICT, "REC_EXERCISE_003", "이미 저장된 추천 운동 플랜입니다"),
+    INVALID_RECOMMENDED_EXERCISE_DATA(HttpStatus.BAD_REQUEST, "REC_EXERCISE_004", "유효하지 않은 추천 운동 데이터입니다"),
+
     // ==================== 일반적인 에러 ====================
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "COMMON_001", "올바르지 않은 입력값입니다"),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_002", "서버 내부 오류가 발생했습니다"),
@@ -128,7 +142,8 @@ public enum ErrorCode {
     SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "COMMON_009", "서비스를 일시적으로 사용할 수 없습니다"),
     MISSING_REQUIRED_FIELD(HttpStatus.BAD_REQUEST, "COMMON_010", "필수 항목이 누락되었습니다"),
     INVALID_PARAMETER(HttpStatus.BAD_REQUEST, "COMMON_011", "유효하지 않은 파라미터입니다"),
-    DATABASE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_012", "데이터베이스 오류가 발생했습니다");
+    DATABASE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_012", "데이터베이스 오류가 발생했습니다"),
+    NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON_013" ,"리소스를 찾을 수 없습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

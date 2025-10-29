@@ -97,6 +97,18 @@ public class SecurityConfig {
                         // 선호 음식 API (신규)
                         .requestMatchers("/api/food-preferences/**").authenticated()
 
+                        // 홈 화면 API
+                        .requestMatchers("/api/home/**").authenticated()
+
+                        // 운동 API
+                        .requestMatchers("/api/exercises/**").authenticated()
+
+                        // 추천 운동 API
+                        .requestMatchers("/api/exercise-recommendations/**").authenticated()
+
+                        // 뱃지 API
+                        .requestMatchers("/api/badges/**").authenticated()
+
                         // 나머지는 인증 필요
                         .anyRequest().authenticated()
                 )

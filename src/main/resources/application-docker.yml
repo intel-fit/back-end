@@ -1,5 +1,10 @@
 server:
   port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+      enabled: true
 
 spring:
   config:
@@ -7,6 +12,7 @@ spring:
       on-profile: docker
   application:
     name: intelfit
+
 
   datasource:
     url: jdbc:mysql://mysql:3306/intelfit?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&autoReconnect=true
@@ -24,11 +30,15 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     properties:
       hibernate:
+        ddl-auto: update
         dialect: org.hibernate.dialect.MySQLDialect
-        format_sql: false
-        show_sql: false
+        format_sql: true
+        show_sql: true
+
     open-in-view: false
     database-platform: org.hibernate.dialect.MySQLDialect
 
@@ -99,8 +109,8 @@ logging:
     root: INFO
     rto.intelfit: INFO
     org.springframework.web: INFO
-    org.hibernate: WARN
-    org.springframework.mail: INFO
+    org.hibernate: DEBUG
+    org.springframework.mail: TRACE
 
 jwt:
   secret: ${JWT_SECRET:intelfit-jwt-secret-key-for-production-use-minimum-32-characters-long-2024}
@@ -119,3 +129,4 @@ ai:
 # 앱 설정
 app:
   name: IntelFit
+
