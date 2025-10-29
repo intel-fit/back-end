@@ -55,7 +55,7 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      - spring-app
+      - app
     networks:
       - app-network
 
