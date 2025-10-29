@@ -166,7 +166,7 @@ public class RecommendedMealService {
                 user.getUserId(), planId);
     }
 
-    // Private helper methods
+
 
     private User findUserByPrincipal(CustomUserPrincipal userPrincipal) {
         return userRepository.findByUserId(userPrincipal.getUserId())
