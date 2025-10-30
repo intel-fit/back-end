@@ -106,92 +106,32 @@ jobs:
           {
               admin off
               auto_https off
-              grace_period 10s
-              servers {
-                  timeouts {
-                      read_body 30s
-                      read_header 30s
-                      write 60s
-                      idle 90s
-                  }
-              }
           }
 
-          # HTTP on port 80
           :80 {
-              # Reverse proxy to Spring Boot application
+              # 로깅 활성화
+              log {
+                  output stdout
+                  format console
+                  level INFO
+              }
+
+              # Caddy 자체 헬스체크 (최우선) - Docker healthcheck용
+              handle /health {
+                  respond "OK" 200
+              }
+
+              # 기본 리버스 프록시
               reverse_proxy spring-app:8080 {
                   header_up Host {host}
                   header_up X-Real-IP {remote}
                   header_up X-Forwarded-For {remote}
                   header_up X-Forwarded-Proto {scheme}
           
-                  # 헬스체크 설정 (매우 관대하게)
-                  health_uri /actuator/health
-                  health_interval 30s
-                  health_timeout 10s
-                  health_status 200
-          
-                  # 실패 허용 설정 - 5번 연속 실패해야 백엔드 제거
-                  fail_duration 60s
-                  unhealthy_request_count 5
-          
-                  # 재시도 설정
-                  lb_try_duration 30s
-                  lb_try_interval 2s
-          
-                  # 타임아웃 설정
                   transport http {
-                      dial_timeout 30s
-                      response_header_timeout 60s
-                      keepalive 90s
-                      keepalive_idle_conns 10
+                      dial_timeout 10s
+                      response_header_timeout 30s
                   }
-              }
-
-              # 로깅 (에러만)
-              log {
-                  output stdout
-                  format console
-                  level ERROR
-              }
-
-              # CORS 헤더
-              header {
-                  Access-Control-Allow-Origin *
-                  Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-                  Access-Control-Allow-Headers "Authorization, Content-Type"
-                  -Server
-              }
-
-              # Swagger UI
-              handle_path /swagger-ui* {
-                  reverse_proxy spring-app:8080
-              }
-
-              # API Docs
-              handle_path /v3/api-docs* {
-                  reverse_proxy spring-app:8080
-              }
-
-              # Actuator
-              handle_path /actuator* {
-                  reverse_proxy spring-app:8080
-              }
-
-              # API 엔드포인트
-              handle_path /api/* {
-                  reverse_proxy spring-app:8080
-              }
-
-              # Caddy 자체 헬스체크 (Docker healthcheck용)
-              handle /health {
-                  respond "OK" 200
-              }
-
-              # 그 외 모든 요청
-              handle {
-                  reverse_proxy spring-app:8080
               }
           }
           EOF
@@ -330,7 +270,8 @@ jobs:
           
           CADDY_SUCCESS=false
           for i in {1..30}; do
-              if curl -sf http://localhost/actuator/health > /dev/null 2>&1; then
+              # Caddy 자체 /health 엔드포인트로 체크 (JWT 불필요)
+              if curl -sf http://localhost/health > /dev/null 2>&1; then
                   log "✅ Caddy 프록시가 정상 동작합니다."
                   CADDY_SUCCESS=true
                   break
@@ -431,7 +372,8 @@ jobs:
             # Caddy 프록시 헬스체크 (필수)
             echo "🔍 Caddy 프록시 확인 중..."
             for i in {1..30}; do
-              if curl -sf http://localhost/actuator/health > /dev/null 2>&1; then
+              # Caddy 자체 /health 엔드포인트로 체크 (JWT 불필요)
+              if curl -sf http://localhost/health > /dev/null 2>&1; then
                 echo "✅ Caddy 프록시가 정상 동작합니다."
                 CADDY_HEALTH=true
                 break
@@ -456,7 +398,7 @@ jobs:
               echo "  ✅ Spring Boot (직접): http://43.200.40.140:8080"
               echo "  ✅ Swagger UI: http://43.200.40.140/swagger-ui.html"
               echo "  ✅ Health Check: http://43.200.40.140/actuator/health"
-              echo "  ✅ HTTPS 준비: https://intelfits.com (도메인 연결 시)"
+              echo "  ✅ API Base: http://43.200.40.140/api"
               echo ""
               echo "🎉 IntelFit 백엔드가 성공적으로 배포되었습니다!"
               exit 0
