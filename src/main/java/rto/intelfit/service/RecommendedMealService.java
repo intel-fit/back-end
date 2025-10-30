@@ -110,7 +110,7 @@ public class RecommendedMealService {
     }
 
     /**
-     * 추천 식단 저장 취소()
+     * 추천 식단 저장 취소
      */
     @Transactional
     public RecommendedMealDto.SaveRecommendedPlanResponse unsaveRecommendedPlan(
