@@ -100,6 +100,9 @@ public class SecurityConfig {
                         // 홈 화면 API
                         .requestMatchers("/api/home/**").authenticated()
 
+                        // 홈 화면 - 칼로리 & 운동 달성률 API
+                        .requestMatchers("/api/daily-progress/**").authenticated()
+
                         // 운동 API
                         .requestMatchers("/api/exercises/**").authenticated()
 
