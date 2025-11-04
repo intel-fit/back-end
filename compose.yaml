@@ -9,10 +9,12 @@ services:
       MYSQL_CHARACTER_SET_SERVER: utf8mb4
       MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
       TZ: Asia/Seoul
-    command: >
-      --character-set-server=utf8mb4
-      --collation-server=utf8mb4_unicode_ci
-      --init-connect='SET NAMES utf8mb4'
+    command:
+      [
+              "--character-set-server=utf8mb4",
+              "--collation-server=utf8mb4_unicode_ci",
+              "--skip-character-set-client-handshake"
+      ]
     ports:
       - "3306:3306"
     volumes:

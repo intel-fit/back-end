@@ -1,4 +1,4 @@
-﻿CREATE DATABASE IF NOT EXISTS intelfit;
+CREATE DATABASE IF NOT EXISTS intelfit;
 USE intelfit;
 DROP TABLE IF EXISTS exerciseCategory;
 
