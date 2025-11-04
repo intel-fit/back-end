@@ -17,7 +17,7 @@ public class DailyProgress {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // 사용자//
+    // 사용자 (FK)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -27,10 +27,12 @@ public class DailyProgress {
     private LocalDate date;
 
     // 운동 달성률 (%)
-    @Column(nullable = false)
-    private double exerciseRate;
+    @Builder.Default
+    @Column(name = "exercise_rate", nullable = false)
+    private double exerciseRate = 0.0;
 
     // 섭취 칼로리 (kcal)
-    @Column(nullable = false)
-    private double totalCalorie;
+    @Builder.Default
+    @Column(name = "total_calorie", nullable = false)
+    private double totalCalorie = 0.0;
 }
