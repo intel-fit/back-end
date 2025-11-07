@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import rto.intelfit.domain.FitnessExerciseCategoryDB;
+import java.util.List;
+
 
 import java.util.Optional;
 
@@ -22,6 +24,15 @@ public interface FitnessExerciseCategoryRepository extends JpaRepository<Fitness
 
     Page<FitnessExerciseCategoryDB> searchExercises(
             @Param("bodyPart") String bodyPart,
+            @Param("keyword") String keyword,
+            Pageable pageable);
+
+    /** ✅ 새로 추가할 메서드 — 여러 부위 매핑 검색용 */
+    @Query("SELECT e FROM FitnessExerciseCategoryDB e " +
+            "WHERE (:keyword IS NULL OR e.name LIKE %:keyword%) " +
+            "AND (COALESCE(:bodyParts, NULL) IS NULL OR e.bodyPart IN :bodyParts)")
+    Page<FitnessExerciseCategoryDB> searchExercisesByBodyParts(
+            @Param("bodyParts") List<String> bodyParts,
             @Param("keyword") String keyword,
             Pageable pageable);
 
