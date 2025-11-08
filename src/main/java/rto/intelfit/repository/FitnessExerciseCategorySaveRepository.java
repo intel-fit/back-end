@@ -7,7 +7,6 @@ import org.springframework.stereotype.Repository;
 import rto.intelfit.domain.FitnessExerciseCategorySave;
 import rto.intelfit.domain.User;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @Repository
@@ -19,11 +18,7 @@ public interface FitnessExerciseCategorySaveRepository extends JpaRepository<Fit
     /** 특정 세션 ID로 운동 세트 조회 */
     List<FitnessExerciseCategorySave> findBySessionId(String sessionId);
 
-    /** 특정 유저의 세션 ID 목록 (중복 제거) */
+
     @Query("SELECT DISTINCT f.sessionId FROM FitnessExerciseCategorySave f WHERE f.user = :user ORDER BY MAX(f.workoutDate) DESC")
     List<String> findDistinctSessionIdsByUser(@Param("user") User user);
-
-    List<FitnessExerciseCategorySave> findByUserAndWorkoutDate(User user, LocalDate date);
-
-    List<FitnessExerciseCategorySave> findByUserAndWorkoutDateBetween(User user, LocalDate weekStart, LocalDate weekEnd);
 }

@@ -40,7 +40,6 @@ public class HomeService {
     private final MealRepository mealRepository;
     private final InBodyRepository inBodyRepository;
     private final DailyNutritionGoalRepository dailyNutritionGoalRepository;
-    private final FitnessExerciseCategorySaveRepository fitnessExerciseCategorySaveRepository;
 
     /**
      * 홈 화면 메인 정보 조회
@@ -49,7 +48,7 @@ public class HomeService {
             CustomUserPrincipal userPrincipal,
             LocalDate date) {
 
-        User user = getUserById(Long.valueOf(userPrincipal.getUserId()));
+        User user = getUserById(userPrincipal.getUserId());
 
         // 각 섹션별 데이터 조회
         HomeDto.UserSummary userSummary = createUserSummary(user);
@@ -69,49 +68,48 @@ public class HomeService {
     }
 
     /**
-     * 오늘의 운동 요약 조회 - FitnessExerciseCategorySave에서 조회
+     * 오늘의 운동 요약 조회
      */
     public HomeDto.TodayExerciseSummary getTodayExerciseSummary(
             CustomUserPrincipal userPrincipal,
             LocalDate date) {
 
-        User user = getUserById(Long.valueOf(userPrincipal.getUserId()));
+        User user = getUserById(userPrincipal.getUserId());
 
-        // FitnessExerciseCategorySave에서 조회
-        List<FitnessExerciseCategorySave> workoutRecords =
-                fitnessExerciseCategorySaveRepository.findByUserAndWorkoutDate(user, date);
+        List<Exercise> exercises = exerciseRepository.findByUserAndExerciseDate(user, date);
 
-        if (workoutRecords.isEmpty()) {
+        if (exercises.isEmpty()) {
             return createEmptyExerciseSummary(date);
         }
 
-        // 세션 단위로 그룹핑
-        List<String> uniqueSessions = workoutRecords.stream()
-                .map(FitnessExerciseCategorySave::getSessionId)
-                .distinct()
-                .collect(Collectors.toList());
+        // 총 운동 시간 계산
+        int totalDuration = exercises.stream()
+                .mapToInt(Exercise::getTotalDurationMinutes)
+                .sum();
 
-        // 총 운동 시간 계산 (세트당 평균 2분으로 가정)
-        int totalDuration = workoutRecords.size() * 2;
-
-        // 총 칼로리 소모 계산 (세트당 대략 10kcal로 가정, 실제로는 운동 종류와 강도에 따라 다름)
-        BigDecimal totalCalories = BigDecimal.valueOf(workoutRecords.size() * 10);
+        // 총 칼로리 소모 계산
+        BigDecimal totalCalories = exercises.stream()
+                .flatMap(exercise -> exercise.getExerciseSets().stream())
+                .map(ExerciseSet::getCaloriesBurned)
+                .filter(cal -> cal != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // 주요 운동 카테고리 추출
-        List<String> mainCategories = workoutRecords.stream()
-                .map(FitnessExerciseCategorySave::getCategory)
-                .filter(cat -> cat != null && !cat.isEmpty())
+        List<String> mainCategories = exercises.stream()
+                .map(Exercise::getExerciseCategory)
+                .filter(cat -> cat != null)
                 .distinct()
+                .map(Enum::name)
                 .collect(Collectors.toList());
 
-        String message = createExerciseMessage(uniqueSessions.size(), totalDuration);
+        String message = createExerciseMessage(exercises.size(), totalDuration);
 
         return HomeDto.TodayExerciseSummary.builder()
                 .date(date)
                 .completed(true)
                 .totalDurationMinutes(totalDuration)
                 .totalCaloriesBurned(totalCalories)
-                .exerciseCount(uniqueSessions.size())
+                .exerciseCount(exercises.size())
                 .mainCategories(mainCategories)
                 .message(message)
                 .build();
@@ -124,7 +122,7 @@ public class HomeService {
             CustomUserPrincipal userPrincipal,
             LocalDate date) {
 
-        User user = getUserById(Long.valueOf(userPrincipal.getUserId()));
+        User user = getUserById(userPrincipal.getUserId());
 
         List<Meal> meals = mealRepository.findByUserAndMealDate(user, date);
 
@@ -177,21 +175,21 @@ public class HomeService {
     }
 
     /**
-     * 주간 요약 조회 - FitnessExerciseCategorySave에서 조회
+     * 주간 요약 조회
      */
     public HomeDto.WeeklySummary getWeeklySummary(
             CustomUserPrincipal userPrincipal,
             LocalDate date) {
 
-        User user = getUserById(Long.valueOf(userPrincipal.getUserId()));
+        User user = getUserById(userPrincipal.getUserId());
 
         // 해당 주의 시작일과 종료일 계산 (월요일 시작)
         LocalDate weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         LocalDate weekEnd = date.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
 
-        // 이번주 운동 데이터 - FitnessExerciseCategorySave에서 조회
-        List<FitnessExerciseCategorySave> weekWorkouts =
-                fitnessExerciseCategorySaveRepository.findByUserAndWorkoutDateBetween(user, weekStart, weekEnd);
+        // 이번주 운동 데이터
+        List<Exercise> weekExercises = exerciseRepository
+                .findByUserAndExerciseDateBetween(user, weekStart, weekEnd);
 
         // 이번주 식단 데이터
         List<Meal> weekMeals = mealRepository
@@ -201,22 +199,24 @@ public class HomeService {
         LocalDate lastWeekStart = weekStart.minusWeeks(1);
         LocalDate lastWeekEnd = weekEnd.minusWeeks(1);
 
-        List<FitnessExerciseCategorySave> lastWeekWorkouts =
-                fitnessExerciseCategorySaveRepository.findByUserAndWorkoutDateBetween(user, lastWeekStart, lastWeekEnd);
+        List<Exercise> lastWeekExercises = exerciseRepository
+                .findByUserAndExerciseDateBetween(user, lastWeekStart, lastWeekEnd);
 
         List<Meal> lastWeekMeals = mealRepository
                 .findByUserAndMealDateBetween(user, lastWeekStart, lastWeekEnd);
 
-        // 주간 운동 일수 계산 (세션 기준으로 날짜별로 그룹핑)
-        int weeklyExerciseDays = (int) weekWorkouts.stream()
-                .map(w -> w.getWorkoutDate().toLocalDate())
+        // 주간 운동 일수 계산
+        int weeklyExerciseDays = (int) weekExercises.stream()
+                .map(Exercise::getExerciseDate)
                 .distinct()
                 .count();
 
-        // 주간 총 운동 시간 (세트당 2분 가정)
-        int weeklyTotalDuration = weekWorkouts.size() * 2;
+        // 주간 총 운동 시간
+        int weeklyTotalDuration = weekExercises.stream()
+                .mapToInt(Exercise::getTotalDurationMinutes)
+                .sum();
 
-        // 주간 평균 칼로리 (세트당 10kcal 가정)
+        // 주간 평균 칼로리
         BigDecimal weeklyAvgCalories = BigDecimal.ZERO;
         if (!weekMeals.isEmpty()) {
             BigDecimal totalCalories = weekMeals.stream()
@@ -229,29 +229,25 @@ public class HomeService {
                     .count();
 
             if (mealDays > 0) {
-                weeklyAvgCalories = totalCalories.divide(
-                        BigDecimal.valueOf(mealDays), 2, RoundingMode.HALF_UP);
+                weeklyAvgCalories = totalCalories
+                        .divide(BigDecimal.valueOf(mealDays), 0, RoundingMode.HALF_UP);
             }
         }
 
         // 지난주 대비 변화율 계산
-        int lastWeekExerciseDays = (int) lastWeekWorkouts.stream()
-                .map(w -> w.getWorkoutDate().toLocalDate())
-                .distinct()
-                .count();
+        BigDecimal exerciseChangeRate = calculateChangeRate(
+                weeklyTotalDuration,
+                lastWeekExercises.stream().mapToInt(Exercise::getTotalDurationMinutes).sum()
+        );
 
-        BigDecimal exerciseChangeRate = calculateChangeRate(weeklyExerciseDays, lastWeekExerciseDays);
         BigDecimal calorieChangeRate = calculateCalorieChangeRate(weekMeals, lastWeekMeals);
 
-        // 주간 목표 달성률
-        Integer weeklyGoal = Integer.valueOf(user.getWorkoutDaysPerWeek());
-        BigDecimal goalAchievementRate = BigDecimal.ZERO;
-        if (weeklyGoal != null && weeklyGoal > 0) {
-            goalAchievementRate = BigDecimal.valueOf(weeklyExerciseDays)
-                    .divide(BigDecimal.valueOf(weeklyGoal), 4, RoundingMode.HALF_UP)
-                    .multiply(BigDecimal.valueOf(100))
-                    .setScale(1, RoundingMode.HALF_UP);
-        }
+        // 목표 달성률 계산 (주 3회 이상 운동 기준)
+        BigDecimal goalAchievementRate = BigDecimal.valueOf(weeklyExerciseDays)
+                .divide(BigDecimal.valueOf(3), 4, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100))
+                .min(BigDecimal.valueOf(100))
+                .setScale(0, RoundingMode.HALF_UP);
 
         String message = createWeeklyMessage(weeklyExerciseDays, goalAchievementRate);
 
@@ -268,8 +264,10 @@ public class HomeService {
                 .build();
     }
 
-    private User getUserById(Long userId) {
-        return userRepository.findById(userId)
+    // ========== Private Helper Methods ==========
+
+    private User getUserById(String userId) {
+        return userRepository.findByUserId(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
 
@@ -482,3 +480,4 @@ public class HomeService {
                 .setScale(1, RoundingMode.HALF_UP);
     }
 }
+//e//
