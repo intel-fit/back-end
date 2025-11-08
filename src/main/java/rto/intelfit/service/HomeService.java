@@ -49,7 +49,7 @@ public class HomeService {
             CustomUserPrincipal userPrincipal,
             LocalDate date) {
 
-        User user = getUserById(userPrincipal.getUserId());
+        User user = getUserById(Long.valueOf(userPrincipal.getUserId()));
 
         // 각 섹션별 데이터 조회
         HomeDto.UserSummary userSummary = createUserSummary(user);
@@ -75,7 +75,7 @@ public class HomeService {
             CustomUserPrincipal userPrincipal,
             LocalDate date) {
 
-        User user = getUserById(userPrincipal.getUserId());
+        User user = getUserById(Long.valueOf(userPrincipal.getUserId()));
 
         // FitnessExerciseCategorySave에서 조회
         List<FitnessExerciseCategorySave> workoutRecords =
@@ -124,7 +124,7 @@ public class HomeService {
             CustomUserPrincipal userPrincipal,
             LocalDate date) {
 
-        User user = getUserById(userPrincipal.getUserId());
+        User user = getUserById(Long.valueOf(userPrincipal.getUserId()));
 
         List<Meal> meals = mealRepository.findByUserAndMealDate(user, date);
 
@@ -183,7 +183,7 @@ public class HomeService {
             CustomUserPrincipal userPrincipal,
             LocalDate date) {
 
-        User user = getUserById(userPrincipal.getUserId());
+        User user = getUserById(Long.valueOf(userPrincipal.getUserId()));
 
         // 해당 주의 시작일과 종료일 계산 (월요일 시작)
         LocalDate weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
@@ -244,7 +244,7 @@ public class HomeService {
         BigDecimal calorieChangeRate = calculateCalorieChangeRate(weekMeals, lastWeekMeals);
 
         // 주간 목표 달성률
-        Integer weeklyGoal = user.getWorkoutDaysPerWeek();
+        Integer weeklyGoal = Integer.valueOf(user.getWorkoutDaysPerWeek());
         BigDecimal goalAchievementRate = BigDecimal.ZERO;
         if (weeklyGoal != null && weeklyGoal > 0) {
             goalAchievementRate = BigDecimal.valueOf(weeklyExerciseDays)

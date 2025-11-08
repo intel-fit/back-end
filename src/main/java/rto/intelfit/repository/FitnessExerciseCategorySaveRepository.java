@@ -23,11 +23,7 @@ public interface FitnessExerciseCategorySaveRepository extends JpaRepository<Fit
     @Query("SELECT DISTINCT f.sessionId FROM FitnessExerciseCategorySave f WHERE f.user = :user ORDER BY MAX(f.workoutDate) DESC")
     List<String> findDistinctSessionIdsByUser(@Param("user") User user);
 
-    /** 특정 날짜의 운동 기록 조회 */
-    @Query("SELECT f FROM FitnessExerciseCategorySave f WHERE f.user = :user AND DATE(f.workoutDate) = :date")
-    List<FitnessExerciseCategorySave> findByUserAndWorkoutDate(@Param("user") User user, @Param("date") LocalDate date);
+    List<FitnessExerciseCategorySave> findByUserAndWorkoutDate(User user, LocalDate date);
 
-    /** 특정 기간의 운동 기록 조회 */
-    @Query("SELECT f FROM FitnessExerciseCategorySave f WHERE f.user = :user AND DATE(f.workoutDate) BETWEEN :startDate AND :endDate")
-    List<FitnessExerciseCategorySave> findByUserAndWorkoutDateBetween(@Param("user") User user, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+    List<FitnessExerciseCategorySave> findByUserAndWorkoutDateBetween(User user, LocalDate weekStart, LocalDate weekEnd);
 }
