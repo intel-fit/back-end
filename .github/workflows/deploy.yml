@@ -1,10 +1,10 @@
 name: CI/CD Pipeline
 
 on:
-  push:
-    branches: [ dev ]
   pull_request:
-    branches: [ dev ]
+    types: [closed]
+    branches:
+      - dev
 
 env:
   DOCKER_IMAGE: intelfit-backend
@@ -13,6 +13,7 @@ env:
 
 jobs:
   test:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     services:
@@ -23,13 +24,21 @@ jobs:
           MYSQL_DATABASE: intelfit
         ports:
           - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
 
       redis:
         image: redis:7.2-alpine
         ports:
           - 6379:6379
-        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
 
     steps:
       - name: Checkout code
@@ -74,8 +83,8 @@ jobs:
 
   build-and-deploy:
     needs: test
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/dev'
 
     steps:
       - name: Checkout code
@@ -115,7 +124,6 @@ jobs:
               }
 
               location / {
-                  
                   proxy_pass http://spring-app:8080;
                   proxy_http_version 1.1;
                   proxy_set_header Upgrade $http_upgrade;
@@ -179,7 +187,6 @@ jobs:
           source: "image.tar.gz,compose.yaml,deploy.sh,docker/nginx/nginx.conf,docker/mysql/exerciseCategoryDataBase.sql"
           target: "/home/ubuntu/back-end"
           overwrite: true
-
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
