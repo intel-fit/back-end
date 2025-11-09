@@ -67,6 +67,9 @@ dependencies {
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 	// JSON 파싱
 	implementation("com.fasterxml.jackson.core:jackson-databind")
+	implementation ("org.springframework.boot:spring-boot-starter-validation")
+
+	implementation ("org.springframework.boot:spring-boot-starter-web")
 }
 
 tasks.withType<Test> {

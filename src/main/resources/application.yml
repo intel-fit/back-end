@@ -104,7 +104,7 @@ jwt:
 # AI 서버 설정
 ai:
   server:
-    url: ${AI_SERVER_URL:http://localhost:8000}
+    url: ${AI_SERVER_URL:http://43.200.40.140:8000}
     api-key: ${AI_SERVER_API_KEY:}
     timeout:
       connect: 5000
