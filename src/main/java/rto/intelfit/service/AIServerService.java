@@ -16,12 +16,12 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import rto.intelfit.domain.*;
 import rto.intelfit.dto.MealDto;
-import rto.intelfit.dto.UserFoodPreferenceDto;
 import rto.intelfit.exception.BusinessException;
 import rto.intelfit.exception.ErrorCode;
 import rto.intelfit.repository.RecommendedMealPlanRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.web.util.UriComponentsBuilder;
+import rto.intelfit.dto.RecommendedMealDto;
 
 
 import rto.intelfit.repository.UserRepository;
@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Transactional
 public class AIServerService {
 
     private final RestTemplate restTemplate;
@@ -45,7 +45,6 @@ public class AIServerService {
     private final UserFoodPreferenceService preferenceService;
     private final ObjectMapper objectMapper;
 
-    // ✅ 옥텟 빠진 URL 고쳐서 넣어라 (예: http://43.200.40.140:8000)
     @Value("${ai.server.url:http://43.200.40.140:8000}")
     private String aiServerUrl;
 
@@ -86,7 +85,7 @@ public class AIServerService {
         if (goal == null) return "maintenance";
         switch (goal) {
             case DIET:        return "fat_loss";
-            case BULK:        // 의도에 맞게 통일
+            case BULK:
             case MUSCLE_GAIN:
             case LEAN_MASS:   return "hypertrophy";
             case MAINTENANCE: default: return "maintenance";
@@ -103,30 +102,25 @@ public class AIServerService {
 
     // -----------------------------
     // 1) 회원가입 직후 AI 서버 사용자 동기화
-    //    FastAPI의 사용자 생성 엔드포인트 경로에 맞춰 path 바꿔라.
-    //    현재 FastAPI router가 prefix 없이 @router.post("/create") 이면 "/create"가 맞다.
     // -----------------------------
     @Transactional
     public void createUserOnAI(User user) {
-        // FastAPI가 /create 라우트라면:
         String endpoint = aiServerUrl + "/user/create";
-        // 만약 prefix "/users"가 붙어 있다면: String endpoint = aiServerUrl + "/users/create";
 
         AIUserCreateRequest payload = AIUserCreateRequest.builder()
                 .id(user.getUserId())
                 .name(user.getName())
                 .age(calcAge(user.getBirthDate()))
-                .sex(mapSex(user.getGender())) // "male"/"female"
+                .sex(mapSex(user.getGender()))
                 .height(user.getHeight() == null ? null : user.getHeight().floatValue())
                 .weight(user.getWeight() == null ? null : user.getWeight().floatValue())
                 .body_fat(null)
-                .skeletal_muscle(null) //체지방률과 인바디 정보는 회원가입시 자동 업로드 x
+                .skeletal_muscle(null)
                 .activity_level(1.2f)
                 .goal(mapGoal(user.getHealthGoal()))
                 .build();
 
         try {
-            // 요청 바디 디버그 출력 (직렬화 실패는 개별 처리)
             if (log.isDebugEnabled()) {
                 try {
                     log.debug("AI user create payload: {}", objectMapper.writeValueAsString(payload));
@@ -145,12 +139,11 @@ public class AIServerService {
             log.info("AI user sync: status={}, body={}", res.getStatusCode(), res.getBody());
         } catch (HttpClientErrorException e) {
             log.warn("AI user sync 4xx/5xx: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString(), e);
-            throw e; // 여기서는 런타임 예외라 그대로 던져도 OK
+            throw e;
         } catch (Exception e) {
             log.error("AI user sync failed: {}", e.getMessage(), e);
-            throw new RuntimeException(e); // ★ 체크 예외를 런타임으로 래핑
+            throw new RuntimeException(e);
         }
-
     }
 
     // -----------------------------
@@ -188,21 +181,14 @@ public class AIServerService {
         }
     }
 
-    // -----------------------------
+    // =========================================================
     // 3) 추천 식단 요청
-    // -----------------------------
-// 3) 추천 식단 요청  (기존 POST /api/v1/meal/recommend -> AI의 GET /generate_daily_plan로 변경)
-    @Transactional
-    // AIServerService.java 안, 기존 requestRecommendedMealPlan(...) 전체 교체
+    // =========================================================
+    // A) 🔹 일일 추천을 가져오되, 아직 DB에 저장하지 않는 헬퍼
 
-
-    public RecommendedMealPlan requestRecommendedMealPlan(CustomUserPrincipal userPrincipal) {
-        User user = userRepository.findByUserId(userPrincipal.getUserId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
+    @Transactional(noRollbackFor = HttpClientErrorException.class)
+    protected RecommendedMealPlan fetchDailyRecommendedMealPlan(User user) {
         try {
-            // FastAPI 스펙: POST /recommend/recommend_daily_meal
-            // params: user_id, meals_per_day(기본 3), goal(diet|bulk|lean|maintain)
             String goalParam = mapGoalForRecommender(user.getHealthGoal());
 
             UriComponentsBuilder ub = UriComponentsBuilder
@@ -211,10 +197,8 @@ public class AIServerService {
                     .queryParam("meals_per_day", 3)
                     .queryParam("goal", goalParam);
 
-            // preferred_foods / excluded_foods 는 현재 백엔드에 ID 정보가 없으므로 생략
             String url = ub.toUriString();
 
-            // POST 이지만 본문은 비우고, 쿼리스트링으로 전달 (FastAPI 시그니처와 합치)
             ResponseEntity<Map> response = restTemplate.exchange(
                     url,
                     HttpMethod.POST,
@@ -224,40 +208,12 @@ public class AIServerService {
 
             if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
                 log.warn("AI 추천 실패 - status={}, body={}", response.getStatusCode(), response.getBody());
-                return recommendedMealPlanRepository.save(createSampleRecommendedMealPlan(user));
+                return createSampleRecommendedMealPlan(user);
             }
 
             Map<String, Object> body = response.getBody();
 
-            // ------ AI 응답 해석 (recommendation.py 기준) ------
-            // {
-            //   "date": "2025-11-09",
-            //   "user_id": "user030",
-            //   "goal": "diet",
-            //   "meals_per_day": 3,
-            //   "target_daily_calories": 1987.5,
-            //   "target_protein": 170.0,
-            //   "target_fat": 55.0,
-            //   "target_carbs": 210.0,
-            //   "meals": [
-            //     {
-            //       "meal_type": "meal_1",
-            //       "target_calories": ...,
-            //       "actual_calories": ...,
-            //       "target_protein": ...,
-            //       "actual_protein": ...,
-            //       "target_fat": ...,
-            //       "actual_fat": ...,
-            //       "target_carbs": ...,
-            //       "actual_carbs": ...,
-            //       "foods": [ { "id": ..., "name": "...", "calories": ..., "protein": ..., "fat": ..., "carbs": ... }, ... ]
-            //     }, ...
-            //   ]
-            // }
-
-            BigDecimal totalKcal = toBD(body.get("target_daily_calories"));  // 목표 기준으로 저장
-            // 실제 합계가 필요한 경우: meals[].actual_* 합산해서 교체해도 됨
-
+            BigDecimal totalKcal = toBD(body.get("target_daily_calories"));
             List<Map<String, Object>> meals = safeListMap(body.get("meals"));
 
             RecommendedMealPlan plan = RecommendedMealPlan.builder()
@@ -275,24 +231,22 @@ public class AIServerService {
             for (Map<String, Object> m : meals) {
                 String type = str(m.get("meal_type")); // meal_1, meal_2, ...
                 RecommendedMeal rm = RecommendedMeal.builder()
-                        .mealType(mapMealTypeGuess(type)) // 아래 보조 매핑 사용
+                        .mealType(mapMealTypeGuess(type))
                         .totalCalories(toBD(m.get("actual_calories")))
                         .totalCarbs(toBD(m.get("actual_carbs")))
                         .totalProtein(toBD(m.get("actual_protein")))
                         .totalFat(toBD(m.get("actual_fat")))
                         .build();
 
-
                 List<Map<String, Object>> foods = safeListMap(m.get("foods"));
                 for (Map<String, Object> f : foods) {
-                    BigDecimal serving = toBD(f.get("serving_size")); // 응답에 없으면 ZERO
-
+                    BigDecimal serving = toBD(f.get("serving_size"));
                     if (serving == null || BigDecimal.ZERO.compareTo(serving) == 0) {
                         serving = new BigDecimal("100");
                     }
                     rm.addRecommendedFood(RecommendedFood.builder()
                             .foodName(str(f.get("name")))
-                            .servingSize(serving) // AI 응답에 g 정보가 없으니 비움(추후 확장)
+                            .servingSize(serving)
                             .calories(toBD(f.get("calories")))
                             .carbs(toBD(f.get("carbs")))
                             .protein(toBD(f.get("protein")))
@@ -303,24 +257,119 @@ public class AIServerService {
             }
 
             log.info("AI 일간 식단 생성 성공 - userId={}, goal={}", user.getUserId(), goalParam);
-            return recommendedMealPlanRepository.save(plan);
+            return plan;
 
         } catch (HttpClientErrorException e) {
             log.warn("AI 추천 4xx/5xx - status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString(), e);
-            return recommendedMealPlanRepository.save(createSampleRecommendedMealPlan(user));
+            return createSampleRecommendedMealPlan(user);
         } catch (Exception e) {
             log.error("AI 추천 호출 실패: {}", e.getMessage(), e);
-            return recommendedMealPlanRepository.save(createSampleRecommendedMealPlan(user));
+            return createSampleRecommendedMealPlan(user);
         }
     }
-    // AIServerService.java 하단 보조 메서드 추가
+    // 샘플 플랜 생성기 (AI 실패 시 대체용)
+    private RecommendedMealPlan createSampleRecommendedMealPlan(User user) {
+        RecommendedMealPlan plan = RecommendedMealPlan.builder()
+                .user(user)
+                .planName("균형 잡힌 하루 식단")
+                .description("하루 2000kcal 목표의 균형 잡힌 영양 식단입니다")
+                .totalCalories(new BigDecimal("2000"))
+                .totalCarbs(new BigDecimal("250"))
+                .totalProtein(new BigDecimal("100"))
+                .totalFat(new BigDecimal("67"))
+                .recommendationReason("사용자의 활동량과 목표에 최적화된 영양 비율입니다")
+                .isSaved(false)
+                .build();
 
+        RecommendedMeal breakfast = RecommendedMeal.builder()
+                .mealType(Meal.MealType.BREAKFAST)
+                .totalCalories(new BigDecimal("500"))
+                .totalCarbs(new BigDecimal("60"))
+                .totalProtein(new BigDecimal("25"))
+                .totalFat(new BigDecimal("15"))
+                .build();
+
+        breakfast.addRecommendedFood(RecommendedFood.builder()
+                .foodName("통밀빵 토스트")
+                .servingSize(new BigDecimal("60"))
+                .calories(new BigDecimal("150"))
+                .carbs(new BigDecimal("28"))
+                .protein(new BigDecimal("6"))
+                .fat(new BigDecimal("2"))
+                .build());
+
+        plan.addRecommendedMeal(breakfast);
+        return plan;
+    }
+
+
+    // B) 🔹 주간(7일) 추천 생성 및 저장: bundleId 하나로 1~7일 저장
+    @Transactional
+    public List<RecommendedMealDto.RecommendedPlanDetailResponse> requestWeeklyRecommendedMealPlans(
+            CustomUserPrincipal userPrincipal, LocalDate weekStartDate) {
+
+        User user = userRepository.findByUserId(userPrincipal.getUserId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        String bundleId = UUID.randomUUID().toString(); // ✅ 7일 공통 번들 ID
+        List<RecommendedMealPlan> weekly = new ArrayList<>(7);
+
+        for (int day = 1; day <= 7; day++) {
+
+            // ✅ 1) 기존 builder 기반 메서드 결과 가져오기
+            RecommendedMealPlan daily = fetchDailyRecommendedMealPlan(user);
+
+            // ✅ 2) builder로 만들어진 객체는 JPA 변경감지에서 제외될 수 있으므로 완전히 재귀 세팅
+            daily.setUser(user);
+            daily.setBundleId(bundleId);
+            daily.setBundleDay(day);
+            daily.setPlanDate(
+                    weekStartDate != null ? weekStartDate.plusDays(day - 1) : LocalDate.now().plusDays(day - 1)
+            );
+
+            daily.setIsSaved(true); // ← 이 한 줄 추가!
+
+            // ✅ 3) 식사 목록에도 영속성 연동을 위해 역참조 세팅
+            if (daily.getRecommendedMeals() != null) {
+                daily.getRecommendedMeals().forEach(meal -> meal.setRecommendedMealPlan(daily));
+            }
+
+            weekly.add(daily);
+        }
+
+        // ✅ 4) saveAll() 전, 모든 엔티티가 user + bundleId + bundleDay + planDate 세팅 완료
+        List<RecommendedMealPlan> saved = recommendedMealPlanRepository.saveAll(weekly);
+
+        log.info("주간 식단 생성 완료 - userId={}, bundleId={}, count={}", user.getUserId(), bundleId, saved.size());
+
+        return saved.stream()
+                .map(RecommendedMealDto.RecommendedPlanDetailResponse::from)
+                .toList();
+    }
+
+
+    // C) 🔹 단일(하루) 추천 생성 및 저장: 번들 메타(day=1) 포함
+    @Transactional
+    public RecommendedMealPlan requestRecommendedMealPlan(CustomUserPrincipal userPrincipal) {
+        User user = userRepository.findByUserId(userPrincipal.getUserId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        RecommendedMealPlan plan = fetchDailyRecommendedMealPlan(user);
+        plan.setBundleId(UUID.randomUUID().toString());
+        plan.setBundleDay(1);
+        plan.setPlanDate(LocalDate.now());
+
+        return recommendedMealPlanRepository.save(plan);
+    }
+
+    // -----------------------------
+    // 3-보조
+    // -----------------------------
     private Meal.MealType mapMealTypeGuess(String mealTypeFromAI) {
         String s = (mealTypeFromAI == null) ? "" : mealTypeFromAI.toLowerCase(Locale.ROOT);
         if (s.contains("1")) return Meal.MealType.BREAKFAST;
         if (s.contains("2")) return Meal.MealType.LUNCH;
         if (s.contains("3")) return Meal.MealType.DINNER;
-        // 그 외는 간식 처리
         return Meal.MealType.SNACK;
     }
     @SuppressWarnings("unchecked")
@@ -336,8 +385,6 @@ public class AIServerService {
         if (o == null) return BigDecimal.ZERO;
         try { return new BigDecimal(String.valueOf(o)); } catch (Exception ignore) { return BigDecimal.ZERO; }
     }
-    // AIServerService.java 안
-
     private String mapGoalForRecommender(User.HealthGoal goal) {
         if (goal == null) return "maintain";
         switch (goal) {
@@ -350,13 +397,8 @@ public class AIServerService {
         }
     }
 
-
-
-
-
-
     // -----------------------------
-    // 4) 변환/샘플 헬퍼
+    // 4) 변환/샘플 헬퍼 (기존 유지)
     // -----------------------------
     private List<MealDto.FoodItemRequest> convertToFoodItemRequests(FoodAnalysisResponse response) {
         if (response.getFoods() == null) return Collections.emptyList();
@@ -441,49 +483,21 @@ public class AIServerService {
         return foods;
     }
 
-    private RecommendedMealPlan createSampleRecommendedMealPlan(User user) {
-        RecommendedMealPlan plan = RecommendedMealPlan.builder()
-                .user(user)
-                .planName("균형 잡힌 하루 식단")
-                .description("하루 2000kcal 목표의 균형 잡힌 영양 식단입니다")
-                .totalCalories(new BigDecimal("2000"))
-                .totalCarbs(new BigDecimal("250"))
-                .totalProtein(new BigDecimal("100"))
-                .totalFat(new BigDecimal("67"))
-                .recommendationReason("사용자의 활동량과 목표에 최적화된 영양 비율입니다")
-                .isSaved(false)
-                .build();
-        RecommendedMeal breakfast = RecommendedMeal.builder()
-                .mealType(Meal.MealType.BREAKFAST)
-                .totalCalories(new BigDecimal("500"))
-                .totalCarbs(new BigDecimal("60"))
-                .totalProtein(new BigDecimal("25"))
-                .totalFat(new BigDecimal("15"))
-                .build();
-        breakfast.addRecommendedFood(RecommendedFood.builder()
-                .foodName("통밀빵 토스트").servingSize(new BigDecimal("60"))
-                .calories(new BigDecimal("150")).carbs(new BigDecimal("28"))
-                .protein(new BigDecimal("6")).fat(new BigDecimal("2"))
-                .build());
-        plan.addRecommendedMeal(breakfast);
-        return plan;
-    }
-
     // -----------------------------
-    // 5) 내부 DTO (한 파일 내 정리)
+    // 5) 내부 DTO (기존 유지)
     // -----------------------------
     @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
     private static class AIUserCreateRequest {
         private String id;
         private String name;
         private Integer age;
-        private String sex;            // "male" | "female"
+        private String sex;
         private Float height;
         private Float weight;
         private Float body_fat;
         private Float skeletal_muscle;
-        private Float activity_level;  // ex) 1.2
-        private String goal;           // "fat_loss" | "hypertrophy" | "maintenance"
+        private Float activity_level;
+        private String goal;
     }
 
     @Data @NoArgsConstructor @AllArgsConstructor
