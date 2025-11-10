@@ -64,6 +64,8 @@ services:
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: Admin123!
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      AI_SERVER_URL: http://43.200.40.140:8000   # ⬅︎ 공인 IP/도메인
+
     ports:
       - "8080:8080"
     healthcheck:

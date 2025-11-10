@@ -7,6 +7,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import rto.intelfit.domain.User;
 import rto.intelfit.dto.LoginDto;
 import rto.intelfit.dto.SignUpDto;
@@ -31,6 +33,7 @@ public class UserService {
     private final RedisTemplate<String, String> redisTemplate;
     private final JwtUtil jwtUtil;
     private final EmailService emailService; // ✅ 추가: 이메일 서비스
+    private final AIServerService aiServerService; // ✅ 추가
 
     @Value("${jwt.access-token-expiration:3600000}")
     private long accessTokenExpiration;
@@ -94,6 +97,21 @@ public class UserService {
 
         // 인증코드 삭제
         deleteEmailVerificationCode(request.getEmail());
+
+        // 커밋 이후 AI 서버에 사용자 동기화 (가입 성공 흐름은 절대 방해하지 않음)
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                try {
+                    // 네가 만든 메서드명에 맞춰서 호출해. createUserOnAI 또는 createUserInAIServer 중 하나.
+                    aiServerService.createUserOnAI(savedUser);
+                    // aiServerService.createUserInAIServer(savedUser);
+                } catch (Exception ex) {
+                    // 가입은 이미 커밋되었으니, 동기화 실패는 경고 로그만 남김
+                    log.warn("AI 사용자 동기화 실패 - userId={}, reason={}", savedUser.getUserId(), ex.getMessage(), ex);
+                }
+            }
+        });
 
         return SignUpDto.Response.builder()
                 .success(true)

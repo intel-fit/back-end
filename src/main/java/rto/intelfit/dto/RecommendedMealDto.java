@@ -10,6 +10,8 @@ import rto.intelfit.domain.Meal;
 import rto.intelfit.domain.RecommendedFood;
 import rto.intelfit.domain.RecommendedMeal;
 import rto.intelfit.domain.RecommendedMealPlan;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -156,9 +158,11 @@ public class RecommendedMealDto {
         @Schema(description = "음식 ID", example = "1")
         private Long id;
 
+        @NotBlank
         @Schema(description = "음식 이름", example = "현미밥")
         private String foodName;
 
+        @NotNull                    // ← 필수!
         @Schema(description = "1인분 기준량 (g)", example = "150")
         private BigDecimal servingSize;
 
