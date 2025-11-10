@@ -286,7 +286,10 @@ public class AIServerService {
                 List<Map<String, Object>> foods = safeListMap(m.get("foods"));
                 for (Map<String, Object> f : foods) {
                     BigDecimal serving = toBD(f.get("serving_size")); // 응답에 없으면 ZERO
-                    if (serving == null) serving = BigDecimal.ZERO;   // 또는 new BigDecimal("100")
+
+                    if (serving == null || BigDecimal.ZERO.compareTo(serving) == 0) {
+                        serving = new BigDecimal("100");
+                    }
                     rm.addRecommendedFood(RecommendedFood.builder()
                             .foodName(str(f.get("name")))
                             .servingSize(serving) // AI 응답에 g 정보가 없으니 비움(추후 확장)
