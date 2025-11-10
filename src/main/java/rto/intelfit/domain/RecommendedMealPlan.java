@@ -7,12 +7,18 @@ import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "recommended_meal_plans")
+@Table(
+        name = "recommended_meal_plans",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_bundle_day", columnNames = {"bundle_id", "bundle_day"})
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -23,6 +29,18 @@ public class RecommendedMealPlan {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    /** 7일 묶음을 나타내는 공통 ID */
+    @Column(name = "bundle_id", nullable = false, length = 36)
+    private String bundleId;
+
+    /** 번들 내 일자(1~7) */
+    @Column(name = "bundle_day", nullable = false)
+    private Integer bundleDay;
+
+    /** 실제 날짜(옵션: 주차 조회/정렬용) */
+    @Column(name = "plan_date")
+    private LocalDate planDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
@@ -35,7 +53,6 @@ public class RecommendedMealPlan {
     @Column(name = "description", length = 1000)
     private String description;
 
-    // 추천 식단의 총 영양소
     @Column(name = "total_calories", precision = 8, scale = 2)
     private BigDecimal totalCalories;
 
@@ -48,18 +65,16 @@ public class RecommendedMealPlan {
     @Column(name = "total_fat", precision = 8, scale = 2)
     private BigDecimal totalFat;
 
-    // 추천 식단에 포함된 식사들
     @OneToMany(mappedBy = "recommendedMealPlan", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<RecommendedMeal> recommendedMeals = new ArrayList<>();
 
-    // AI 추천 이유/근거
     @Column(name = "recommendation_reason", length = 1000)
     private String recommendationReason;
 
     @Column(name = "is_saved", nullable = false)
     @Builder.Default
-    private Boolean isSaved = false; // 사용자가 저장했는지 여부
+    private Boolean isSaved = false;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
