@@ -64,18 +64,18 @@ public class FitnessExerciseCategorySaveService {
             throw new BusinessException(ErrorCode.NOT_FOUND, "해당 세션 ID에 해당하는 기록이 없습니다.");
         }
 
-        // 삭제 전에 user와 workoutDate 저장 (달성률 재계산용)
         User user = sessionRecords.get(0).getUser();
         LocalDate workoutDate = sessionRecords.get(0).getWorkoutDate().toLocalDate();
+        String externalId = sessionRecords.get(0).getExternalId();   // ✅ 운동 ID 추출
 
         saveRepository.deleteAll(sessionRecords);
         log.info("✅ 세션 ID={} 삭제 완료 ({}개 세트)", sessionId, sessionRecords.size());
 
-        // 🔥 삭제 후 해당 날짜의 운동 달성률 재계산
         dailyProgressService.recalculateProgress(user, workoutDate);
 
         return FitnessExerciseCategorySaveDto.DeleteResponse.builder()
                 .sessionId(sessionId)
+                .externalId(externalId)
                 .deletedCount(sessionRecords.size())
                 .build();
     }
@@ -85,20 +85,20 @@ public class FitnessExerciseCategorySaveService {
      * ✅ 저장 후 해당 날짜의 달성률 자동 재계산
      */
     public String addWorkoutSession(FitnessExerciseCategorySaveDto.CreateRequest request) {
-        log.info("💪 운동 세션 추가 요청 - userId={}, exercise={}, sets={}",
-                request.getUserId(), request.getExerciseName(), request.getSets().size());
+        log.info("💪 운동 세션 추가 요청 - userId={}, exerciseId={}, exerciseName={}, sets={}",
+                request.getUserId(), request.getExternalId(), request.getExerciseName(), request.getSets().size());
 
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // 세션ID 자동 생성 (타임스탬프 기반)
         String sessionId = "S-" + System.currentTimeMillis();
 
-        // 세트별 엔티티 생성
+        // ✅ 운동 ID 포함
         List<FitnessExerciseCategorySave> entities = request.getSets().stream()
                 .map(set -> FitnessExerciseCategorySave.builder()
                         .user(user)
                         .sessionId(sessionId)
+                        .externalId(request.getExternalId())        // 추가
                         .exerciseName(request.getExerciseName())
                         .category(request.getCategory())
                         .setNumber(set.getSetNumber())
@@ -109,14 +109,11 @@ public class FitnessExerciseCategorySaveService {
                 .collect(Collectors.toList());
 
         saveRepository.saveAll(entities);
+        log.info("✅ 세션ID={} 운동 '{}' 저장 완료", sessionId, request.getExerciseName());
 
-        log.info("✅ 세션ID={} 운동 '{}' {}세트 저장 완료", sessionId,
-                request.getExerciseName(), entities.size());
-
-        // 🔥 저장 후 해당 날짜의 운동 달성률 재계산
         LocalDate workoutDate = request.getWorkoutDate().toLocalDate();
         dailyProgressService.recalculateProgress(user, workoutDate);
-        
+
         return sessionId;
     }
 }
