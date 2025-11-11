@@ -12,7 +12,6 @@ import rto.intelfit.exception.ErrorCode;
 import rto.intelfit.repository.FitnessExerciseCategorySaveRepository;
 import rto.intelfit.repository.UserRepository;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -25,7 +24,7 @@ public class FitnessExerciseCategorySaveService {
 
     private final FitnessExerciseCategorySaveRepository saveRepository;
     private final UserRepository userRepository;
-    private final DailyProgressService dailyProgressService;
+    private final DailyProgressService dailyProgressService; // 추가
 
     /**
      * 1️⃣ 특정 유저의 운동 기록을 세션 단위로 그룹핑하여 조회
@@ -54,7 +53,6 @@ public class FitnessExerciseCategorySaveService {
 
     /**
      * 2️⃣ 세션 ID 기준으로 삭제
-     * ✅ 삭제 후 해당 날짜의 달성률 재계산
      */
     public FitnessExerciseCategorySaveDto.DeleteResponse deleteBySessionId(String sessionId) {
         log.info("🗑 세션 ID={} 삭제 요청", sessionId);
@@ -64,41 +62,32 @@ public class FitnessExerciseCategorySaveService {
             throw new BusinessException(ErrorCode.NOT_FOUND, "해당 세션 ID에 해당하는 기록이 없습니다.");
         }
 
-        User user = sessionRecords.get(0).getUser();
-        LocalDate workoutDate = sessionRecords.get(0).getWorkoutDate().toLocalDate();
-        String externalId = sessionRecords.get(0).getExternalId();   // ✅ 운동 ID 추출
-
         saveRepository.deleteAll(sessionRecords);
         log.info("✅ 세션 ID={} 삭제 완료 ({}개 세트)", sessionId, sessionRecords.size());
 
-        dailyProgressService.recalculateProgress(user, workoutDate);
-
         return FitnessExerciseCategorySaveDto.DeleteResponse.builder()
                 .sessionId(sessionId)
-                .externalId(externalId)
                 .deletedCount(sessionRecords.size())
                 .build();
     }
-
     /**
-     * 3️⃣ 운동 세션 추가 (세트 여러 개 포함)
-     * ✅ 저장 후 해당 날짜의 달성률 자동 재계산
+     * 3. 운동 세션 추가 (세트 여러 개 포함)
      */
     public String addWorkoutSession(FitnessExerciseCategorySaveDto.CreateRequest request) {
-        log.info("💪 운동 세션 추가 요청 - userId={}, exerciseId={}, exerciseName={}, sets={}",
-                request.getUserId(), request.getExternalId(), request.getExerciseName(), request.getSets().size());
+        log.info("💪 운동 세션 추가 요청 - userId={}, exercise={}, sets={}",
+                request.getUserId(), request.getExerciseName(), request.getSets().size());
 
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
+        // 세션ID 자동 생성 (UUID 일부 사용)
         String sessionId = "S-" + System.currentTimeMillis();
 
-        // ✅ 운동 ID 포함
+        // 세트별 엔티티 생성
         List<FitnessExerciseCategorySave> entities = request.getSets().stream()
                 .map(set -> FitnessExerciseCategorySave.builder()
                         .user(user)
                         .sessionId(sessionId)
-                        .externalId(request.getExternalId())        // 추가
                         .exerciseName(request.getExerciseName())
                         .category(request.getCategory())
                         .setNumber(set.getSetNumber())
@@ -109,11 +98,12 @@ public class FitnessExerciseCategorySaveService {
                 .collect(Collectors.toList());
 
         saveRepository.saveAll(entities);
-        log.info("✅ 세션ID={} 운동 '{}' 저장 완료", sessionId, request.getExerciseName());
 
-        LocalDate workoutDate = request.getWorkoutDate().toLocalDate();
-        dailyProgressService.recalculateProgress(user, workoutDate);
+        dailyProgressService.calculateTodayProgress(user);
 
+        log.info("✅ 세션ID={} 운동 '{}' {}세트 저장 완료", sessionId,
+                request.getExerciseName(), entities.size());
         return sessionId;
     }
+
 }
