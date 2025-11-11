@@ -30,8 +30,8 @@ public class MealService {
     private final MealRepository mealRepository;
     private final UserRepository userRepository;
     private final DailyNutritionGoalRepository nutritionGoalRepository;
-    private final UserFoodPreferenceService preferenceService; // 추가
-    private final DailyProgressService dailyProgressService; // 추가
+    private final UserFoodPreferenceService preferenceService; // 기존
+    private final DailyProgressService dailyProgressService;   // ✅ 추가 (칼로리 반영용)
 
     /**
      * 식사 추가
@@ -96,7 +96,8 @@ public class MealService {
 
         Meal savedMeal = mealRepository.save(meal);
 
-        dailyProgressService.calculateTodayProgress(user); // dailyProgress 갱신
+        // ✅ DailyProgress 칼로리 갱신만 수행
+        dailyProgressService.updateCalorieOnly(user, request.getMealDate());
 
         log.info("식사 추가 완료 - 사용자 ID: {}, 날짜: {}, 타입: {}",
                 user.getUserId(), request.getMealDate(), request.getMealType());
