@@ -52,7 +52,7 @@ public class FitnessExerciseCategorySaveController {
     @DeleteMapping("/{sessionId}")
     public ResponseEntity<FitnessExerciseCategorySaveDto.DeleteResponse> deleteWorkoutSession(
             @PathVariable @NotBlank String sessionId) {
-
+//
         log.info("🗑 운동 세션 삭제 요청: sessionId={}", sessionId);
         FitnessExerciseCategorySaveDto.DeleteResponse response = saveService.deleteBySessionId(sessionId);
         return ResponseEntity.ok(response);
