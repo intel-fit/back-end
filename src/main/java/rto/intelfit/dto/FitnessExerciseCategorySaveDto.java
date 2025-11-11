@@ -8,12 +8,13 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+
 /**
- * 운동 기록 조회/삭제용 DTO
+ * 운동 기록 조회/추가/삭제 DTO
  */
 public class FitnessExerciseCategorySaveDto {
 
-    // ✅ 세트 단위
+    // ✅ 세트 단위 DTO
     @Getter
     @Setter
     @Builder
@@ -31,7 +32,34 @@ public class FitnessExerciseCategorySaveDto {
         private Integer reps;
     }
 
-    // ✅ 세션 단위
+    // ✅ 운동 기록 추가 요청 DTO
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "운동 세션 추가 요청 DTO")
+    public static class CreateRequest {
+        @Schema(description = "유저 ID", example = "1")
+        private Long userId;
+
+        @Schema(description = "운동 ID (Exercise DB의 externalId)", example = "27NNGFr")
+        private String externalId; // ✅ 추가됨
+
+        @Schema(description = "운동명", example = "벤치프레스")
+        private String exerciseName;
+
+        @Schema(description = "카테고리", example = "가슴")
+        private String category;
+
+        @Schema(description = "운동 날짜 (YYYY-MM-DDTHH:MM:SS)", example = "2025-10-27T09:00:00")
+        private LocalDateTime workoutDate;
+
+        @Schema(description = "세트 목록")
+        private List<SetDetail> sets;
+    }
+
+    // ✅ 세션 단위 조회 응답 DTO
     @Getter
     @Setter
     @Builder
@@ -41,6 +69,9 @@ public class FitnessExerciseCategorySaveDto {
     public static class SessionResponse {
         @Schema(description = "세션 ID")
         private String sessionId;
+
+        @Schema(description = "운동 ID (Exercise DB의 externalId)")
+        private String externalId; // ✅ 추가됨
 
         @Schema(description = "운동명")
         private String exerciseName;
@@ -58,6 +89,7 @@ public class FitnessExerciseCategorySaveDto {
             FitnessExerciseCategorySave first = records.get(0);
             return SessionResponse.builder()
                     .sessionId(sessionId)
+                    .externalId(first.getExternalId()) // ✅ 추가됨
                     .exerciseName(first.getExerciseName())
                     .category(first.getCategory())
                     .workoutDate(first.getWorkoutDate())
@@ -72,7 +104,7 @@ public class FitnessExerciseCategorySaveDto {
         }
     }
 
-    // ✅ 삭제 응답 DTO
+    // ✅ 세션 삭제 응답 DTO
     @Getter
     @Setter
     @Builder
@@ -83,30 +115,10 @@ public class FitnessExerciseCategorySaveDto {
         @Schema(description = "삭제된 세션 ID")
         private String sessionId;
 
+        @Schema(description = "운동 ID (Exercise DB의 externalId)")
+        private String externalId; // ✅ 추가됨
+
         @Schema(description = "삭제된 세트 수")
         private int deletedCount;
-    }
-    // ✅ 운동 기록 추가 요청 DTO
-    @Getter
-    @Setter
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Schema(description = "운동 세션 추가 요청 DTO")
-    public static class CreateRequest {
-        @Schema(description = "유저 ID", example = "1")
-        private Long userId;
-
-        @Schema(description = "운동명", example = "벤치프레스")
-        private String exerciseName;
-
-        @Schema(description = "카테고리", example = "가슴")
-        private String category;
-
-        @Schema(description = "운동 날짜 (YYYY-MM-DDTHH:MM:SS)", example = "2025-10-27T09:00:00")
-        private LocalDateTime workoutDate;
-
-        @Schema(description = "세트 목록")
-        private List<SetDetail> sets; // 아까 정의한 세트 DTO 재활용
     }
 }

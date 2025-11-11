@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class FitnessExerciseCategorySave {
-
+//운동 id 행 만들어야한다
     /** 각 행(세트)의 고유 PK */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,6 +34,9 @@ public class FitnessExerciseCategorySave {
     /** 운동 세션 식별자 (한 운동 묶음) */
     @Column(name = "session_id", nullable = false, length = 50)
     private String sessionId;
+
+    @Column(name = "external_id")
+    private String externalId;
 
     /** 운동명 (예: 벤치프레스, 스쿼트 등) */
     @Column(name = "exercise_name", nullable = false, length = 100)
