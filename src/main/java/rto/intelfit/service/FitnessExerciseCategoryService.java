@@ -35,30 +35,32 @@ public class FitnessExerciseCategoryService {
     /** 1️⃣ 운동 목록 조회 (카테고리 + 검색어 + 페이징) */
     public Page<ExerciseCategoryDto.Response> getExerciseList(String bodyPart, String keyword, Pageable pageable) {
         bodyPart = (bodyPart != null) ? bodyPart.trim() : null;
+        keyword = (keyword != null && !keyword.isBlank()) ? keyword.trim() : null;
+
         log.info("📋 운동 목록 조회 - bodyPart={}, keyword={}", bodyPart, keyword);
 
-        // ✅ DB 전체 데이터 조회
-        List<ExerciseCategoryDto.Response> all = repository.findAll().stream()
-                .map(ExerciseCategoryDto.Response::fromEntity)
-                .toList();
+        Page<FitnessExerciseCategoryDB> page;
 
-        if (bodyPart == null || bodyPart.isBlank()) {
-            return toPage(all, pageable);
+        // ✅ bodyPart가 지정된 경우: 매핑된 세부 부위 리스트를 사용
+        if (bodyPart != null && !bodyPart.isBlank()) {
+            List<String> mappedParts = BODY_PART_MAP.getOrDefault(bodyPart, List.of(bodyPart));
+            log.info("✅ 매핑된 세부 부위 리스트: {}", mappedParts);
+
+            page = repository.searchExercisesByBodyParts(mappedParts, keyword, pageable);
+        }
+        // ✅ bodyPart가 없고 keyword만 있는 경우
+        else if (keyword != null) {
+            page = repository.searchExercisesByBodyParts(null, keyword, pageable);
+        }
+        // ✅ 아무 필터도 없는 경우 전체 조회
+        else {
+            page = repository.findAll(pageable);
         }
 
-        List<String> mappedParts = BODY_PART_MAP.getOrDefault(bodyPart, List.of(bodyPart));
-        log.info("✅ 매핑된 세부 부위 리스트: {}", mappedParts);
-
-        // ✅ 매핑된 부위로 필터링
-        List<ExerciseCategoryDto.Response> filtered = all.stream()
-                .filter(e -> mappedParts.stream().anyMatch(mp ->
-                        e.getBodyPart() != null && e.getBodyPart().contains(mp)
-                ))
-                .toList();
-
-        // ✅ 필터링된 리스트를 다시 Pageable 형태로 자르기
-        return toPage(filtered, pageable);
+        // ✅ DTO 변환 후 반환
+        return page.map(ExerciseCategoryDto.Response::fromEntity);
     }
+
     // ✅ 리스트를 Pageable 형태로 잘라주는 헬퍼 함수
     private Page<ExerciseCategoryDto.Response> toPage(List<ExerciseCategoryDto.Response> list, Pageable pageable) {
         int start = (int) pageable.getOffset();
