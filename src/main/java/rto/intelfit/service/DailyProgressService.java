@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import rto.intelfit.domain.DailyProgress;
 import rto.intelfit.domain.Meal;
 import rto.intelfit.domain.User;
+import rto.intelfit.domain.FitnessExerciseCategorySave;
 import rto.intelfit.dto.DailyProgressDto;
 import rto.intelfit.repository.*;
 
@@ -17,7 +18,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * ✅ DailyProgressService (최종 개선 버전)
+ * ✅ DailyProgressService (FitnessExerciseCategorySave 기준 개선 버전)
  * - 운동 달성률(%) + 섭취 칼로리 합산
  * - 주간/월간 데이터가 없을 때도 0으로 안전하게 반환
  */
@@ -29,12 +30,11 @@ public class DailyProgressService {
 
     private final DailyProgressRepository dailyProgressRepository;
     private final WorkoutPlanDetailRepository workoutPlanDetailRepository;
-    private final WorkoutRecordRepository workoutRecordRepository;
+    private final FitnessExerciseCategorySaveRepository saveRepository; // ✅ 교체됨
     private final MealRepository mealRepository;
 
     /**
-     * ✅ 오늘의 운동 달성률 & 칼로리 계산
-     * 이미 있으면 업데이트, 없으면 새로 생성
+     * ✅ 오늘의 운동 달성률 & 칼로리 계산 (FitnessExerciseCategorySave 기준)
      */
     @Transactional
     public DailyProgressDto calculateTodayProgress(User user) {
@@ -46,14 +46,16 @@ public class DailyProgressService {
                 workoutPlanDetailRepository.sumSetsByUserAndDayOfWeek(user.getId(), dayOfWeek)
         ).orElse(0);
 
-        // ✅ 수행된 세트 수 (없으면 0)
-        int completedSets = Optional.ofNullable(
-                workoutRecordRepository.sumSetsCompletedByUserAndDate(user.getId(), today)
-        ).orElse(0);
+        // ✅ FitnessExerciseCategorySave에서 오늘 수행한 세트 수 계산
+        List<FitnessExerciseCategorySave> records = saveRepository.findByUserOrderByWorkoutDateDesc(user);
+        int completedSets = (int) records.stream()
+                .filter(r -> r.getWorkoutDate() != null &&
+                        r.getWorkoutDate().toLocalDate().isEqual(today))
+                .count();
 
         // 📊 운동 달성률 계산
         double exerciseRate = (plannedSets == 0)
-                ? 0.0
+                ? (completedSets > 0 ? 100.0 : 0.0) // 계획 없지만 운동했으면 100%
                 : Math.round(((double) completedSets / plannedSets) * 1000.0) / 10.0;
 
         // 🍽️ 오늘 섭취 칼로리 합산 (데이터 없으면 0)
@@ -87,9 +89,7 @@ public class DailyProgressService {
                 .build();
     }
 
-    /**
-     * ✅ 특정 날짜의 운동 달성률 조회 (없으면 0으로 반환)
-     */
+    /** ✅ 특정 날짜의 운동 달성률 조회 (없으면 0으로 반환) */
     public DailyProgressDto getProgressByDate(User user, LocalDate date) {
         return dailyProgressRepository.findByUserIdAndDate(user.getId(), date)
                 .map(p -> DailyProgressDto.builder()
@@ -104,17 +104,11 @@ public class DailyProgressService {
                         .build());
     }
 
-    /**
-     * ✅ 이번 주 (일~토) 운동 달성률 조회 (없으면 0으로 채움)
-     */
+    /** ✅ 이번 주 (일~토) 운동 달성률 조회 */
     public List<DailyProgressDto> getWeeklyProgress(User user) {
         LocalDate today = LocalDate.now();
-
-        // ✅ 이번 주 시작: 이번 주 일요일 / 끝: 이번 주 토요일
         LocalDate startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY));
         LocalDate endOfWeek = today.with(TemporalAdjusters.nextOrSame(DayOfWeek.SATURDAY));
-
-        log.info("🧩 [getWeeklyProgress] now={}, start={}, end={}", today, startOfWeek, endOfWeek);
 
         List<DailyProgress> progressList =
                 dailyProgressRepository.findByUserIdAndDateBetween(user.getId(), startOfWeek, endOfWeek);
@@ -122,30 +116,25 @@ public class DailyProgressService {
         Map<LocalDate, DailyProgress> map = progressList.stream()
                 .collect(Collectors.toMap(DailyProgress::getDate, p -> p));
 
-        // ✅ 일~토까지 모두 채우기
         return startOfWeek.datesUntil(endOfWeek.plusDays(1))
-                .map(date -> map.containsKey(date)
-                        ? DailyProgressDto.builder()
-                        .date(date)
-                        .exerciseRate(Optional.ofNullable(map.get(date).getExerciseRate()).orElse(0.0))
-                        .totalCalorie(Optional.ofNullable(map.get(date).getTotalCalorie()).orElse(0.0))
-                        .build()
-                        : DailyProgressDto.builder()
-                        .date(date)
-                        .exerciseRate(0.0)
-                        .totalCalorie(0.0)
+                .map(date -> map.getOrDefault(date,
+                        DailyProgress.builder()
+                                .date(date)
+                                .exerciseRate(0.0)
+                                .totalCalorie(0.0)
+                                .build()))
+                .map(p -> DailyProgressDto.builder()
+                        .date(p.getDate())
+                        .exerciseRate(Optional.ofNullable(p.getExerciseRate()).orElse(0.0))
+                        .totalCalorie(Optional.ofNullable(p.getTotalCalorie()).orElse(0.0))
                         .build())
                 .collect(Collectors.toList());
     }
 
-    /**
-     * ✅ 월별 운동 달성률 & 칼로리 조회 (없으면 0으로 채움)
-     */
+    /** ✅ 월별 운동 달성률 조회 */
     public List<DailyProgressDto> getMonthlyProgress(User user, YearMonth month) {
         LocalDate start = month.atDay(1);
         LocalDate end = month.atEndOfMonth();
-
-        log.info("🧩 [getMonthlyProgress] month={}, start={}, end={}", month, start, end);
 
         List<DailyProgress> list =
                 dailyProgressRepository.findByUserIdAndDateBetween(user.getId(), start, end);
@@ -153,25 +142,22 @@ public class DailyProgressService {
         Map<LocalDate, DailyProgress> map = list.stream()
                 .collect(Collectors.toMap(DailyProgress::getDate, p -> p));
 
-        // ✅ 해당 월의 모든 날짜를 0으로 채우기
         return start.datesUntil(end.plusDays(1))
-                .map(date -> map.containsKey(date)
-                        ? DailyProgressDto.builder()
-                        .date(date)
-                        .exerciseRate(Optional.ofNullable(map.get(date).getExerciseRate()).orElse(0.0))
-                        .totalCalorie(Optional.ofNullable(map.get(date).getTotalCalorie()).orElse(0.0))
-                        .build()
-                        : DailyProgressDto.builder()
-                        .date(date)
-                        .exerciseRate(0.0)
-                        .totalCalorie(0.0)
+                .map(date -> map.getOrDefault(date,
+                        DailyProgress.builder()
+                                .date(date)
+                                .exerciseRate(0.0)
+                                .totalCalorie(0.0)
+                                .build()))
+                .map(p -> DailyProgressDto.builder()
+                        .date(p.getDate())
+                        .exerciseRate(Optional.ofNullable(p.getExerciseRate()).orElse(0.0))
+                        .totalCalorie(Optional.ofNullable(p.getTotalCalorie()).orElse(0.0))
                         .build())
                 .collect(Collectors.toList());
     }
 
-    /**
-     * ✅ 최근 N일간 운동 달성률 & 칼로리 조회 (없으면 0으로 채움)
-     */
+    /** ✅ 최근 N일간 운동 달성률 조회 */
     public List<DailyProgressDto> getRecentProgress(User user, int days) {
         LocalDate end = LocalDate.now();
         LocalDate start = end.minusDays(days - 1);
@@ -182,18 +168,17 @@ public class DailyProgressService {
         Map<LocalDate, DailyProgress> map = list.stream()
                 .collect(Collectors.toMap(DailyProgress::getDate, p -> p));
 
-        // ✅ N일간 데이터 누락 보완
         return start.datesUntil(end.plusDays(1))
-                .map(date -> map.containsKey(date)
-                        ? DailyProgressDto.builder()
-                        .date(date)
-                        .exerciseRate(Optional.ofNullable(map.get(date).getExerciseRate()).orElse(0.0))
-                        .totalCalorie(Optional.ofNullable(map.get(date).getTotalCalorie()).orElse(0.0))
-                        .build()
-                        : DailyProgressDto.builder()
-                        .date(date)
-                        .exerciseRate(0.0)
-                        .totalCalorie(0.0)
+                .map(date -> map.getOrDefault(date,
+                        DailyProgress.builder()
+                                .date(date)
+                                .exerciseRate(0.0)
+                                .totalCalorie(0.0)
+                                .build()))
+                .map(p -> DailyProgressDto.builder()
+                        .date(p.getDate())
+                        .exerciseRate(Optional.ofNullable(p.getExerciseRate()).orElse(0.0))
+                        .totalCalorie(Optional.ofNullable(p.getTotalCalorie()).orElse(0.0))
                         .build())
                 .collect(Collectors.toList());
     }
