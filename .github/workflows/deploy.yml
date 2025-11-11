@@ -80,6 +80,8 @@ jobs:
           SPRING_MAIL_PORT: 587
           SPRING_MAIL_USERNAME: lkmm1108@naver.com
           SPRING_MAIL_PASSWORD: 7BJRP2P6F2LF
+          AI_SERVER_URL: http://localhost:8000   # ✅ 추가
+          AI_SERVER_API_KEY: dummy
 
   build-and-deploy:
     needs: test
