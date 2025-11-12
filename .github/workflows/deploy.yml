@@ -1,8 +1,7 @@
 name: CI/CD Pipeline
 
 on:
-  pull_request:
-    types: [closed]
+  push:
     branches:
       - dev
 
@@ -13,7 +12,6 @@ env:
 
 jobs:
   test:
-    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     services:
@@ -54,20 +52,11 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Refresh dependencies and verify Gradle version
-        run: |
-          ./gradlew --version
-          ./gradlew clean --refresh-dependencies --no-daemon
-
-      - name: Wait for MySQL to be ready
-        run: |
-          until mysqladmin ping -h 127.0.0.1 -u root -pAdmin123! --silent; do
-            echo 'Waiting for MySQL...'
-            sleep 2
-          done
+      - name: Clean and refresh dependencies
+        run: ./gradlew clean --refresh-dependencies --no-daemon
 
       - name: Run tests
-        run: ./gradlew test --no-daemon --refresh-dependencies
+        run: ./gradlew test --no-daemon
         env:
           SPRING_PROFILES_ACTIVE: test
           SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/intelfit?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
@@ -80,12 +69,11 @@ jobs:
           SPRING_MAIL_PORT: 587
           SPRING_MAIL_USERNAME: lkmm1108@naver.com
           SPRING_MAIL_PASSWORD: 7BJRP2P6F2LF
-          AI_SERVER_URL: http://localhost:8000   # ✅ 추가
+          AI_SERVER_URL: http://localhost:8000
           AI_SERVER_API_KEY: dummy
 
   build-and-deploy:
     needs: test
-    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     steps:
@@ -135,10 +123,6 @@ jobs:
                   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                   proxy_set_header X-Forwarded-Proto $scheme;
                   proxy_cache_bypass $http_upgrade;
-
-                  proxy_connect_timeout 60s;
-                  proxy_send_timeout 60s;
-                  proxy_read_timeout 60s;
               }
           }
           EOF
@@ -148,7 +132,6 @@ jobs:
           cat > deploy.sh << 'EOF'
           #!/bin/bash
           set -e
-
           echo "🚀 IntelFit 백엔드 배포 시작..."
           docker compose down --remove-orphans || true
           docker image prune -f || true

@@ -11,6 +11,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import rto.intelfit.security.CustomUserPrincipal;
+import rto.intelfit.service.AIExerciseSyncService;
 import rto.intelfit.service.AIServerClient;
 
 import java.io.IOException;
@@ -28,6 +29,7 @@ import java.util.Map;
 public class AIIntegrationController {
 
     private final AIServerClient aiServerClient;
+    private AIExerciseSyncService aiExerciseSyncService;
 
     // ========================================
     // 1️⃣ 식단 관련
@@ -45,6 +47,7 @@ public class AIIntegrationController {
         request.put("user_id", String.valueOf(userPrincipal.getUserId()));
         
         Map<String, Object> result = aiServerClient.generateMealPlan(request);
+        aiExerciseSyncService.syncAIRecommendedExercises(userPrincipal.getUserId());
         
         return ResponseEntity.ok(result);
     }
@@ -79,6 +82,8 @@ public class AIIntegrationController {
         request.put("user_id", String.valueOf(userPrincipal.getUserId()));
         
         Map<String, Object> result = aiServerClient.generateExercisePlan(request);
+        
+        aiExerciseSyncService.syncAIRecommendedExercises(userPrincipal.getUserId());
         
         return ResponseEntity.ok(result);
     }
