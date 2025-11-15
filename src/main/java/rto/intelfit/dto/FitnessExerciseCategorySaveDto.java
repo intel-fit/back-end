@@ -121,4 +121,22 @@ public class FitnessExerciseCategorySaveDto {
         @Schema(description = "삭제된 세트 수")
         private int deletedCount;
     }
+
+    // ✅ 세션 완료 상태 토글 응답 DTO
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "세션 완료 상태 토글 응답 DTO")
+    public static class ToggleResponse {
+        @Schema(description = "세션 ID")
+        private String sessionId;
+
+        @Schema(description = "변경된 완료 상태 (true=완료, false=미완료)")
+        private boolean completed;
+
+        @Schema(description = "영향받은 세트 수")
+        private int affectedSets;
+    }
 }
