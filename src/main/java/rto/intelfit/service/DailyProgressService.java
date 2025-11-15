@@ -44,41 +44,27 @@ public class DailyProgressService {
 
     /**
      * ✅ 특정 날짜의 운동 달성률 계산 및 저장
-     * - workoutDate 기준으로 해당 날짜에 완료된 세트 수 계산
+     * - 해당 날짜의 세션(운동 종목) 중 완료된 비율로 계산
+     * - 각 세션의 모든 세트가 완료되어야 해당 세션이 완료된 것으로 간주
      */
     @Transactional
     public DailyProgressDto calculateProgressByDate(User user, LocalDate date) {
-        String dayOfWeek = date.getDayOfWeek().name();
-
-        // 🏋️ 계획된 세트 수 (없으면 0)
-        int plannedSets = Optional.ofNullable(
-                workoutPlanDetailRepository.sumSetsByUserAndDayOfWeek(user.getId(), dayOfWeek)
-        ).orElse(0);
-
-        // ✅ 해당 날짜에 완료된 운동 세트 수 계산
-        // workoutDate가 LocalDateTime이므로 날짜만 비교
-        List<FitnessExerciseCategorySave> allRecords = 
-                saveRepository.findByUserOrderByWorkoutDateDesc(user);
+        // 🏋️ 해당 날짜의 전체 세션 수
+        long totalSessions = saveRepository.countTotalSessionsByDate(user, date);
         
-        int completedSets = (int) allRecords.stream()
-                .filter(record -> record.getWorkoutDate() != null)
-                .filter(record -> record.getWorkoutDate().toLocalDate().isEqual(date))
-                .count();
+        // ✅ 해당 날짜의 완료된 세션 수
+        long completedSessions = saveRepository.countCompletedSessionsByDate(user, date);
 
-        log.debug("운동 달성률 계산 - 날짜: {}, 계획: {}세트, 완료: {}세트", 
-                date, plannedSets, completedSets);
+        log.debug("운동 달성률 계산 - 날짜: {}, 전체 세션: {}, 완료 세션: {}", 
+                date, totalSessions, completedSessions);
 
         // 📊 운동 달성률 계산
         double exerciseRate;
-        if (plannedSets == 0) {
-            // 계획이 없는 경우: 운동했으면 100%, 안 했으면 0%
-            exerciseRate = (completedSets > 0) ? 100.0 : 0.0;
+        if (totalSessions == 0) {
+            exerciseRate = 0.0;
         } else {
-            // 계획이 있는 경우: (완료 / 계획) * 100, 최대 100%
-            exerciseRate = Math.min(
-                    Math.round(((double) completedSets / plannedSets) * 1000.0) / 10.0,
-                    100.0
-            );
+            // (완료된 세션 / 전체 세션) * 100
+            exerciseRate = Math.round(((double) completedSessions / totalSessions) * 1000.0) / 10.0;
         }
 
         // 🍽️ 해당 날짜 섭취 칼로리 합산
@@ -91,19 +77,21 @@ public class DailyProgressService {
 
         // 🧾 DB에 저장 또는 업데이트
         DailyProgress progress = dailyProgressRepository.findByUserIdAndDate(user.getId(), date)
-                .orElse(DailyProgress.builder()
-                        .user(user)
-                        .date(date)
-                        .exerciseRate(0.0)
-                        .totalCalorie(0.0)
-                        .build());
+                .orElseGet(() -> {
+                    DailyProgress newProgress = new DailyProgress();
+                    newProgress.setUser(user);
+                    newProgress.setDate(date);
+                    newProgress.setExerciseRate(0.0);
+                    newProgress.setTotalCalorie(0.0);
+                    return newProgress;
+                });
 
         progress.setExerciseRate(exerciseRate);
         progress.setTotalCalorie(totalCalories.doubleValue());
         dailyProgressRepository.save(progress);
 
-        log.info("✅ DailyProgress 저장 - userId: {}, date: {}, rate: {}%, kcal: {}, 완료세트: {}/{}",
-                user.getUserId(), date, exerciseRate, totalCalories, completedSets, plannedSets);
+        log.info("✅ DailyProgress 저장 - userId: {}, date: {}, rate: {}%, kcal: {}, 완료세션: {}/{}",
+                user.getUserId(), date, exerciseRate, totalCalories, completedSessions, totalSessions);
 
         return DailyProgressDto.builder()
                 .date(date)

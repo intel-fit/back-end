@@ -74,4 +74,19 @@ public class FitnessExerciseCategorySaveController {
         return ResponseEntity.ok(Map.of("sessionId", sessionId, "status", "success"));
     }
 
+    @Operation(summary = "운동 세션 완료 상태 토글",
+            description = "세션의 완료/미완료 상태를 토글합니다. 세션의 모든 세트가 일괄 변경됩니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "토글 성공"),
+            @ApiResponse(responseCode = "404", description = "해당 세션 없음")
+    })
+    @PatchMapping("/{sessionId}/toggle")
+    public ResponseEntity<FitnessExerciseCategorySaveDto.ToggleResponse> toggleSessionCompletion(
+            @PathVariable @NotBlank String sessionId) {
+
+        log.info("🔄 운동 세션 완료 토글 요청: sessionId={}", sessionId);
+        FitnessExerciseCategorySaveDto.ToggleResponse response = saveService.toggleSessionCompletion(sessionId);
+        return ResponseEntity.ok(response);
+    }
+
 }
