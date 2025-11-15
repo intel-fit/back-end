@@ -27,9 +27,7 @@ public class FitnessExerciseCategorySaveService {
     private final UserRepository userRepository;
     private final DailyProgressService dailyProgressService;
 
-    /**
-     * 1️⃣ 특정 유저의 운동 기록을 세션 단위로 그룹핑하여 조회
-     */
+
     @Transactional(readOnly = true)
     public List<FitnessExerciseCategorySaveDto.SessionResponse> getUserGroupedSessions(Long userId) {
         log.info("🔍 유저 ID={} 의 운동 세션 기록 조회 시작", userId);
@@ -52,10 +50,7 @@ public class FitnessExerciseCategorySaveService {
         return result;
     }
 
-    /**
-     * 2️⃣ 세션 ID 기준으로 삭제
-     * ✅ 삭제 후 해당 날짜의 달성률 재계산
-     */
+
     public FitnessExerciseCategorySaveDto.DeleteResponse deleteBySessionId(String sessionId) {
         log.info("🗑 세션 ID={} 삭제 요청", sessionId);
 
@@ -80,10 +75,7 @@ public class FitnessExerciseCategorySaveService {
                 .build();
     }
 
-    /**
-     * 3️⃣ 운동 세션 추가 (세트 여러 개 포함)
-     * ✅ 저장 후 해당 날짜의 달성률 자동 재계산
-     */
+
     public String addWorkoutSession(FitnessExerciseCategorySaveDto.CreateRequest request) {
         log.info("💪 운동 세션 추가 요청 - userId={}, exerciseId={}, exerciseName={}, sets={}",
                 request.getUserId(), request.getExternalId(), request.getExerciseName(), request.getSets().size());
@@ -93,12 +85,12 @@ public class FitnessExerciseCategorySaveService {
 
         String sessionId = "S-" + System.currentTimeMillis();
 
-        // ✅ 운동 ID 포함
+
         List<FitnessExerciseCategorySave> entities = request.getSets().stream()
                 .map(set -> FitnessExerciseCategorySave.builder()
                         .user(user)
                         .sessionId(sessionId)
-                        .externalId(request.getExternalId())        // 추가
+                        .externalId(request.getExternalId())
                         .exerciseName(request.getExerciseName())
                         .category(request.getCategory())
                         .setNumber(set.getSetNumber())
@@ -109,11 +101,43 @@ public class FitnessExerciseCategorySaveService {
                 .collect(Collectors.toList());
 
         saveRepository.saveAll(entities);
-        log.info("✅ 세션ID={} 운동 '{}' 저장 완료", sessionId, request.getExerciseName());
+        log.info("✅ 세션ID={} 운동 '{}' 저장 완료 (미완료 상태)", sessionId, request.getExerciseName());
 
         LocalDate workoutDate = request.getWorkoutDate().toLocalDate();
         dailyProgressService.recalculateProgress(user, workoutDate);
 
         return sessionId;
+    }
+
+
+    public FitnessExerciseCategorySaveDto.ToggleResponse toggleSessionCompletion(String sessionId) {
+        log.info("🔄 세션 완료 상태 토글 요청 - sessionId={}", sessionId);
+
+        List<FitnessExerciseCategorySave> sessionRecords = saveRepository.findBySessionId(sessionId);
+        if (sessionRecords.isEmpty()) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "해당 세션 ID에 해당하는 기록이 없습니다.");
+        }
+
+        // 현재 상태 확인 (하나라도 미완료면 전체를 완료로, 모두 완료면 전체를 미완료로)
+        boolean hasIncomplete = sessionRecords.stream().anyMatch(record -> !record.isCompleted());
+        boolean newCompletionStatus = hasIncomplete;  // 미완료가 있으면 → 완료로, 모두 완료면 → 미완료로
+
+        // 모든 세트의 완료 상태 변경
+        sessionRecords.forEach(record -> record.setCompleted(newCompletionStatus));
+        saveRepository.saveAll(sessionRecords);
+
+        log.info("✅ 세션 ID={} 완료 상태 변경: {} ({}개 세트)", 
+                sessionId, newCompletionStatus ? "완료" : "미완료", sessionRecords.size());
+
+        // 달성률 재계산
+        User user = sessionRecords.get(0).getUser();
+        LocalDate workoutDate = sessionRecords.get(0).getWorkoutDate().toLocalDate();
+        dailyProgressService.recalculateProgress(user, workoutDate);
+
+        return FitnessExerciseCategorySaveDto.ToggleResponse.builder()
+                .sessionId(sessionId)
+                .completed(newCompletionStatus)
+                .affectedSets(sessionRecords.size())
+                .build();
     }
 }

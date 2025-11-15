@@ -192,4 +192,3 @@ public class UserFoodPreferenceController {
         return ResponseEntity.ok(response);
     }
 }
-        //추가 설정(보류)

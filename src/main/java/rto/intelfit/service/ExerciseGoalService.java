@@ -28,13 +28,13 @@ public class ExerciseGoalService {
         User user = userRepository.findByUserId(userPrincipal.getUserId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // ✅ 기존 목표 삭제
+        // 기존 목표 삭제
         exerciseGoalRepository.findByUser(user).ifPresent(oldGoal -> {
             exerciseGoalRepository.delete(oldGoal);
             log.info("기존 운동 목표 삭제 - userId={}, oldGoalId={}", user.getUserId(), oldGoal.getId());
         });
 
-        // ✅ 새 목표 생성 (progress = 0 기본값)
+        // 새 목표 생성 (progress = 0 기본값)
         ExerciseGoal newGoal = ExerciseGoal.builder()
                 .user(user)
                 .weeklyFrequency(request.getWeeklyFrequency())

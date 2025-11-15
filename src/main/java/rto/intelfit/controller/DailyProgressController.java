@@ -18,7 +18,7 @@ import java.time.YearMonth;
 import java.util.List;
 
 /**
- * ✅ DailyProgressController (운영 DB 기반)
+ * DailyProgressController (운영 DB 기반)
  * 홈 화면/캘린더용 운동 달성률 & 칼로리 API
  */
 @Tag(name = "DailyProgress API", description = "운동 달성률 및 칼로리 조회")
@@ -30,12 +30,12 @@ public class DailyProgressController {
     private final DailyProgressService dailyProgressService;
     private final UserService userService;
 
-    /** ✅ 인증된 사용자 정보 가져오기 */
+    /** 인증된 사용자 정보 가져오기 */
     private User resolveUser(CustomUserPrincipal principal) {
         return userService.findByPrincipal(principal);
     }
 
-    /** ✅ 오늘의 운동 달성률 & 칼로리 */
+    /** 오늘의 운동 달성률 & 칼로리 */
     @Operation(summary = "오늘의 운동 달성률과 칼로리 조회")
     @GetMapping("/today")
     public ResponseEntity<DailyProgressDto> getTodayProgress(
@@ -45,7 +45,7 @@ public class DailyProgressController {
         return ResponseEntity.ok(progress);
     }
 
-    /** ✅ 특정 날짜의 운동 달성률 & 칼로리 */
+    /** 특정 날짜의 운동 달성률 & 칼로리 */
     @Operation(summary = "특정 날짜의 운동 달성률과 칼로리 조회")
     @GetMapping("/date")
     public ResponseEntity<DailyProgressDto> getProgressByDate(
@@ -66,7 +66,7 @@ public class DailyProgressController {
         return ResponseEntity.ok(weeklyProgress);
     }
 
-    /** ✅ 월별 운동 달성률 & 칼로리 리스트 */
+    /** 월별 운동 달성률 & 칼로리 리스트 */
     @Operation(summary = "월별 운동 달성률 및 칼로리 목록 조회")
     @GetMapping("/month")
     public ResponseEntity<List<DailyProgressDto>> getMonthlyProgress(
@@ -78,7 +78,7 @@ public class DailyProgressController {
         return ResponseEntity.ok(monthlyProgress);
     }
 
-    /** ✅ 최근 N일간 운동 달성률 & 칼로리 리스트 */
+    /** 최근 N일간 운동 달성률 & 칼로리 리스트 */
     @Operation(summary = "최근 N일간 운동 달성률 및 칼로리 목록 조회")
     @GetMapping("/recent")
     public ResponseEntity<List<DailyProgressDto>> getRecentProgress(

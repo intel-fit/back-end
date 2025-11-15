@@ -32,8 +32,8 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final RedisTemplate<String, String> redisTemplate;
     private final JwtUtil jwtUtil;
-    private final EmailService emailService; // ✅ 추가: 이메일 서비스
-    private final AIServerService aiServerService; // ✅ 추가
+    private final EmailService emailService;
+    private final AIServerService aiServerService;
 
     @Value("${jwt.access-token-expiration:3600000}")
     private long accessTokenExpiration;
@@ -147,7 +147,7 @@ public class UserService {
         String key = EMAIL_VERIFICATION_PREFIX + email;
         redisTemplate.opsForValue().set(key, verificationCode, VERIFICATION_CODE_EXPIRE_MINUTES, TimeUnit.MINUTES);
 
-        // ✅ 수정: 실제 이메일 발송 (비동기)
+        // 실제 이메일 발송 (비동기)
         try {
             emailService.sendVerificationCode(email, verificationCode);
             log.info("이메일 인증코드 발송 성공 - 이메일: {}, 인증코드: {}", email, verificationCode);
@@ -268,7 +268,7 @@ public class UserService {
         // 아이디 마스킹 처리
         String maskedUserId = maskUserId(user.getUserId());
 
-        // ✅ 수정: 실제 이메일 발송 (비동기)
+        //실제 이메일 발송 (비동기)
         try {
             emailService.sendUserId(email, user.getUserId());
             log.info("아이디 찾기 이메일 발송 성공 - 이메일: {}, 아이디: {}", email, user.getUserId());
@@ -297,7 +297,7 @@ public class UserService {
         String key = TEMP_PASSWORD_PREFIX + email;
         redisTemplate.opsForValue().set(key, tempPassword, TEMP_PASSWORD_EXPIRE_MINUTES, TimeUnit.MINUTES);
 
-        // ✅ 수정: 실제 이메일 발송 (비동기)
+        //실제 이메일 발송 (비동기)
         try {
             emailService.sendTempPassword(email, tempPassword);
             log.info("임시 비밀번호 이메일 발송 성공 - 이메일: {}, 임시 비밀번호: {}", email, tempPassword);

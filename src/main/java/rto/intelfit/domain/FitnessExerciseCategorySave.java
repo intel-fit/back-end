@@ -62,6 +62,11 @@ public class FitnessExerciseCategorySave {
     @Column(name = "workout_date")
     private LocalDateTime workoutDate;
 
+    /** 완료 여부 (true=완료, false=미완료) */
+    @Builder.Default
+    @Column(name = "completed", nullable = false)
+    private boolean completed = false;
+
     /** 생성 시각 */
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
