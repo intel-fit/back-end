@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import rto.intelfit.domain.InBody;
 import rto.intelfit.domain.User;
 import rto.intelfit.dto.InBodyDto;
@@ -12,6 +13,9 @@ import rto.intelfit.exception.ErrorCode;
 import rto.intelfit.repository.InBodyRepository;
 import rto.intelfit.repository.UserRepository;
 import rto.intelfit.security.CustomUserPrincipal;
+import rto.intelfit.service.ocr.InBodyOcrPipeline;
+
+import java.time.LocalDate;
 
 @Slf4j
 @Service
@@ -21,6 +25,8 @@ public class InBodyService {
 
     private final InBodyRepository inBodyRepository;
     private final UserRepository userRepository;
+    private final S3StorageService s3StorageService;
+    private final InBodyOcrPipeline inBodyOcrPipeline;
 
     /**
      * 인바디 정보 등록
@@ -33,38 +39,9 @@ public class InBodyService {
         User user = findUserByPrincipal(userPrincipal);
 
         // 동일 날짜에 이미 기록이 있는지 확인
-        if (inBodyRepository.findByUserAndMeasurementDate(user, request.getMeasurementDate()).isPresent()) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "해당 날짜에 이미 인바디 기록이 존재합니다");
-        }
+        ensureUniqueMeasurement(user, request.getMeasurementDate());
 
-        InBody inBody = InBody.builder()
-                .user(user)
-                .measurementDate(request.getMeasurementDate())
-                .weight(request.getWeight())
-                .muscleMass(request.getMuscleMass())
-                .bodyFatMass(request.getBodyFatMass())
-                .skeletalMuscleMass(request.getSkeletalMuscleMass())
-                .bodyFatPercentage(request.getBodyFatPercentage())
-                .leftArmMuscle(request.getLeftArmMuscle())
-                .rightArmMuscle(request.getRightArmMuscle())
-                .trunkMuscle(request.getTrunkMuscle())
-                .leftLegMuscle(request.getLeftLegMuscle())
-                .rightLegMuscle(request.getRightLegMuscle())
-                .leftArmFat(request.getLeftArmFat())
-                .rightArmFat(request.getRightArmFat())
-                .trunkFat(request.getTrunkFat())
-                .leftLegFat(request.getLeftLegFat())
-                .rightLegFat(request.getRightLegFat())
-                .totalBodyWater(request.getTotalBodyWater())
-                .protein(request.getProtein())
-                .mineral(request.getMineral())
-                .bmi(request.getBmi())
-                .bodyFatPercentageStandard(request.getBodyFatPercentageStandard())
-                .obesityDegree(request.getObesityDegree())
-                .visceralFatLevel(request.getVisceralFatLevel())
-                .basalMetabolicRate(request.getBasalMetabolicRate())
-                .achievementBadge(InBody.AchievementBadge.NONE) // 초기값은 NONE
-                .build();
+        InBody inBody = buildInBodyFromRequest(user, request);
 
         InBody savedInBody = inBodyRepository.save(inBody);
 
@@ -75,6 +52,28 @@ public class InBodyService {
                 .success(true)
                 .message("인바디 정보가 등록되었습니다")
                 .inBody(InBodyDto.InBodyDetailResponse.from(savedInBody, user))
+                .build();
+    }
+
+    /**
+     * 인바디 결과지 이미지 업로드 -> S3 저장 + Gemini OCR 초안 생성
+     */
+    @Transactional
+    public InBodyDto.InBodyOcrUploadResponse uploadInBodyFromImage(
+            CustomUserPrincipal userPrincipal,
+            MultipartFile file) {
+
+        User user = findUserByPrincipal(userPrincipal);
+        log.info("인바디 결과지 업로드 요청 - 사용자 ID: {}", user.getUserId());
+
+        S3StorageService.UploadResult uploadResult = s3StorageService.uploadInBodyImageWithKey(user.getUserId(), file);
+        byte[] downloadedImage = s3StorageService.downloadImage(uploadResult.objectKey());
+        InBodyOcrPipeline.PipelineResult pipelineResult = inBodyOcrPipeline.execute(downloadedImage);
+        return InBodyDto.InBodyOcrUploadResponse.builder()
+                .success(true)
+                .message("AI가 추출한 인바디 초안 데이터를 확인해 주세요")
+                .imageUrl(uploadResult.imageUrl())
+                .draftData(pipelineResult.getFinalResult())
                 .build();
     }
 
@@ -132,6 +131,47 @@ public class InBodyService {
     private User findUserByPrincipal(CustomUserPrincipal userPrincipal) {
         return userRepository.findByUserId(userPrincipal.getUserId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private void ensureUniqueMeasurement(User user, LocalDate measurementDate) {
+        if (measurementDate == null) {
+            throw new BusinessException(ErrorCode.INVALID_MEASUREMENT_DATE, "측정 날짜가 필요합니다");
+        }
+        inBodyRepository.findByUserAndMeasurementDate(user, measurementDate)
+                .ifPresent(existing -> {
+                    throw new BusinessException(ErrorCode.DUPLICATE_INBODY_DATE, "해당 날짜에 이미 인바디 기록이 존재합니다");
+                });
+    }
+
+    private InBody buildInBodyFromRequest(User user, InBodyDto.InBodyCreateRequest request) {
+        return InBody.builder()
+                .user(user)
+                .measurementDate(request.getMeasurementDate())
+                .weight(request.getWeight())
+                .muscleMass(request.getMuscleMass())
+                .bodyFatMass(request.getBodyFatMass())
+                .skeletalMuscleMass(request.getSkeletalMuscleMass())
+                .bodyFatPercentage(request.getBodyFatPercentage())
+                .leftArmMuscle(request.getLeftArmMuscle())
+                .rightArmMuscle(request.getRightArmMuscle())
+                .trunkMuscle(request.getTrunkMuscle())
+                .leftLegMuscle(request.getLeftLegMuscle())
+                .rightLegMuscle(request.getRightLegMuscle())
+                .leftArmFat(request.getLeftArmFat())
+                .rightArmFat(request.getRightArmFat())
+                .trunkFat(request.getTrunkFat())
+                .leftLegFat(request.getLeftLegFat())
+                .rightLegFat(request.getRightLegFat())
+                .totalBodyWater(request.getTotalBodyWater())
+                .protein(request.getProtein())
+                .mineral(request.getMineral())
+                .bmi(request.getBmi())
+                .bodyFatPercentageStandard(request.getBodyFatPercentageStandard())
+                .obesityDegree(request.getObesityDegree())
+                .visceralFatLevel(request.getVisceralFatLevel())
+                .basalMetabolicRate(request.getBasalMetabolicRate())
+                .achievementBadge(InBody.AchievementBadge.NONE)
+                .build();
     }
 
     private void updateInBodyFields(InBody inBody, InBodyDto.InBodyUpdateRequest request) {

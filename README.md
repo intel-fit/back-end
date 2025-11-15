@@ -43,3 +43,14 @@ code convention
     - K&R 중괄호 스타일
     - Lombok 적극 활용
     - Spring Boot 어노테이션 기반 개발
+
+## 인바디 결과지 OCR 초안 기능
+
+- 엔드포인트: `POST /api/inbody/upload` (`multipart/form-data`, `file` 필드에 이미지 전송)
+- 흐름: 이미지 업로드 → S3 저장 → S3에서 다시 다운로드 → OpenCV 전처리(문서 검출/보정, 조명/노이즈 제거, 대비 강화, 리샘플링) → Gemini Vision OCR → **초안 데이터(draft)** 만 반환 (DB 미저장)
+- 품질 향상: blur/skew 감지, 저품질 시 고강도 전처리 재시도, 원본/전처리 이미지를 동시에 Gemini에 전달해 가장 신뢰도 높은 값을 단일 패스로 추출
+- 응답: `imageUrl`(S3 경로) + `draftData`(최종 JSON). 프론트는 `draftData`를 "인바디 수기 입력" 기본값으로 사용 후 `POST /api/inbody`를 호출해 저장.
+- 환경 변수
+  - `AWS_REGION`, `AWS_S3_BUCKET`, `AWS_S3_INBODY_FOLDER`(선택), `AWS_S3_BASE_URL`(선택)
+  - `GEMINI_API_KEY` (bashrc에 이미 등록되어 있어야 함)
+- 기존 수기 입력 API (`POST /api/inbody`)는 그대로 사용합니다.
