@@ -33,18 +33,47 @@ import java.util.Map;
 public class GeminiVisionClient {
 
     private static final String BASE_PROMPT = """
-            You are an OCR specialist that extracts InBody result tables. Follow the rules strictly:
-            1. Even when the photo has distortions, shadows, or noise, reconstruct the table values faithfully.
-            2. If a value is blurry or unreadable, do NOT guess; return null.
-            3. Respect the units shown in the table (kg, %, kcal, L) to decide each metric.
-            4. Output pure JSON only. No natural language, no markdown or code fences.
-            5. Compare both images (original and preprocessed). Choose the number that is more reliable.
-            6. Fields order: measurementDate(yyyy-MM-dd), weight, muscleMass, bodyFatMass, skeletalMuscleMass, bodyFatPercentage,
-               leftArmMuscle, rightArmMuscle, trunkMuscle, leftLegMuscle, rightLegMuscle,
-               leftArmFat, rightArmFat, trunkFat, leftLegFat, rightLegFat,
-               totalBodyWater, protein, mineral, bmi, bodyFatPercentageStandard, obesityDegree,
-               visceralFatLevel, basalMetabolicRate.
-            7. Return JSON with those exact keys. Null for missing values. Do not add comments.
+            You are an expert OCR specialist for InBody result data. Extract all values from the single input image into the exact JSON format specified below.
+            
+            [REQUIRED EXTRACTION RULES]
+            1.  Strict Data Extraction: Identify and extract numerical values and the measurement date.
+            2.  No Guessing: If any value is ambiguous, blurry, or unreadable, return null for that field. Do not guess or approximate.
+            3.  Field Mapping: Use the units (kg, %, kcal, L) and surrounding labels to map the numbers to the exact fields defined in the schema.
+            4.  Key Integrity: Use the 24 keys exactly as listed. Keys must not be modified or commented.
+            
+            [FINAL JSON SCHEMA - PURE JSON ONLY]
+            Output a single JSON object (starting with {) containing all fields below.
+            DO NOT include any natural language, code fences, titles, or explanations.
+            
+            {
+                "measurementDate": "yyyy-MM-dd" or null,
+                "weight": float or null,
+                "muscleMass": float or null,
+                "bodyFatMass": float or null,
+                "skeletalMuscleMass": float or null,
+                "bodyFatPercentage": float or null,
+            
+                "leftArmMuscle": float or null,
+                "rightArmMuscle": float or null,
+                "trunkMuscle": float or null,
+                "leftLegMuscle": float or null,
+                "rightLegMuscle": float or null,
+            
+                "leftArmFat": float or null,
+                "rightArmFat": float or null,
+                "trunkFat": float or null,
+                "leftLegFat": float or null,
+                "rightLegFat": float or null,
+            
+                "totalBodyWater": float or null,
+                "protein": float or null,
+                "mineral": float or null,
+                "bmi": float or null,
+                "bodyFatPercentageStandard": float or null,
+                "obesityDegree": float or null,
+                "visceralFatLevel": float or null,
+                "basalMetabolicRate": float or null
+            }
             """;
 
     private static final int MAX_RETRY = 3;
@@ -62,13 +91,13 @@ public class GeminiVisionClient {
     @Value("${gemini.url:https://generativelanguage.googleapis.com/v1beta/models}")
     private String geminiBaseUrl;
 
-    public InBodyOcrResult analyze(byte[] primaryImage, byte[] secondaryImage, FocusTarget focusTarget) {
+    public InBodyOcrResult analyze(byte[] imageBytes) {
         if (!StringUtils.hasText(geminiApiKey)) {
             throw new BusinessException(ErrorCode.SERVICE_UNAVAILABLE, "Gemini API 키가 설정되지 않았습니다");
         }
 
         try {
-            String response = callGeminiApi(primaryImage, secondaryImage, focusTarget);
+            String response = callGeminiApi(imageBytes);
             String extractedText = extractTextContent(response);
             String cleanJson = cleanResponse(extractedText);
             return objectMapper.readValue(cleanJson, InBodyOcrResult.class);
@@ -77,21 +106,15 @@ public class GeminiVisionClient {
         }
     }
 
-    private String callGeminiApi(byte[] primaryImage, byte[] secondaryImage, FocusTarget focusTarget) throws JsonProcessingException {
+    private String callGeminiApi(byte[] imageBytes) throws JsonProcessingException {
         String url = String.format("%s/%s:generateContent?key=%s", geminiBaseUrl, geminiModel, geminiApiKey);
         List<Map<String, Object>> parts = new ArrayList<>();
-        parts.add(Map.of("text", focusTargetPrompt(focusTarget)));
+        parts.add(Map.of("text", BASE_PROMPT));
 
         parts.add(Map.of("inline_data", Map.of(
                 "mime_type", "image/jpeg",
-                "data", Base64.getEncoder().encodeToString(primaryImage)
+                "data", Base64.getEncoder().encodeToString(imageBytes)
         )));
-        if (secondaryImage != null && secondaryImage.length > 0) {
-            parts.add(Map.of("inline_data", Map.of(
-                    "mime_type", "image/jpeg",
-                    "data", Base64.getEncoder().encodeToString(secondaryImage)
-            )));
-        }
 
         Map<String, Object> payload = Map.of(
                 "contents", List.of(
@@ -137,13 +160,6 @@ public class GeminiVisionClient {
         }
     }
 
-    private String focusTargetPrompt(FocusTarget focusTarget) {
-        String focusText = focusTarget == FocusTarget.ORIGINAL_PRIMARY
-                ? "Image #1 is the original photo. Image #2 is a preprocessed version. Use Image #1 as the primary source and verify with Image #2."
-                : "Image #1 is the enhanced/preprocessed photo. Image #2 is the original. Use Image #1 as the primary source and cross-check with Image #2.";
-        return BASE_PROMPT + System.lineSeparator() + focusText;
-    }
-
     private String extractTextContent(String responseBody) throws JsonProcessingException {
         JsonNode root = objectMapper.readTree(responseBody);
         JsonNode candidates = root.path("candidates");
@@ -176,10 +192,5 @@ public class GeminiVisionClient {
             Thread.currentThread().interrupt();
             throw new BusinessException(ErrorCode.SERVICE_UNAVAILABLE, "Gemini API 재시도 중 인터럽트가 발생했습니다", e);
         }
-    }
-
-    public enum FocusTarget {
-        ORIGINAL_PRIMARY,
-        PREPROCESSED_PRIMARY
     }
 }
