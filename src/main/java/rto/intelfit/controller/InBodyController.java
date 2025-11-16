@@ -8,9 +8,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import rto.intelfit.dto.InBodyDto;
 import rto.intelfit.security.CustomUserPrincipal;
 import rto.intelfit.service.InBodyService;
@@ -32,8 +34,7 @@ public class InBodyController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "인바디 등록 성공"),
             @ApiResponse(responseCode = "400", description = "잘못된 요청 데이터"),
-            @ApiResponse(responseCode = "401", description = "인증이 필요합니다"),
-            @ApiResponse(responseCode = "409", description = "해당 날짜에 이미 인바디 기록이 존재합니다")
+            @ApiResponse(responseCode = "401", description = "인증이 필요합니다")
     })
     @PostMapping
     public ResponseEntity<InBodyDto.InBodyCreateResponse> createInBody(
@@ -43,6 +44,25 @@ public class InBodyController {
                 userPrincipal.getUserId(), request.getMeasurementDate());
 
         InBodyDto.InBodyCreateResponse response = inBodyService.createInBody(userPrincipal, request);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 1-1. 인바디 결과지 이미지 업로드
+     */
+    @Operation(summary = "인바디 결과지 업로드",
+            description = "인바디 결과지 이미지를 업로드하면 Gemini가 수치를 추출해 초안 데이터를 반환합니다")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "인바디 OCR 초안 생성 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 이미지 파일"),
+            @ApiResponse(responseCode = "401", description = "인증이 필요합니다")
+    })
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<InBodyDto.InBodyOcrUploadResponse> uploadInBodyImage(
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal,
+            @RequestPart("file") MultipartFile file) {
+        log.info("인바디 결과지 업로드 API 호출 - 사용자 ID: {}", userPrincipal.getUserId());
+        InBodyDto.InBodyOcrUploadResponse response = inBodyService.uploadInBodyFromImage(userPrincipal, file);
         return ResponseEntity.ok(response);
     }
 
