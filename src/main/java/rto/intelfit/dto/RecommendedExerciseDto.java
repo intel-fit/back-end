@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 
 public class RecommendedExerciseDto {
 
-    // ========== AI 운동 추천 생성 응답 ==========
+
     @Data
     @Builder
     @NoArgsConstructor
