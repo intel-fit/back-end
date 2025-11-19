@@ -56,7 +56,7 @@ dependencies {
 	runtimeOnly("com.mysql:mysql-connector-j")
 
 	// Swagger
-	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
+	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0")
 
 	// Lombok
 	compileOnly("org.projectlombok:lombok")
