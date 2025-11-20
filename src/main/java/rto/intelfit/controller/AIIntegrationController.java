@@ -8,13 +8,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import rto.intelfit.dto.AIChatMessageDto;
+import rto.intelfit.dto.ChatbotMessageRequest;
+import rto.intelfit.exception.BusinessException;
+import rto.intelfit.exception.ErrorCode;
 import rto.intelfit.security.CustomUserPrincipal;
+import rto.intelfit.service.AIChatService;
 import rto.intelfit.service.AIExerciseSyncService;
 import rto.intelfit.service.AIServerClient;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -29,7 +36,8 @@ import java.util.Map;
 public class AIIntegrationController {
 
     private final AIServerClient aiServerClient;
-    private AIExerciseSyncService aiExerciseSyncService;
+    private final AIExerciseSyncService aiExerciseSyncService;
+    private final AIChatService aiChatService;
 
     // ========================================
     // 1️⃣ 식단 관련
@@ -260,16 +268,37 @@ public class AIIntegrationController {
     @Operation(summary = "AI 코치 챗봇")
     public ResponseEntity<Map<String, Object>> chatWithCoach(
             @Parameter(hidden = true) @AuthenticationPrincipal CustomUserPrincipal userPrincipal,
-            @RequestBody Map<String, String> request) {
-        
-        String message = request.get("message");
-        
-        log.info("AI 코치 챗봇 - userId: {}, message: {}", 
-                userPrincipal.getUserId(), message);
-        
-        Map<String, Object> result = aiServerClient.chatWithCoach(
-                String.valueOf(userPrincipal.getUserId()), message);
-        
+            @RequestBody(required = false) ChatbotMessageRequest request,
+            @RequestParam(value = "message", required = false) String messageFromQuery) {
+
+        String message = request != null ? request.getMessage() : null;
+        if (!StringUtils.hasText(message)) {
+            message = messageFromQuery;
+        }
+
+        if (!StringUtils.hasText(message)) {
+            throw new BusinessException(ErrorCode.MISSING_REQUIRED_FIELD, "message 파라미터는 필수입니다.");
+        }
+
+        log.info("AI 코치 챗봇 - userId: {}, message: {}", userPrincipal.getUserId(), message);
+
+        Map<String, Object> result = aiChatService.handleChat(
+                userPrincipal.getId(),
+                message
+        );
+
         return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/coach/chat/history")
+    @Operation(summary = "AI 챗봇 대화 내역 조회")
+    public ResponseEntity<List<AIChatMessageDto>> getChatHistory(
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserPrincipal userPrincipal,
+            @RequestParam(defaultValue = "20") int limit) {
+
+        int sanitizedLimit = Math.max(1, Math.min(limit, 50));
+        List<AIChatMessageDto> history = aiChatService.getRecentMessages(userPrincipal.getId(), sanitizedLimit);
+
+        return ResponseEntity.ok(history);
     }
 }
