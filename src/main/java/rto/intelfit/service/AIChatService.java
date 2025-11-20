@@ -32,10 +32,10 @@ public class AIChatService {
      */
     @Transactional
     public Map<String, Object> handleChat(Long userId, String message) {
-        Map<String, Object> aiResponse = aiServerClient.chatWithCoach(String.valueOf(userId), message);
-
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        Map<String, Object> aiResponse = aiServerClient.chatWithCoach(user.getUserId(), message);
 
         AIChatMessage chatMessage = AIChatMessage.builder()
                 .user(user)
