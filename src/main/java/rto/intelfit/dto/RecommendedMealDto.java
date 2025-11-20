@@ -377,4 +377,9 @@
                         .build();
             }
         }
+        @Data
+        public static class SaveBundleRequest {
+            private List<RecommendedPlanDetailResponse> plans;
+        }
+
     }

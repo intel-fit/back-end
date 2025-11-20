@@ -19,11 +19,12 @@ import java.util.List;
                 @UniqueConstraint(name = "uk_bundle_day", columnNames = {"bundle_id", "bundle_day"})
         }
 )
+
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class RecommendedMealPlan {
 
     @Id

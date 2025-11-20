@@ -11,9 +11,9 @@ import java.math.BigDecimal;
 @Table(name = "recommended_foods")
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class RecommendedFood {
 
     @Id

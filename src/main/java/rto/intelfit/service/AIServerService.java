@@ -191,11 +191,22 @@ public class AIServerService {
         try {
             String goalParam = mapGoalForRecommender(user.getHealthGoal());
 
+            // 1) 비선호 음식 리스트 로드
+            List<String> dislikedFoods = preferenceService.getDislikedFoods(user);
+
+            // 2) 기본 URL Builder 생성
             UriComponentsBuilder ub = UriComponentsBuilder
                     .fromHttpUrl(aiServerUrl + "/recommend/recommend_daily_meal")
                     .queryParam("user_id", user.getUserId())
                     .queryParam("meals_per_day", 3)
                     .queryParam("goal", goalParam);
+
+            // 3) 비선호 음식 쿼리스트링 추가
+            if (dislikedFoods != null && !dislikedFoods.isEmpty()) {
+                for (String df : dislikedFoods) {
+                    ub.queryParam("excluded_foods", df);
+                }
+            }
 
             String url = ub.toUriString();
 
@@ -213,46 +224,83 @@ public class AIServerService {
 
             Map<String, Object> body = response.getBody();
 
-            BigDecimal totalKcal = toBD(body.get("target_daily_calories"));
-            List<Map<String, Object>> meals = safeListMap(body.get("meals"));
+            BigDecimal targetDailyCalories = toBD(body.get("target_daily_calories"));
+            BigDecimal targetProtein       = toBD(body.get("target_protein"));
+            BigDecimal targetFat           = toBD(body.get("target_fat"));
+            BigDecimal targetCarbs         = toBD(body.get("target_carbs"));
+            String comment                 = str(body.get("comment"));
+
+            Map<String, Object> aiPlan = safeMap(body.get("ai_meal_plan"));
+            BigDecimal totalKcalFromPlan = toBD(aiPlan.get("total_kcal"));
+            if (totalKcalFromPlan == null || BigDecimal.ZERO.compareTo(totalKcalFromPlan) == 0) {
+                totalKcalFromPlan = targetDailyCalories;
+            }
+
+            List<Map<String, Object>> meals = safeListMap(aiPlan.get("meals"));
 
             RecommendedMealPlan plan = RecommendedMealPlan.builder()
                     .user(user)
                     .planName("AI Daily Plan")
                     .description("AI 서버에서 생성한 하루 식단")
-                    .totalCalories(totalKcal)
-                    .totalCarbs(toBD(body.get("target_carbs")))
-                    .totalProtein(toBD(body.get("target_protein")))
-                    .totalFat(toBD(body.get("target_fat")))
-                    .recommendationReason("사용자 프로필과 목표 기반 자동 생성")
+                    .totalCalories(totalKcalFromPlan)
+                    .totalCarbs(targetCarbs)
+                    .totalProtein(targetProtein)
+                    .totalFat(targetFat)
+                    .recommendationReason(
+                            (comment == null || comment.isBlank())
+                                    ? "사용자 프로필과 목표 기반 자동 생성"
+                                    : comment
+                    )
                     .isSaved(false)
                     .build();
 
             for (Map<String, Object> m : meals) {
-                String type = str(m.get("meal_type")); // meal_1, meal_2, ...
+                String typeRaw = str(m.get("meal_type"));
+
                 RecommendedMeal rm = RecommendedMeal.builder()
-                        .mealType(mapMealTypeGuess(type))
-                        .totalCalories(toBD(m.get("actual_calories")))
-                        .totalCarbs(toBD(m.get("actual_carbs")))
-                        .totalProtein(toBD(m.get("actual_protein")))
-                        .totalFat(toBD(m.get("actual_fat")))
+                        .mealType(mapMealTypeGuess(typeRaw))
                         .build();
+
+                BigDecimal mealCalories = BigDecimal.ZERO;
+                BigDecimal mealCarbs    = BigDecimal.ZERO;
+                BigDecimal mealProtein  = BigDecimal.ZERO;
+                BigDecimal mealFat      = BigDecimal.ZERO;
 
                 List<Map<String, Object>> foods = safeListMap(m.get("foods"));
                 for (Map<String, Object> f : foods) {
-                    BigDecimal serving = toBD(f.get("serving_size"));
-                    if (serving == null || BigDecimal.ZERO.compareTo(serving) == 0) {
-                        serving = new BigDecimal("100");
+                    String foodName = str(f.get("name"));
+                    BigDecimal amountG = toBD(f.get("amount_g"));
+                    if (amountG == null || BigDecimal.ZERO.compareTo(amountG) == 0) {
+                        amountG = new BigDecimal("100");
                     }
-                    rm.addRecommendedFood(RecommendedFood.builder()
-                            .foodName(str(f.get("name")))
-                            .servingSize(serving)
-                            .calories(toBD(f.get("calories")))
-                            .carbs(toBD(f.get("carbs")))
-                            .protein(toBD(f.get("protein")))
-                            .fat(toBD(f.get("fat")))
-                            .build());
+
+                    BigDecimal calories = toBD(f.get("calories"));
+                    BigDecimal protein  = toBD(f.get("protein"));
+                    BigDecimal fat      = toBD(f.get("fat"));
+                    BigDecimal carbs    = toBD(f.get("carb"));
+
+                    mealCalories = mealCalories.add(calories);
+                    mealProtein  = mealProtein.add(protein);
+                    mealFat      = mealFat.add(fat);
+                    mealCarbs    = mealCarbs.add(carbs);
+
+                    rm.addRecommendedFood(
+                            RecommendedFood.builder()
+                                    .foodName(foodName)
+                                    .servingSize(amountG)
+                                    .calories(calories)
+                                    .carbs(carbs)
+                                    .protein(protein)
+                                    .fat(fat)
+                                    .build()
+                    );
                 }
+
+                rm.setTotalCalories(mealCalories);
+                rm.setTotalProtein(mealProtein);
+                rm.setTotalFat(mealFat);
+                rm.setTotalCarbs(mealCarbs);
+
                 plan.addRecommendedMeal(rm);
             }
 
@@ -267,6 +315,59 @@ public class AIServerService {
             return createSampleRecommendedMealPlan(user);
         }
     }
+
+    // == NEW: 0) 유저 비선호 음식 조회 ==
+    private List<String> loadDislikedFoods(User user) {
+        return preferenceService.getDislikedFoods(user);
+    }
+
+
+    public List<RecommendedMealPlan> requestWeeklyRecommendedMealPlansWithoutSave(CustomUserPrincipal principal) {
+
+        User user = userRepository.findByUserId(principal.getUserId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // ✔ fetchDailyRecommendedMealPlan() 기반으로 7일 생성
+        List<RecommendedMealPlan> weekly = new ArrayList<>();
+
+        for (int day = 1; day <= 7; day++) {
+            RecommendedMealPlan daily = fetchDailyRecommendedMealPlan(user);
+
+            daily.setUser(user);
+            daily.setBundleId(null); // temp 단계이므로 번들 없음
+            daily.setBundleDay(day);
+            daily.setPlanDate(LocalDate.now().plusDays(day - 1));
+            daily.setIsSaved(false);
+
+            if (daily.getRecommendedMeals() != null) {
+                daily.getRecommendedMeals().forEach(m -> m.setRecommendedMealPlan(daily));
+            }
+
+            weekly.add(daily);
+        }
+
+        return weekly;
+    }
+
+
+    public RecommendedMealPlan requestDailyRecommendedMealPlanWithoutSave(CustomUserPrincipal principal) {
+        User user = userRepository.findByUserId(principal.getUserId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        return fetchDailyRecommendedMealPlan(user);
+    }
+
+    @Transactional
+    public RecommendedMealPlan saveRecommendedMealPlan(RecommendedMealPlan plan) {
+        return recommendedMealPlanRepository.save(plan);
+    }
+
+
+
+
+
+
+
     // 샘플 플랜 생성기 (AI 실패 시 대체용)
     private RecommendedMealPlan createSampleRecommendedMealPlan(User user) {
         RecommendedMealPlan plan = RecommendedMealPlan.builder()
@@ -337,12 +438,10 @@ public class AIServerService {
             weekly.add(daily);
         }
 
-        // ✅ 4) saveAll() 전, 모든 엔티티가 user + bundleId + bundleDay + planDate 세팅 완료
-        List<RecommendedMealPlan> saved = recommendedMealPlanRepository.saveAll(weekly);
 
-        log.info("주간 식단 생성 완료 - userId={}, bundleId={}, count={}", user.getUserId(), bundleId, saved.size());
+        log.info("주간 식단 생성 완료 - userId={}, bundleId={}, count={}", user.getUserId(), bundleId, weekly.size());
 
-        return saved.stream()
+        return weekly.stream()
                 .map(RecommendedMealDto.RecommendedPlanDetailResponse::from)
                 .toList();
     }
@@ -359,8 +458,7 @@ public class AIServerService {
         plan.setBundleDay(1);
         plan.setPlanDate(LocalDate.now());
 
-        return recommendedMealPlanRepository.save(plan);
-    }
+        return plan;    }
 
     // -----------------------------
     // 3-보조
