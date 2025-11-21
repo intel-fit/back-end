@@ -142,6 +142,10 @@ public class ExerciseRecommendationService {
         return plan;
     }
 
+    private RecommendedExerciseRoutine convertAIDayToRoutine(Map<String, Object> dayData) {
+        return null;
+    }
+
     /**
      * ✅ AI 루틴 데이터를 RecommendedExerciseRoutine 엔티티로 변환
      */

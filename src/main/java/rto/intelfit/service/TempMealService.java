@@ -10,21 +10,21 @@ import rto.intelfit.domain.RecommendedMealPlan;
 import rto.intelfit.domain.RecommendedMeal;
 import rto.intelfit.domain.RecommendedFood;
 
-import rto.intelfit.domain.temp.TempMealDomain.TempMealBundle;
-import rto.intelfit.domain.temp.TempMealDomain.TempMealPlan;
-import rto.intelfit.domain.temp.TempMealDomain.TempMeal;
-import rto.intelfit.domain.temp.TempMealDomain.TempMealFood;
+import rto.intelfit.domain.TempMealDomain.TempMealBundle;
+import rto.intelfit.domain.TempMealDomain.TempMealPlan;
+import rto.intelfit.domain.TempMealDomain.TempMeal;
+import rto.intelfit.domain.TempMealDomain.TempMealFood;
 
-import rto.intelfit.repository.temp.TempBundleRepo;
-import rto.intelfit.repository.temp.TempPlanRepo;
-import rto.intelfit.repository.temp.TempMealRepo;
-import rto.intelfit.repository.temp.TempFoodRepo;
+import rto.intelfit.repository.TempBundleRepo;
+import rto.intelfit.repository.TempPlanRepo;
+import rto.intelfit.repository.TempMealRepo;
+import rto.intelfit.repository.TempFoodRepo;
 
 import rto.intelfit.repository.UserRepository;
 import rto.intelfit.security.CustomUserPrincipal;
 import rto.intelfit.exception.BusinessException;
 import rto.intelfit.exception.ErrorCode;
-import rto.intelfit.dto.tempmeal.TempMealDto;
+import rto.intelfit.dto.TempMealDto;
 
 import java.time.LocalDate;
 import java.util.List;

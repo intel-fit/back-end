@@ -1,4 +1,4 @@
-package rto.intelfit.domain.temp;
+package rto.intelfit.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
