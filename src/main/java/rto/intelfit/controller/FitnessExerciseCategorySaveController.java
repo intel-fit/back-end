@@ -13,6 +13,10 @@ import rto.intelfit.dto.FitnessExerciseCategorySaveDto;
 import rto.intelfit.service.FitnessExerciseCategorySaveService;
 import java.util.Map;
 import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.AllArgsConstructor;
+
 //*
 // 운동 기록 페이지
 // 1. user id 별 운동 기록 리스트 반환
@@ -88,5 +92,55 @@ public class FitnessExerciseCategorySaveController {
         FitnessExerciseCategorySaveDto.ToggleResponse response = saveService.toggleSessionCompletion(sessionId);
         return ResponseEntity.ok(response);
     }
+
+    @Operation(summary = "오늘 운동 시간 추가", description = "프론트에서 보낸 운동 시간을 오늘의 DailyProgress에 누적 저장합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "운동 시간 누적 성공"),
+            @ApiResponse(responseCode = "404", description = "유저 없음")
+    })
+    @PostMapping("/time")
+    public ResponseEntity<Map<String, Object>> addWorkoutTime(@RequestBody WorkoutTimeRequest request) {
+
+        log.info("⏱ 오늘 운동 시간 추가 요청: userId={}, seconds={}", request.getUserId(), request.getSeconds());
+
+        saveService.addDailyExerciseSeconds(request.getUserId(), request.getSeconds());
+
+        return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "addedSeconds", request.getSeconds()
+        ));
+    }
+
+    @Getter
+    @Setter
+    public static class WorkoutTimeRequest {
+        private Long userId;
+        private long seconds;
+    }
+    @Operation(summary = "오늘 운동 시간 조회", description = "특정 유저의 오늘 총 운동 시간을 반환합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "404", description = "유저 없음")
+    })
+    @GetMapping("/time/{userId}")
+    public ResponseEntity<TodayWorkoutTimeResponse> getTodayWorkoutTime(@PathVariable Long userId) {
+
+        log.info("⏱ 오늘 운동시간 조회 요청: userId={}", userId);
+
+        long seconds = saveService.getTodayWorkoutSeconds(userId);
+
+        return ResponseEntity.ok(
+                new TodayWorkoutTimeResponse(userId, seconds)
+        );
+    }
+
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    public static class TodayWorkoutTimeResponse {
+        private Long userId;
+        private long totalSeconds;
+    }
+
 
 }

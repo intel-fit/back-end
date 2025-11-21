@@ -35,4 +35,12 @@ public class DailyProgress {
     @Builder.Default
     @Column(name = "total_calorie", nullable = false)
     private double totalCalorie = 0.0;
+
+    //오늘의 총 운동 시간 추가
+
+    // 오늘 총 운동 시간 (초 단위)
+    @Builder.Default
+    @Column(name = "total_exercise_seconds", nullable = false)
+    private long totalExerciseSeconds = 0L;
+
 }

@@ -13,9 +13,9 @@ import java.util.List;
 @Table(name = "recommended_meals")
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class RecommendedMeal {
 
     @Id

@@ -113,3 +113,16 @@ ai:
 # 앱 설정
 app:
   name: IntelFit
+
+cloud:
+  aws:
+    region: ${AWS_REGION:ap-northeast-2}
+    s3:
+      bucket: ${AWS_S3_BUCKET:}
+      folder: ${AWS_S3_INBODY_FOLDER:inbody-records}
+      base-url: ${AWS_S3_BASE_URL:}
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: ${GEMINI_MODEL:gemini-2.5-flash}
+  url: ${GEMINI_API_URL:https://generativelanguage.googleapis.com/v1beta/models}

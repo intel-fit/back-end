@@ -70,6 +70,17 @@ public class RecommendedMealController {
         return ResponseEntity.ok(response);
     }
 
+    // === 3️⃣ 7일치 추천받은 식단 저장 / 취소 ===
+    @PostMapping("/save-bundle")
+    @Operation(summary = "추천 식단 번들 저장", description = "프론트에서 받은 7일치 DTO를 그대로 DB에 저장합니다")
+    public ResponseEntity<RecommendedMealDto.SaveRecommendedPlanResponse> saveBundleFromClient(
+            @AuthenticationPrincipal CustomUserPrincipal principal,
+            @RequestBody RecommendedMealDto.SaveBundleRequest request
+    ) {
+        var resp = recommendedMealService.saveBundleFromClient(principal, request);
+        return ResponseEntity.ok(resp);
+    }
+
     // === 3️⃣ 추천 식단 저장 / 취소 ===
     @Operation(summary = "추천 식단 저장")
     @PostMapping("/{planId}/save")

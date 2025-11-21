@@ -11,6 +11,8 @@ import rto.intelfit.exception.BusinessException;
 import rto.intelfit.exception.ErrorCode;
 import rto.intelfit.repository.FitnessExerciseCategorySaveRepository;
 import rto.intelfit.repository.UserRepository;
+import rto.intelfit.repository.DailyProgressRepository;
+import rto.intelfit.domain.DailyProgress;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -26,6 +28,8 @@ public class FitnessExerciseCategorySaveService {
     private final FitnessExerciseCategorySaveRepository saveRepository;
     private final UserRepository userRepository;
     private final DailyProgressService dailyProgressService;
+    private final DailyProgressRepository dailyProgressRepository;
+
 
 
     @Transactional(readOnly = true)
@@ -140,4 +144,44 @@ public class FitnessExerciseCategorySaveService {
                 .affectedSets(sessionRecords.size())
                 .build();
     }
+
+    @Transactional
+    public void addDailyExerciseSeconds(Long userId, long seconds) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "유저를 찾을 수 없습니다."));
+
+        LocalDate today = LocalDate.now();
+
+        DailyProgress progress = dailyProgressRepository.findByUserIdAndDate(userId, today)
+                .orElseGet(() -> {
+                    DailyProgress newOne = DailyProgress.builder()
+                            .user(user)
+                            .date(today)
+                            .totalExerciseSeconds(0L)
+                            .totalCalorie(0.0)
+                            .exerciseRate(0.0)
+                            .build();
+                    return dailyProgressRepository.save(newOne);
+                });
+
+        progress.setTotalExerciseSeconds(progress.getTotalExerciseSeconds() + seconds);
+
+        log.info("✔ 오늘 운동시간 누적 완료 userId={}, totalSeconds={}",
+                userId, progress.getTotalExerciseSeconds());
+    }
+    @Transactional(readOnly = true)
+    public long getTodayWorkoutSeconds(Long userId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "유저를 찾을 수 없습니다."));
+
+        LocalDate today = LocalDate.now();
+
+        return dailyProgressRepository.findByUserIdAndDate(userId, today)
+                .map(DailyProgress::getTotalExerciseSeconds)
+                .orElse(0L); // 오늘 기록이 없으면 0초로 반환
+    }
+
+
 }

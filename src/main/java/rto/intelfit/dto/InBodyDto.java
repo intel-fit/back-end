@@ -546,6 +546,28 @@ public class InBodyDto {
         private InBodyDetailResponse inBody;
     }
 
+    // ==================== OCR 업로드 응답 ====================
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "인바디 OCR 초안 응답")
+    public static class InBodyOcrUploadResponse {
+
+        @Schema(description = "성공 여부", example = "true")
+        private boolean success;
+
+        @Schema(description = "메시지", example = "인바디 초안 데이터를 확인해 주세요")
+        private String message;
+
+        @Schema(description = "업로드된 이미지 URL")
+        private String imageUrl;
+
+        @Schema(description = "AI가 해석한 초안 수치 (최종 반영)")
+        private InBodyOcrResult draftData;
+
+    }
+
     // ==================== 수정 응답 ====================
     @Data
     @Builder

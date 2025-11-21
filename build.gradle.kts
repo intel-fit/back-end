@@ -45,6 +45,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation ("org.springframework.boot:spring-boot-starter-mail")
+	implementation("software.amazon.awssdk:s3:2.25.66")
 
 	//JWT
 	implementation("io.jsonwebtoken:jjwt-api:0.11.5")

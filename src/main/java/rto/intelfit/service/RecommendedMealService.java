@@ -16,6 +16,9 @@ import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.UUID;
+import java.util.ArrayList;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -419,4 +422,56 @@ public class RecommendedMealService {
         return userRepository.findByUserId(userPrincipal.getUserId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
+    @Transactional
+    public RecommendedMealDto.SaveRecommendedPlanResponse saveBundleFromClient(
+            CustomUserPrincipal userPrincipal,
+            RecommendedMealDto.SaveBundleRequest request
+    ) {
+        User user = findUserByPrincipal(userPrincipal);
+
+        if (request.getPlans() == null || request.getPlans().isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "저장할 식단 정보가 없습니다");
+        }
+
+        String bundleId = UUID.randomUUID().toString();
+
+        List<RecommendedMealPlan> entities = new ArrayList<>();
+
+        int day = 1;
+        for (RecommendedMealDto.RecommendedPlanDetailResponse dto : request.getPlans()) {
+
+            RecommendedMealPlan plan = RecommendedMealPlan.builder()
+                    .user(user)
+                    .planName(dto.getPlanName())
+                    .description(dto.getDescription())
+                    .totalCalories(dto.getTotalCalories())
+                    .totalCarbs(dto.getTotalCarbs())
+                    .totalProtein(dto.getTotalProtein())
+                    .totalFat(dto.getTotalFat())
+                    .recommendationReason(dto.getRecommendationReason())
+                    .isSaved(true)
+                    .bundleId(bundleId)
+                    .bundleDay(day++)
+                    .planDate(dto.getPlanDate())
+                    .build();
+
+            // meals
+
+
+            entities.add(plan);
+        }
+
+        // 7일치 저장
+        recommendedMealPlanRepository.saveAll(entities);
+
+        log.info("프론트 기반 번들 저장 완료 - userId={}, bundleId={}, days={}",
+                user.getUserId(), bundleId, entities.size());
+
+        return RecommendedMealDto.SaveRecommendedPlanResponse.builder()
+                .success(true)
+                .message("7일 식단이 저장되었습니다")
+                .plan(RecommendedMealDto.RecommendedPlanDetailResponse.from(entities.get(0)))
+                .build();
+    }
+
 }

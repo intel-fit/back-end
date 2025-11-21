@@ -16,9 +16,13 @@ import rto.intelfit.domain.User;
 import rto.intelfit.domain.InBody;
 
 import java.io.IOException;
+
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.HashMap;
+
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 @Slf4j
@@ -222,14 +226,11 @@ public class AIServerClient {
     }
 
     public Map<String, Object> chatWithCoach(String userId, String message) {
-        String url = aiServerUrl + "/chat/coach";
+        String url = aiServerUrl + "/chat/coach"
+                + "?user_id=" + userId
+                + "&message=" + URLEncoder.encode(message, StandardCharsets.UTF_8);
 
-        Map<String, Object> request = Map.of(
-                "user_id", userId,
-                "message", message
-        );
-
-        return postRequest(url, request);
+        return postRequest(url, null);
     }
 
     // ========================================
@@ -253,9 +254,12 @@ public class AIServerClient {
     }
 
     private Map<String, Object> postRequest(String url, Map<String, Object> request) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(request, headers);
+        HttpEntity<Map<String, Object>> requestEntity = null;
+        if (request != null) {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            requestEntity = new HttpEntity<>(request, headers);
+        }
 
         try {
             log.debug("AI 서버 POST 요청: {} - Body: {}", url, request);

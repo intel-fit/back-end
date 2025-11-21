@@ -143,7 +143,8 @@ public enum ErrorCode {
     MISSING_REQUIRED_FIELD(HttpStatus.BAD_REQUEST, "COMMON_010", "필수 항목이 누락되었습니다"),
     INVALID_PARAMETER(HttpStatus.BAD_REQUEST, "COMMON_011", "유효하지 않은 파라미터입니다"),
     DATABASE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_012", "데이터베이스 오류가 발생했습니다"),
-    NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON_013" ,"리소스를 찾을 수 없습니다.");
+    NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON_013" ,"리소스를 찾을 수 없습니다."),
+    NOT_FOUND_TEMP_MEAL(HttpStatus.NOT_FOUND, "TEMP_MEAL_NOT_FOUND", "임시 저장된 식단이 없습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
