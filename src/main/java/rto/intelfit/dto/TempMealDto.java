@@ -1,4 +1,4 @@
-package rto.intelfit.dto.tempmeal;
+package rto.intelfit.dto;
 
 import lombok.*;
 import java.math.BigDecimal;

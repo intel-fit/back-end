@@ -77,7 +77,7 @@ public class ExerciseRecommendationController {
     /**
      * 저장된 추천 운동 플랜 목록 조회
      */
-    @GetMapping
+    @GetMapping({"", "/"})
     @Operation(summary = "저장된 추천 플랜 목록", 
                description = "사용자가 저장한 추천 운동 플랜 목록을 조회합니다")
     public ResponseEntity<RecommendedExerciseDto.SavedPlansResponse> getSavedPlans(

@@ -1,7 +1,7 @@
-package rto.intelfit.repository.temp;
+package rto.intelfit.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import rto.intelfit.domain.temp.TempMealDomain.TempMealPlan;
+import rto.intelfit.domain.TempMealDomain.TempMealPlan;
 import java.util.Optional;
 import java.util.List;
 

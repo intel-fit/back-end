@@ -7,7 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
-import rto.intelfit.dto.tempmeal.TempMealDto;
+import rto.intelfit.dto.TempMealDto;
 import rto.intelfit.security.CustomUserPrincipal;
 import rto.intelfit.service.TempMealService;
 
