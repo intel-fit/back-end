@@ -10,8 +10,6 @@ public enum ErrorCode {
 
     // ==================== 사용자 관련 에러 ====================
     DUPLICATE_USER_ID(HttpStatus.CONFLICT, "USER_001", "이미 사용중인 아이디입니다"),
-    DUPLICATE_EMAIL(HttpStatus.CONFLICT, "USER_002", "이미 사용중인 이메일입니다"),
-    DUPLICATE_PHONE_NUMBER(HttpStatus.CONFLICT, "USER_003", "이미 사용중인 전화번호입니다"),
     PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, "USER_004", "비밀번호가 일치하지 않습니다"),
     INVALID_USER_DATA(HttpStatus.BAD_REQUEST, "USER_005", "유효하지 않은 사용자 정보입니다"),
     USER_NOT_FOUND_BY_EMAIL(HttpStatus.NOT_FOUND, "USER_006", "해당 이메일로 등록된 사용자를 찾을 수 없습니다"),
@@ -144,7 +142,8 @@ public enum ErrorCode {
     INVALID_PARAMETER(HttpStatus.BAD_REQUEST, "COMMON_011", "유효하지 않은 파라미터입니다"),
     DATABASE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_012", "데이터베이스 오류가 발생했습니다"),
     NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON_013" ,"리소스를 찾을 수 없습니다."),
-    NOT_FOUND_TEMP_MEAL(HttpStatus.NOT_FOUND, "TEMP_MEAL_NOT_FOUND", "임시 저장된 식단이 없습니다.");
+    NOT_FOUND_TEMP_MEAL(HttpStatus.NOT_FOUND, "TEMP_MEAL_NOT_FOUND", "임시 저장된 식단이 없습니다."),
+    DUPLICATE_EMAIL(HttpStatus.CONFLICT, "COMMMON_000", "이미 사용중인 이메일입니다." );
 
     private final HttpStatus httpStatus;
     private final String code;
