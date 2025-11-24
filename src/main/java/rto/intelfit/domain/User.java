@@ -39,9 +39,6 @@ public class User {
     @Column(name = "birth_date", nullable = false)
     private LocalDate birthDate;
 
-    @Column(name = "phone_number", nullable = false, length = 11)
-    private String phoneNumber;
-
     @Column(name = "password", nullable = false, length = 255)
     private String password;
 
@@ -77,6 +74,20 @@ public class User {
     @Column(name = "gender")
     private Gender gender;
 
+    @Column(name = "agree_privacy", nullable = false)
+    @Builder.Default
+    private Boolean agreePrivacy = false;
+
+    @Column(name = "agree_terms", nullable = false)
+    @Builder.Default
+    private Boolean agreeTerms = false;
+
+    @Column(name = "agreed_at")
+    private LocalDateTime agreedAt;
+
+    @Column(name = "fitness_concerns", length = 500)
+    private String fitnessConcerns;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -84,6 +95,8 @@ public class User {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+
 
     // InBody와의 1:N 관계
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)

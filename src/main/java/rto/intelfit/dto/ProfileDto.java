@@ -76,7 +76,6 @@ public class ProfileDto {
                     .name(user.getName())
                     .email(user.getEmail())
                     .birthDate(user.getBirthDate())
-                    .phoneNumber(user.getPhoneNumber())
                     .height(user.getHeight())
                     .weight(user.getWeight())
                     .gender(user.getGender())

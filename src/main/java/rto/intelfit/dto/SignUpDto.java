@@ -54,10 +54,16 @@ public class SignUpDto {
         @JsonFormat(pattern = "yyyy-MM-dd")
         private LocalDate birthDate;
 
-        @Schema(description = "전화번호", example = "01028147460")
-        @NotBlank(message = "전화번호를 입력해주세요")
-        @Pattern(regexp = "^\\d{10,11}$", message = "올바른 전화번호 형식이 아닙니다")
-        private String phoneNumber;
+
+        @Schema(description = "개인정보 처리방침 동의", example = "true")
+        @NotNull(message = "개인정보 처리방침에 동의해주세요")
+        @AssertTrue(message = "개인정보 처리방침에 동의해야 합니다")
+        private Boolean agreePrivacy;
+
+        @Schema(description = "서비스 이용약관 동의", example = "true")
+        @NotNull(message = "서비스 이용약관에 동의해주세요")
+        @AssertTrue(message = "서비스 이용약관에 동의해야 합니다")
+        private Boolean agreeTerms;
 
         @Schema(description = "이메일 인증코드", example = "123456")
         @NotBlank(message = "이메일 인증코드를 입력해주세요")
@@ -94,6 +100,13 @@ public class SignUpDto {
         @Schema(description = "주간 운동 일수", example = "3-4일")
         @Size(max = 20, message = "주간 운동 일수는 20자 이내로 입력해주세요")
         private String workoutDaysPerWeek;
+
+        @Schema(description = "헬스 고민 (쉼표로 구분된 문자열)", 
+                example = "의지 부족,루틴 짜기 어려움",
+                allowableValues = {"의지 부족", "근육의 자극", "루틴 짜기 어려움", "올바른 운동 자세", "식단 관리", "기타"})
+        @Size(max = 500, message = "헬스 고민은 500자 이내로 입력해주세요")
+        private String fitnessConcerns;
+
     }
 
     @Data

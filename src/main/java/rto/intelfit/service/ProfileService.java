@@ -42,13 +42,6 @@ public class ProfileService {
                                                           ProfileDto.ProfileUpdateRequest request) {
         User user = findUserByPrincipal(userPrincipal);
 
-        // 전화번호 중복 체크 (본인 제외)
-        if (StringUtils.hasText(request.getPhoneNumber()) &&
-                !request.getPhoneNumber().equals(user.getPhoneNumber())) {
-            if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
-                throw new BusinessException(ErrorCode.DUPLICATE_PHONE_NUMBER);
-            }
-        }
 
         // 수정 가능한 필드들 업데이트
         updateUserFields(user, request);
@@ -159,9 +152,6 @@ public class ProfileService {
     private void updateUserFields(User user, ProfileDto.ProfileUpdateRequest request) {
         if (StringUtils.hasText(request.getName())) {
             user.setName(request.getName());
-        }
-        if (StringUtils.hasText(request.getPhoneNumber())) {
-            user.setPhoneNumber(request.getPhoneNumber());
         }
         if (request.getHeight() != null) {
             user.setHeight(request.getHeight());

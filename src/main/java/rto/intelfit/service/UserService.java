@@ -62,10 +62,6 @@ public class UserService {
             throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
         }
 
-        // 전화번호 중복 확인
-        if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
-            throw new BusinessException(ErrorCode.DUPLICATE_PHONE_NUMBER);
-        }
 
         // 이메일 인증코드 확인
         if (!verifyEmailCode(request.getEmail(), request.getVerificationCode())) {
@@ -82,7 +78,6 @@ public class UserService {
                 .email(request.getEmail())
                 .password(encodedPassword)
                 .birthDate(request.getBirthDate())
-                .phoneNumber(request.getPhoneNumber())
                 .emailVerified(true) // 인증코드 확인 완료
                 // 초기 피트니스 정보 추가
                 .gender(request.getGender())
@@ -91,6 +86,12 @@ public class UserService {
                 .weightGoal(request.getWeightGoal())
                 .healthGoal(request.getHealthGoal())
                 .workoutDaysPerWeek(request.getWorkoutDaysPerWeek())
+                // 약관 동의 정보 추가
+                .agreePrivacy(request.getAgreePrivacy())
+                .agreeTerms(request.getAgreeTerms())
+                .agreedAt(java.time.LocalDateTime.now())
+                // 헬스 고민 추가
+                .fitnessConcerns(request.getFitnessConcerns())
                 .build();
 
         User savedUser = userRepository.save(user);
