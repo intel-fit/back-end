@@ -52,6 +52,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/users/signup",
                                 "/api/users/login",
+                                "/api/users/kakao/login",
                                 "/api/users/check-userId",
                                 "/api/users/send-verification-code",
                                 "/api/users/find-userId",

@@ -13,7 +13,6 @@ spring:
   application:
     name: intelfit
 
-
   datasource:
     url: jdbc:mysql://mysql:3306/intelfit?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&autoReconnect=true
     username: root
@@ -38,7 +37,6 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
         show_sql: true
-
     open-in-view: false
     database-platform: org.hibernate.dialect.MySQLDialect
 
@@ -142,3 +140,11 @@ gemini:
   api-key: ${GEMINI_API_KEY:}
   model: ${GEMINI_MODEL:gemini-2.5-flash}
   url: ${GEMINI_API_URL:https://generativelanguage.googleapis.com/v1beta/models}
+
+kakao:
+  rest-api-key: ${KAKAO_REST_API_KEY:7fc72724581279e69f3fd90de192b691}
+  javascript-key: ${KAKAO_JAVASCRIPT_KEY:8f93a1757095b48d18fe50b632637f5a}
+  redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:19002/auth/kakao/callback}
+  auth-url: https://kauth.kakao.com/oauth/authorize
+  token-url: https://kauth.kakao.com/oauth/token
+  user-info-url: https://kapi.kakao.com/v2/user/me

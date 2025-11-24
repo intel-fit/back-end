@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   mysql:
     image: mysql:8.0
@@ -11,9 +13,9 @@ services:
       TZ: Asia/Seoul
     command:
       [
-              "--character-set-server=utf8mb4",
-              "--collation-server=utf8mb4_unicode_ci",
-              "--skip-character-set-client-handshake"
+        "--character-set-server=utf8mb4",
+        "--collation-server=utf8mb4_unicode_ci",
+        "--skip-character-set-client-handshake"
       ]
     ports:
       - "3306:3306"
@@ -64,8 +66,11 @@ services:
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: Admin123!
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
-      AI_SERVER_URL: http://43.200.40.140:8000   # ⬅︎ 공인 IP/도메인
-
+      AI_SERVER_URL: http://43.200.40.140:8000
+      # 카카오 로그인 설정 추가
+      KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY}
+      KAKAO_JAVASCRIPT_KEY: ${KAKAO_JAVASCRIPT_KEY}
+      KAKAO_REDIRECT_URI: ${KAKAO_REDIRECT_URI}
     ports:
       - "8080:8080"
     healthcheck:
