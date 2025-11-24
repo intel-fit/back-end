@@ -11,18 +11,16 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
-import rto.intelfit.domain.SocialAccount;
+
 import rto.intelfit.domain.User;
 import rto.intelfit.dto.KakaoDto;
 import rto.intelfit.exception.BusinessException;
 import rto.intelfit.exception.ErrorCode;
-import rto.intelfit.repository.SocialAccountRepository;
 import rto.intelfit.repository.UserRepository;
 import rto.intelfit.util.JwtUtil;
 
 import java.time.LocalDate;
 import java.util.UUID;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -30,7 +28,6 @@ import java.util.UUID;
 public class KakaoService {
 
     private final UserRepository userRepository;
-    private final SocialAccountRepository socialAccountRepository;
     private final JwtUtil jwtUtil;
     private final WebClient webClient;
 
@@ -74,7 +71,7 @@ public class KakaoService {
     }
 
     /**
-     * 2단계: 카카오 액세스 토큰으로 사용자 정보 조회
+     * 2단계: 액세스 토큰으로 카카오 사용자 정보 조회
      */
     public KakaoDto.KakaoUserInfo getKakaoUserInfo(String accessToken) {
         try {
@@ -91,68 +88,58 @@ public class KakaoService {
     }
 
     /**
-     * 3단계: 카카오 로그인 처리 (전체 흐름)
+     * 3단계: 카카오 로그인 처리 (User 테이블에 직접 저장)
      */
     @Transactional
     public KakaoDto.KakaoLoginResponse kakaoLogin(String code) {
-        // 1. 인가 코드로 카카오 액세스 토큰 발급
+        // 1. 카카오 토큰 발급
         KakaoDto.KakaoTokenResponse tokenResponse = getKakaoToken(code);
         String kakaoAccessToken = tokenResponse.getAccessToken();
 
-        // 2. 카카오 액세스 토큰으로 사용자 정보 조회
+        // 2. 사용자 정보 조회
         KakaoDto.KakaoUserInfo kakaoUserInfo = getKakaoUserInfo(kakaoAccessToken);
-        String providerId = String.valueOf(kakaoUserInfo.getId());
-        KakaoDto.KakaoUserInfo.KakaoAccount kakaoAccount = kakaoUserInfo.getKakaoAccount();
 
-        if (kakaoAccount == null || kakaoAccount.getEmail() == null) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE,
-                    "카카오 계정에서 이메일 정보를 가져올 수 없습니다. 카카오 계정에 이메일을 등록해주세요.");
-        }
+        long kakaoId = kakaoUserInfo.getId();
+        KakaoDto.KakaoUserInfo.KakaoAccount account = kakaoUserInfo.getKakaoAccount();
+        String email = account.getEmail();
 
-        // 3. 기존 소셜 계정 확인
-        SocialAccount socialAccount = socialAccountRepository
-                .findByProviderAndProviderId(SocialAccount.Provider.KAKAO, providerId)
-                .orElse(null);
+        // 기존 유저 조회 (socialId 기준)
+        User existingUser = userRepository.findBySocialId(String.valueOf(kakaoId)).orElse(null);
 
-        User user;
         boolean isNewUser = false;
+        User user;
 
-        if (socialAccount == null) {
-            // 신규 사용자
-            user = userRepository.findByEmail(kakaoAccount.getEmail()).orElse(null);
+        if (existingUser == null) {
+            // 이메일 기반으로 기존 LOCAL 사용자 있는지 체크
+            user = userRepository.findByEmail(email).orElse(null);
 
-            if (user != null) {
-                // 기존 일반 회원 - 소셜 계정만 연결
-                socialAccount = createSocialAccount(user, kakaoUserInfo);
-                log.info("기존 회원에 카카오 계정 연결 - 사용자 ID: {}, 이메일: {}",
-                        user.getUserId(), kakaoAccount.getEmail());
-            } else {
-                // 완전 신규 회원
-                user = createUserForKakao(kakaoUserInfo);
-                socialAccount = createSocialAccount(user, kakaoUserInfo);
+            if (user == null) {
+                // 완전 신규
+                user = createKakaoUser(kakaoUserInfo);
                 isNewUser = true;
-                log.info("카카오 신규 회원가입 완료 - 카카오 ID: {}, 이메일: {}",
-                        providerId, kakaoAccount.getEmail());
+                log.info("카카오 신규 회원가입: email={}, kakaoId={}", email, kakaoId);
+            } else {
+                // 기존 로컬 사용자 → 카카오 연결
+                connectKakaoAccount(user, kakaoUserInfo);
+                log.info("기존 로컬 회원 → 카카오 연결 완료: email={}", email);
             }
         } else {
-            // 기존 사용자
-            user = socialAccount.getUser();
-            updateSocialAccount(socialAccount, kakaoUserInfo);
-            log.info("카카오 기존 회원 로그인 - 사용자 ID: {}, 카카오 ID: {}",
-                    user.getUserId(), providerId);
+            // 기존 카카오 회원
+            user = existingUser;
+            updateKakaoProfile(user, kakaoUserInfo);
+            log.info("기존 카카오 회원 로그인: kakaoId={}", kakaoId);
         }
 
-        // 4. 마지막 로그인 시간 업데이트
         user.updateLastLoginAt();
         userRepository.save(user);
 
-        // 5. IntelFit JWT 토큰 생성
+        // JWT 발급
         String accessToken = jwtUtil.generateAccessToken(user.getUserId(), user.getId());
         String refreshToken = jwtUtil.generateRefreshToken(user.getUserId(), user.getId());
 
         return KakaoDto.KakaoLoginResponse.builder()
                 .success(true)
-                .message(isNewUser ? "카카오 회원가입이 완료되었습니다" : "카카오 로그인이 완료되었습니다")
+                .message(isNewUser ? "카카오 회원가입 완료" : "카카오 로그인 성공")
                 .userId(user.getId())
                 .name(user.getName())
                 .accessToken(accessToken)
@@ -164,57 +151,50 @@ public class KakaoService {
     }
 
     /**
-     * 카카오 신규 사용자 생성
+     * 카카오 신규 사용자 생성 (User 테이블)
      */
-    private User createUserForKakao(KakaoDto.KakaoUserInfo kakaoUserInfo) {
-        KakaoDto.KakaoUserInfo.KakaoAccount kakaoAccount = kakaoUserInfo.getKakaoAccount();
-        KakaoDto.KakaoUserInfo.KakaoAccount.Profile profile = kakaoAccount.getProfile();
+    private User createKakaoUser(KakaoDto.KakaoUserInfo info) {
+        KakaoDto.KakaoUserInfo.KakaoAccount acc = info.getKakaoAccount();
+        KakaoDto.KakaoUserInfo.KakaoAccount.Profile profile = acc.getProfile();
 
-        String userId = "kakao_" + System.currentTimeMillis() + "_" +
-                UUID.randomUUID().toString().substring(0, 8);
+        String loginId = "kakao_" + System.currentTimeMillis();
 
         return userRepository.save(User.builder()
-                .userId(userId)
+                .userId(loginId)
                 .name(profile != null ? profile.getNickname() : "카카오사용자")
-                .email(kakaoAccount.getEmail())
-                .password(UUID.randomUUID().toString())
-                .birthDate(LocalDate.of(2000, 1, 1))
+                .email(acc.getEmail())
+                .socialProvider(User.SocialProvider.KAKAO)
+                .socialId(String.valueOf(info.getId()))
+                .profileImage(profile != null ? profile.getProfileImageUrl() : null)
+                .birthDate(null)
                 .emailVerified(true)
                 .agreePrivacy(true)
                 .agreeTerms(true)
-                .agreedAt(java.time.LocalDateTime.now())
+                .password(null)
                 .build());
     }
 
     /**
-     * 소셜 계정 생성
+     * 기존 로컬 → 카카오 계정 연결
      */
-    private SocialAccount createSocialAccount(User user, KakaoDto.KakaoUserInfo kakaoUserInfo) {
-        KakaoDto.KakaoUserInfo.KakaoAccount kakaoAccount = kakaoUserInfo.getKakaoAccount();
-        KakaoDto.KakaoUserInfo.KakaoAccount.Profile profile = kakaoAccount.getProfile();
+    private void connectKakaoAccount(User user, KakaoDto.KakaoUserInfo info) {
+        KakaoDto.KakaoUserInfo.KakaoAccount acc = info.getKakaoAccount();
+        KakaoDto.KakaoUserInfo.KakaoAccount.Profile profile = acc.getProfile();
 
-        return socialAccountRepository.save(SocialAccount.builder()
-                .user(user)
-                .provider(SocialAccount.Provider.KAKAO)
-                .providerId(String.valueOf(kakaoUserInfo.getId()))
-                .email(kakaoAccount.getEmail())
-                .nickname(profile != null ? profile.getNickname() : null)
-                .profileImageUrl(profile != null ? profile.getProfileImageUrl() : null)
-                .build());
+        user.setSocialProvider(User.SocialProvider.KAKAO);
+        user.setSocialId(String.valueOf(info.getId()));
+        user.setProfileImage(profile != null ? profile.getProfileImageUrl() : user.getProfileImage());
     }
 
     /**
-     * 소셜 계정 정보 업데이트
+     * 기존 카카오 사용자 프로필 업데이트
      */
-    private void updateSocialAccount(SocialAccount socialAccount, KakaoDto.KakaoUserInfo kakaoUserInfo) {
-        KakaoDto.KakaoUserInfo.KakaoAccount kakaoAccount = kakaoUserInfo.getKakaoAccount();
-        KakaoDto.KakaoUserInfo.KakaoAccount.Profile profile = kakaoAccount.getProfile();
+    private void updateKakaoProfile(User user, KakaoDto.KakaoUserInfo info) {
+        KakaoDto.KakaoUserInfo.KakaoAccount acc = info.getKakaoAccount();
+        KakaoDto.KakaoUserInfo.KakaoAccount.Profile profile = acc.getProfile();
 
-        socialAccount.updateProfile(
-                kakaoAccount.getEmail(),
-                profile != null ? profile.getProfileImageUrl() : null,
-                profile != null ? profile.getNickname() : null
-        );
-        socialAccountRepository.save(socialAccount);
+        user.setEmail(acc.getEmail());
+        user.setProfileImage(profile != null ? profile.getProfileImageUrl() : null);
+        user.setName(profile != null ? profile.getNickname() : user.getName());
     }
 }
