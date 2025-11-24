@@ -154,7 +154,7 @@ public class JwtUtil {
         }
     }
 
-    // 토큰 블랙리스트 확인
+
     private boolean isTokenBlacklisted(String token) {
         String key = BLACKLIST_TOKEN_PREFIX + token;
         return redisTemplate.hasKey(key);
