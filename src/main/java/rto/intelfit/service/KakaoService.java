@@ -19,8 +19,6 @@ import rto.intelfit.exception.ErrorCode;
 import rto.intelfit.repository.UserRepository;
 import rto.intelfit.util.JwtUtil;
 
-import java.time.LocalDate;
-import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
