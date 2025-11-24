@@ -143,7 +143,8 @@ public enum ErrorCode {
     DATABASE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_012", "데이터베이스 오류가 발생했습니다"),
     NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON_013" ,"리소스를 찾을 수 없습니다."),
     NOT_FOUND_TEMP_MEAL(HttpStatus.NOT_FOUND, "TEMP_MEAL_NOT_FOUND", "임시 저장된 식단이 없습니다."),
-    DUPLICATE_EMAIL(HttpStatus.CONFLICT, "COMMMON_000", "이미 사용중인 이메일입니다." );
+    DUPLICATE_EMAIL(HttpStatus.CONFLICT, "COMMMON_000", "이미 사용중인 이메일입니다." ),
+    INVALID_STATE(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Invalid workout state");
 
     private final HttpStatus httpStatus;
     private final String code;
