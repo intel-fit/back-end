@@ -22,6 +22,7 @@ import rto.intelfit.repository.RecommendedMealPlanRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.web.util.UriComponentsBuilder;
 import rto.intelfit.dto.RecommendedMealDto;
+import rto.intelfit.dto.ExerciseFeedbackDto;
 
 
 import rto.intelfit.repository.UserRepository;
@@ -143,6 +144,30 @@ public class AIServerService {
         } catch (Exception e) {
             log.error("AI user sync failed: {}", e.getMessage(), e);
             throw new RuntimeException(e);
+        }
+    }
+    //1.5 ai 서버로 피드백 전송
+    public void sendExerciseFeedback(ExerciseFeedbackDto.Request request) {
+        String url = aiServerUrl + "/exercise/feedback";
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<ExerciseFeedbackDto.Request> entity =
+                    new HttpEntity<>(request, headers);
+
+            ResponseEntity<String> response =
+                    restTemplate.postForEntity(url, entity, String.class);
+
+            log.info("✅ AI 운동 피드백 전송 완료 userId={}, sessionName={}, status={}",
+                    request.getUser_id(), request.getSession_name(), response.getStatusCode());
+
+        } catch (Exception e) {
+            log.warn("⚠️ AI 운동 피드백 전송 실패 userId={}, sessionName={}",
+                    request.getUser_id(), request.getSession_name(), e);
+            // 여기서 예외를 다시 던지지 않는 이유:
+            //  → AI 서버 장애 때문에 메인 트랜잭션(운동 저장)이 롤백되면 안 되기 때문.
         }
     }
 

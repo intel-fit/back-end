@@ -13,11 +13,15 @@ import rto.intelfit.repository.FitnessExerciseCategorySaveRepository;
 import rto.intelfit.repository.UserRepository;
 import rto.intelfit.repository.DailyProgressRepository;
 import rto.intelfit.domain.DailyProgress;
+import rto.intelfit.dto.ExerciseFeedbackDto;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.Comparator;
 
 @Slf4j
 @Service
@@ -29,6 +33,7 @@ public class FitnessExerciseCategorySaveService {
     private final UserRepository userRepository;
     private final DailyProgressService dailyProgressService;
     private final DailyProgressRepository dailyProgressRepository;
+    private final AIServerService aiServerService;
 
 
 
@@ -268,5 +273,104 @@ public class FitnessExerciseCategorySaveService {
                 .orElse(0L); // 오늘 기록이 없으면 0초로 반환
     }
 
+    @Transactional
+    public FitnessExerciseCategorySaveDto.SaveResponse saveUnsavedWorkoutsAndSendFeedback(
+            Long userId,
+            String saveTitle,
+            List<Double> intensityList,
+            List<String> feedbackList
+    ) {
+        // 1) 기존 저장 기능 수행
+        FitnessExerciseCategorySaveDto.SaveResponse response =
+                saveUnsavedWorkouts(userId, saveTitle);
+
+        if (response.getSessionIds() == null || response.getSessionIds().isEmpty()) {
+            log.info("💾 저장된 세션 없음 → AI 호출 생략 userId={}", userId);
+            return response;
+        }
+
+        // 2) 방금 저장된 운동들 조회
+        List<FitnessExerciseCategorySave> records =
+                saveRepository.findByUserIdAndSessionIdIn(userId, response.getSessionIds());
+
+        // 3) AI 요청 DTO 생성 (리스트 기반 매칭 적용)
+        ExerciseFeedbackDto.Request req =
+                buildExerciseFeedbackRequest(userId, saveTitle, records, intensityList, feedbackList);
+
+        // 4) AI 서버 호출
+        aiServerService.sendExerciseFeedback(req);
+
+        return response;
+    }
+
+
+    private ExerciseFeedbackDto.Request buildExerciseFeedbackRequest(
+            Long userId,
+            String saveTitle,
+            List<FitnessExerciseCategorySave> records,
+            List<Double> intensityList,
+            List<String> feedbackList
+    ) {
+        // 운동 단위로 그룹핑 (sessionId + exerciseName 단위)
+        Map<String, List<FitnessExerciseCategorySave>> byExercise =
+                records.stream().collect(Collectors.groupingBy(r ->
+                        r.getSessionId() + "::" + r.getExerciseName()
+                ));
+
+        List<String> exerciseKeys = byExercise.keySet().stream().toList();
+
+        List<ExerciseFeedbackDto.Item> items = new ArrayList<>();
+
+        for (int i = 0; i < exerciseKeys.size(); i++) {
+
+            String key = exerciseKeys.get(i);
+            List<FitnessExerciseCategorySave> setList = byExercise.get(key);
+
+            // setNumber 순서대로 정렬
+            setList.sort(Comparator.comparingInt(s -> s.getSetNumber() != null ? s.getSetNumber() : 0));
+
+            FitnessExerciseCategorySave last = setList.get(setList.size() - 1);
+
+            // warmup = 마지막 세트 제외
+            List<Map<String, Object>> warmup =
+                    setList.stream()
+                            .filter(s -> !s.getId().equals(last.getId()))
+                            .map(s -> {
+                                Map<String, Object> m = new HashMap<>();
+                                m.put("weight", s.getWeight());
+                                m.put("reps", s.getReps());
+                                return m;
+                            })
+                            .collect(Collectors.toList());
+
+
+            // 🔥 intensityList[i], feedbackList[i] 매칭
+            Double intensity = (intensityList != null && intensityList.size() > i)
+                    ? intensityList.get(i) : null;
+
+            String feedback = (feedbackList != null && feedbackList.size() > i)
+                    ? feedbackList.get(i) : "neutral";
+
+            items.add(
+                    ExerciseFeedbackDto.Item.builder()
+                            .exercise_id(last.getExternalId() != null ? last.getExternalId() : last.getExerciseName())
+                            .name(last.getExerciseName())
+                            .weight(last.getWeight())
+                            .reps(last.getReps())
+                            .sets(setList.size())
+                            .warmup(warmup)
+                            .intensity(intensity)    // 🔥 여기 붙음
+                            .feedback(feedback)      // 🔥 여기 붙음
+                            .build()
+            );
+        }
+
+        return ExerciseFeedbackDto.Request.builder()
+                .user_id(String.valueOf(userId))  // 실제로는 user.userId 문자열 사용 가능
+                .session_name(saveTitle)
+                .duration_min(null)
+                .items(items)
+                .build();
+    }
 
 }

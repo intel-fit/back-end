@@ -9,10 +9,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import rto.intelfit.dto.KakaoDto;
 import rto.intelfit.dto.LoginDto;
 import rto.intelfit.dto.SignUpDto;
-import rto.intelfit.service.KakaoService;
 import rto.intelfit.service.UserService;
 
 @Slf4j
@@ -23,7 +21,6 @@ import rto.intelfit.service.UserService;
 public class UserController {
 
     private final UserService userService;
-    private final KakaoService kakaoService;
 
     @Operation(summary = "회원가입", description = "새로운 사용자를 등록합니다")
     @ApiResponses({
@@ -50,24 +47,6 @@ public class UserController {
         log.info("아이디 중복 확인 요청 - 사용자 ID: {}", userId);
 
         SignUpDto.UserIdCheckResponse response = userService.checkUserIdAvailability(userId);
-        return ResponseEntity.ok(response);
-    }
-
-
-    @Operation(summary = "카카오 로그인", description = "카카오 인가 코드로 로그인합니다")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "카카오 로그인 성공"),
-            @ApiResponse(responseCode = "400", description = "잘못된 인가 코드"),
-            @ApiResponse(responseCode = "500", description = "카카오 API 오류")
-    })
-    @PostMapping("/kakao/login")
-    public ResponseEntity<KakaoDto.KakaoLoginResponse> kakaoLogin(
-            @Valid @RequestBody KakaoDto.KakaoLoginRequest request) {
-        log.info("카카오 로그인 요청 - 인가 코드: {}",
-                request.getCode().length() > 10 ? request.getCode().substring(0, 10) + "..." : request.getCode());
-
-
-        KakaoDto.KakaoLoginResponse response = kakaoService.kakaoLogin(request.getCode());
         return ResponseEntity.ok(response);
     }
 

@@ -145,6 +145,10 @@ public class FitnessExerciseCategorySaveDto {
     public static class SaveRequest {
         private Long userId;
         private String saveTitle;
+
+        // 🔥 운동 개수만큼 리스트로 전달받기
+        private List<Double> intensity;   // 예: [7.5, 5.0, 2.5]
+        private List<String> feedback;    // 예: ["like", "neutral", "dislike"]
     }
 
     @Getter
