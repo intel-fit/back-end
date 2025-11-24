@@ -42,4 +42,7 @@ public interface FitnessExerciseCategorySaveRepository extends JpaRepository<Fit
            "    AND f2.completed = false" +
            ")")
     long countCompletedSessionsByDate(@Param("user") User user, @Param("date") LocalDate date);
+    List<FitnessExerciseCategorySave> findByUserIdAndIsSavedFalse(Long userId);
+    List<FitnessExerciseCategorySave> findByUserIdAndIsSavedTrueOrderBySaveTitleAsc(Long userId);
+
 }

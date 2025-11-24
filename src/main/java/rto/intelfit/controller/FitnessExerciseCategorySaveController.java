@@ -78,6 +78,49 @@ public class FitnessExerciseCategorySaveController {
         return ResponseEntity.ok(Map.of("sessionId", sessionId, "status", "success"));
     }
 
+    @Operation(
+            summary = "현재 운동 기록 저장",
+            description = "isSaved=false 상태의 운동들을 하나의 제목으로 저장합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "운동 저장 성공"),
+            @ApiResponse(responseCode = "404", description = "저장할 운동 없음")
+    })
+    @PostMapping("/save")
+    public ResponseEntity<FitnessExerciseCategorySaveDto.SaveResponse> saveWorkout(
+            @RequestBody FitnessExerciseCategorySaveDto.SaveRequest request
+    ) {
+        log.info("💾 운동 저장 API 호출 userId={}, title={}",
+                request.getUserId(), request.getSaveTitle());
+
+        FitnessExerciseCategorySaveDto.SaveResponse response =
+                saveService.saveUnsavedWorkouts(
+                        request.getUserId(),
+                        request.getSaveTitle()
+                );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "저장된 운동 기록 조회 (제목 → 세션 단위)",
+            description = "저장된 운동 기록들을 saveTitle 기준으로 묶고, 내부에서는 sessionId 기준으로 그룹핑하여 반환합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+    })
+    @GetMapping("/saved/{userId}")
+    public ResponseEntity<List<FitnessExerciseCategorySaveDto.SavedGroupResponse>> getSavedWorkouts(
+            @PathVariable Long userId) {
+
+        log.info("📂 저장된 운동 그룹 조회 요청 userId={}", userId);
+
+        List<FitnessExerciseCategorySaveDto.SavedGroupResponse> response =
+                saveService.getSavedWorkoutGroups(userId);
+
+        return ResponseEntity.ok(response);
+    }
+
+
+
     @Operation(summary = "운동 세션 완료 상태 토글",
             description = "세션의 완료/미완료 상태를 토글합니다. 세션의 모든 세트가 일괄 변경됩니다.")
     @ApiResponses({

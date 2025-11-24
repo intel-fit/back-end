@@ -32,6 +32,7 @@ public class ExerciseRecommendationController {
 
     private final ExerciseRecommendationService exerciseRecommendationService;
 
+
     /**
      * AI 기반 맞춤 운동 추천 생성
      */

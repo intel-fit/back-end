@@ -76,4 +76,14 @@ public class FitnessExerciseCategorySave {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    /** 저장 여부 (처음에는 false) */
+    @Builder.Default
+    @Column(name = "is_saved", nullable = false)
+    private boolean isSaved = false;
+
+    /** 저장 제목 */
+    @Column(name = "save_title", length = 100)
+    private String saveTitle;
+
 }

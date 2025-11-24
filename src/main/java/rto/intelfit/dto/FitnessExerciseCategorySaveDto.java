@@ -139,4 +139,71 @@ public class FitnessExerciseCategorySaveDto {
         @Schema(description = "영향받은 세트 수")
         private int affectedSets;
     }
+
+    @Getter
+    @Setter
+    public static class SaveRequest {
+        private Long userId;
+        private String saveTitle;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    @AllArgsConstructor
+    public static class SaveResponse {
+        private List<String> sessionIds;   // 여러 세션
+        private String saveTitle;
+        private int updatedCount;
+    }
+
+
+    @Getter
+    @Setter
+    @Builder
+    @AllArgsConstructor
+    public static class SavedGroupResponse {
+        private String title;     // saveTitle
+        private List<SessionGroup> sessions;
+
+        @Getter
+        @Setter
+        @Builder
+        @AllArgsConstructor
+        public static class SessionGroup {
+            private String sessionId;
+            private List<FitnessExerciseCategorySaveDto.SavedSetDetail> records;
+        }
+    }
+
+    // 개별 세트 DTO (이미 있을 수 있음)
+    @Getter
+    @Setter
+    @Builder
+    @AllArgsConstructor
+    public static class SavedSetDetail {
+        private Long id;
+        private int setNumber;
+        private Double weight;
+        private Integer reps;
+        private String category;
+        private String exerciseName;
+        private LocalDateTime workoutDate;
+
+        public static SavedSetDetail from(FitnessExerciseCategorySave entity) {
+            return SavedSetDetail.builder()
+                    .id(entity.getId())
+                    .setNumber(entity.getSetNumber())
+                    .weight(entity.getWeight())
+                    .reps(entity.getReps())
+                    .category(entity.getCategory())
+                    .exerciseName(entity.getExerciseName())
+                    .workoutDate(entity.getWorkoutDate())
+                    .build();
+        }
+    }
+
+
+
+
 }

@@ -79,7 +79,6 @@ public class FitnessExerciseCategorySaveService {
                 .build();
     }
 
-
     public String addWorkoutSession(FitnessExerciseCategorySaveDto.CreateRequest request) {
         log.info("💪 운동 세션 추가 요청 - userId={}, exerciseId={}, exerciseName={}, sets={}",
                 request.getUserId(), request.getExternalId(), request.getExerciseName(), request.getSets().size());
@@ -112,6 +111,92 @@ public class FitnessExerciseCategorySaveService {
 
         return sessionId;
     }
+
+
+    @Transactional
+    public FitnessExerciseCategorySaveDto.SaveResponse saveUnsavedWorkouts(
+            Long userId,
+            String saveTitle
+    ) {
+        log.info("💾 운동 저장 요청(userId={}, title={})", userId, saveTitle);
+
+        List<FitnessExerciseCategorySave> rows =
+                saveRepository.findByUserIdAndIsSavedFalse(userId);
+
+        if (rows.isEmpty()) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "저장할 운동 기록이 없습니다.");
+        }
+
+        // 🔥 이제 sessionId 일치 여부 검사 제거!!! (핵심)
+        // 여러 세션이여도 전부 저장
+
+        // sessionId 목록 (프론트에서 다시 조회할 때 필요)
+        List<String> sessionIds = rows.stream()
+                .map(FitnessExerciseCategorySave::getSessionId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // 저장 처리
+        rows.forEach(r -> {
+            r.setSaved(true);
+            r.setSaveTitle(saveTitle);
+        });
+
+        log.info("✅ 운동 저장 완료 (sessionIds={}, count={})", sessionIds, rows.size());
+
+        return FitnessExerciseCategorySaveDto.SaveResponse.builder()
+                .sessionIds(sessionIds)
+                .saveTitle(saveTitle)
+                .updatedCount(rows.size())
+                .build();
+    }
+
+
+    @Transactional(readOnly = true)
+    public List<FitnessExerciseCategorySaveDto.SavedGroupResponse> getSavedWorkoutGroups(Long userId) {
+
+        List<FitnessExerciseCategorySave> saved =
+                saveRepository.findByUserIdAndIsSavedTrueOrderBySaveTitleAsc(userId);
+
+        if (saved.isEmpty()) {
+            return List.of();
+        }
+
+        // 1) 제목 기준 그룹핑
+        Map<String, List<FitnessExerciseCategorySave>> byTitle =
+                saved.stream().collect(Collectors.groupingBy(FitnessExerciseCategorySave::getSaveTitle));
+
+        // 2) 각 title 내에서 sessionId 기준 그룹핑
+        return byTitle.entrySet().stream()
+                .map(titleEntry -> {
+                    String title = titleEntry.getKey();
+                    List<FitnessExerciseCategorySave> titleRows = titleEntry.getValue();
+
+                    Map<String, List<FitnessExerciseCategorySave>> bySession =
+                            titleRows.stream().collect(Collectors.groupingBy(FitnessExerciseCategorySave::getSessionId));
+
+                    List<FitnessExerciseCategorySaveDto.SavedGroupResponse.SessionGroup> sessions =
+                            bySession.entrySet().stream().map(sessionEntry ->
+                                    FitnessExerciseCategorySaveDto.SavedGroupResponse.SessionGroup.builder()
+                                            .sessionId(sessionEntry.getKey())
+                                            .records(
+                                                    sessionEntry.getValue()
+                                                            .stream()
+                                                            .map(FitnessExerciseCategorySaveDto.SavedSetDetail::from)
+                                                            .collect(Collectors.toList())
+                                            )
+                                            .build()
+                            ).collect(Collectors.toList());
+
+                    return FitnessExerciseCategorySaveDto.SavedGroupResponse.builder()
+                            .title(title)
+                            .sessions(sessions)
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
+
+
 
 
     public FitnessExerciseCategorySaveDto.ToggleResponse toggleSessionCompletion(String sessionId) {
