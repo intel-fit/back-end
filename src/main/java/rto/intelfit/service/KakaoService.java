@@ -29,6 +29,7 @@ public class KakaoService {
     private final JwtUtil jwtUtil;
     private final WebClient webClient;
 
+
     @Value("${kakao.rest-api-key}")
     private String kakaoRestApiKey;
 
