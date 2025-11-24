@@ -74,10 +74,6 @@ public class AIIntegrationController {
         return ResponseEntity.ok(result);
     }
 
-    // ========================================
-    // 2️⃣ 운동 관련
-    // ========================================
-
     @PostMapping("/exercise/generate")
     @Operation(summary = "AI 기반 운동 루틴 추천")
     public ResponseEntity<Map<String, Object>> generateExercisePlan(
