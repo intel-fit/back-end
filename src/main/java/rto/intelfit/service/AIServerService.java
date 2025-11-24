@@ -516,7 +516,9 @@ public class AIServerService {
                 .collect(Collectors.toList());
     }
 
-    private double nz(Double v) { return v == null ? 0.0 : v; }
+    private double nz(Double v) {
+        return v == null ? 0.0 : v;
+    }
 
     private RecommendedMealPlan convertToRecommendedMealPlan(MealRecommendationResponse res, User user) {
         RecommendedMealPlan plan = RecommendedMealPlan.builder()
@@ -560,8 +562,11 @@ public class AIServerService {
     }
 
     private Meal.MealType mapMealType(String mealType) {
-        try { return Meal.MealType.valueOf(mealType.toUpperCase()); }
-        catch (Exception e) { return Meal.MealType.SNACK; }
+        try {
+            return Meal.MealType.valueOf(mealType.toUpperCase());
+        } catch (Exception e) {
+            return Meal.MealType.SNACK;
+        }
     }
 
     private List<MealDto.FoodItemRequest> createSampleFoodAnalysisResult() {
