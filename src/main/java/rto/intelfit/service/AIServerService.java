@@ -428,8 +428,48 @@ public class AIServerService {
         return plan;
     }
 
+    public List<RecommendedMealDto.RecommendedPlanDetailResponse>
+    requestWeeklyRecommendedMealForFreeUser(User user) {
 
-    // B) 🔹 주간(7일) 추천 생성 및 저장: bundleId 하나로 1~7일 저장
+        resetWeeklyTokensIfNeeded(user); // lastReset 로직
+
+        if (user.getMealRecommendTokens() <= 0) {
+            throw new BusinessException(ErrorCode.NO_MEAL_TOKENS,
+                    "무료 식단 추천 토큰이 부족합니다.");
+        }
+
+        // 하루치만 생성
+        RecommendedMealPlan daily = fetchDailyRecommendedMealPlan(user);
+        daily.setUser(user);
+        daily.setBundleId(UUID.randomUUID().toString());
+        daily.setBundleDay(1);
+        daily.setPlanDate(LocalDate.now());
+
+        user.setMealRecommendTokens(user.getMealRecommendTokens() - 1);
+
+        return List.of(
+                RecommendedMealDto.RecommendedPlanDetailResponse.from(daily)
+        );
+    }
+
+    // 🔥 무료 플랜 토큰 자동 리셋 (7일마다)
+    private void resetWeeklyTokensIfNeeded(User user) {
+
+        if (user.getMealTokenLastReset() == null) {
+            user.setMealTokenLastReset(LocalDate.now());
+            user.setMealRecommendTokens(1); // 기본 제공 1개
+            return;
+        }
+
+        // 7일 경과 시 토큰 리셋
+        if (user.getMealTokenLastReset().plusDays(7).isBefore(LocalDate.now())) {
+            user.setMealRecommendTokens(1);
+            user.setMealTokenLastReset(LocalDate.now());
+        }
+    }
+
+
+    // B) 🔹 주간(7일) 추천 생성 및 저장:  bundleId 하나로 1~7일 저장
     @Transactional
     public List<RecommendedMealDto.RecommendedPlanDetailResponse> requestWeeklyRecommendedMealPlans(
             CustomUserPrincipal userPrincipal, LocalDate weekStartDate) {

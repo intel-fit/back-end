@@ -12,6 +12,11 @@ import org.springframework.web.bind.annotation.*;
 import rto.intelfit.dto.LoginDto;
 import rto.intelfit.dto.SignUpDto;
 import rto.intelfit.service.UserService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import rto.intelfit.security.CustomUserPrincipal;
+import rto.intelfit.domain.User;
+import rto.intelfit.security.CustomUserPrincipal;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 @Slf4j
 @RestController
@@ -146,4 +151,38 @@ public class UserController {
         LoginDto.PasswordChangeResponse response = userService.changePassword(request);
         return ResponseEntity.ok(response);
     }
+
+    @Operation(summary = "모든 토큰 초기화", description = "현재 로그인한 사용자의 식단/운동/챗봇 토큰을 기본값으로 초기화합니다")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "토큰 초기화 완료"),
+            @ApiResponse(responseCode = "401", description = "인증 실패")
+    })
+    @PostMapping("/tokens/reset")
+    public ResponseEntity<?> resetTokens(@AuthenticationPrincipal CustomUserPrincipal principal) {
+        User updated = userService.updateTokensToDefault(principal);
+        return ResponseEntity.ok("토큰이 기본값으로 초기화되었습니다.");
+    }
+
+
+    @Operation(summary = "프리미엄으로 변경", description = "현재 로그인한 사용자의 멤버십을 Premium으로 변경합니다")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "프리미엄 전환 완료")
+    })
+    @PostMapping("/membership/premium")
+    public ResponseEntity<?> makePremium(@AuthenticationPrincipal CustomUserPrincipal principal) {
+        userService.upgradeToPremium(principal);
+        return ResponseEntity.ok("멤버십이 프리미엄으로 변경되었습니다.");
+    }
+
+
+    @Operation(summary = "무료로 변경", description = "현재 로그인한 사용자의 멤버십을 Free로 변경합니다")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "무료 전환 완료")
+    })
+    @PostMapping("/membership/free")
+    public ResponseEntity<?> makeFree(@AuthenticationPrincipal CustomUserPrincipal principal) {
+        userService.downgradeToFree(principal);
+        return ResponseEntity.ok("멤버십이 무료 플랜으로 변경되었습니다.");
+    }
+
 }
