@@ -32,6 +32,7 @@ public class FitnessExerciseCategorySaveDto {
         private Integer reps;
     }
 
+
     // ✅ 운동 기록 추가 요청 DTO
     @Getter
     @Setter
@@ -140,16 +141,15 @@ public class FitnessExerciseCategorySaveDto {
         private int affectedSets;
     }
 
-    @Getter
-    @Setter
+    @Getter @Setter
     public static class SaveRequest {
         private Long userId;
         private String saveTitle;
-
-        // 🔥 운동 개수만큼 리스트로 전달받기
-        private List<Double> intensity;   // 예: [7.5, 5.0, 2.5]
-        private List<String> feedback;    // 예: ["like", "neutral", "dislike"]
+        private String date;          // ← 추가
+        private List<Double> intensity;
+        private List<String> feedback;
     }
+
 
     @Getter
     @Setter
@@ -165,29 +165,29 @@ public class FitnessExerciseCategorySaveDto {
     @Getter
     @Setter
     @Builder
-    @AllArgsConstructor
     public static class SavedGroupResponse {
-        private String title;     // saveTitle
+
+        private String title;
         private List<SessionGroup> sessions;
 
         @Getter
         @Setter
         @Builder
-        @AllArgsConstructor
         public static class SessionGroup {
             private String sessionId;
-            private List<FitnessExerciseCategorySaveDto.SavedSetDetail> records;
+            private List<SavedSetDetail> records;
         }
     }
+
 
     // 개별 세트 DTO (이미 있을 수 있음)
     @Getter
     @Setter
     @Builder
-    @AllArgsConstructor
     public static class SavedSetDetail {
+
         private Long id;
-        private int setNumber;
+        private Integer setNumber;
         private Double weight;
         private Integer reps;
         private String category;
@@ -206,6 +206,7 @@ public class FitnessExerciseCategorySaveDto {
                     .build();
         }
     }
+
 
 
 

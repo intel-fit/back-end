@@ -118,12 +118,11 @@ public class FitnessExerciseCategorySaveService {
     }
 
 
-    @Transactional
     public FitnessExerciseCategorySaveDto.SaveResponse saveUnsavedWorkouts(
             Long userId,
-            String saveTitle
+            String saveTitle,
+            LocalDate date
     ) {
-        log.info("💾 운동 저장 요청(userId={}, title={})", userId, saveTitle);
 
         List<FitnessExerciseCategorySave> rows =
                 saveRepository.findByUserIdAndIsSavedFalse(userId);
@@ -132,22 +131,16 @@ public class FitnessExerciseCategorySaveService {
             throw new BusinessException(ErrorCode.NOT_FOUND, "저장할 운동 기록이 없습니다.");
         }
 
-        // 🔥 이제 sessionId 일치 여부 검사 제거!!! (핵심)
-        // 여러 세션이여도 전부 저장
-
-        // sessionId 목록 (프론트에서 다시 조회할 때 필요)
-        List<String> sessionIds = rows.stream()
-                .map(FitnessExerciseCategorySave::getSessionId)
-                .distinct()
-                .collect(Collectors.toList());
-
-        // 저장 처리
         rows.forEach(r -> {
             r.setSaved(true);
             r.setSaveTitle(saveTitle);
+            r.setDate(date);  // 🔥 여기서 날짜를 넣는다
         });
 
-        log.info("✅ 운동 저장 완료 (sessionIds={}, count={})", sessionIds, rows.size());
+        List<String> sessionIds = rows.stream()
+                .map(FitnessExerciseCategorySave::getSessionId)
+                .distinct()
+                .toList();
 
         return FitnessExerciseCategorySaveDto.SaveResponse.builder()
                 .sessionIds(sessionIds)
@@ -155,6 +148,58 @@ public class FitnessExerciseCategorySaveService {
                 .updatedCount(rows.size())
                 .build();
     }
+
+    @Transactional(readOnly = true)
+    public List<FitnessExerciseCategorySaveDto.SavedGroupResponse> getSavedWorkoutGroupsByDate(
+            Long userId,
+            LocalDate date
+    ) {
+
+        List<FitnessExerciseCategorySave> saved =
+                saveRepository.findByUserIdAndIsSavedTrueAndDateOrderBySaveTitleAsc(userId, date);
+
+        if (saved.isEmpty()) {
+            return List.of();
+        }
+
+        // title 기준 그룹핑
+        Map<String, List<FitnessExerciseCategorySave>> byTitle =
+                saved.stream().collect(Collectors.groupingBy(FitnessExerciseCategorySave::getSaveTitle));
+
+        return byTitle.entrySet().stream()
+                .map(titleEntry -> {
+
+                    String title = titleEntry.getKey();
+                    List<FitnessExerciseCategorySave> titleRows = titleEntry.getValue();
+
+                    // sessionId 기준 그룹핑
+                    Map<String, List<FitnessExerciseCategorySave>> bySession =
+                            titleRows.stream().collect(Collectors.groupingBy(FitnessExerciseCategorySave::getSessionId));
+
+                    List<FitnessExerciseCategorySaveDto.SavedGroupResponse.SessionGroup> sessions =
+                            bySession.entrySet().stream()
+                                    .map(s -> FitnessExerciseCategorySaveDto.SavedGroupResponse.SessionGroup.builder()
+                                            .sessionId(s.getKey())
+                                            .records(
+                                                    s.getValue().stream()
+                                                            .map(FitnessExerciseCategorySaveDto.SavedSetDetail::from)
+                                                            .collect(Collectors.toList())
+                                            )
+                                            .build()
+                                    )
+                                    .collect(Collectors.toList());
+
+                    return FitnessExerciseCategorySaveDto.SavedGroupResponse.builder()
+                            .title(title)
+                            .sessions(sessions)
+                            .build();
+
+                })
+                .collect(Collectors.toList());
+    }
+
+
+
 
 
     @Transactional(readOnly = true)
@@ -273,35 +318,31 @@ public class FitnessExerciseCategorySaveService {
                 .orElse(0L); // 오늘 기록이 없으면 0초로 반환
     }
 
-    @Transactional
     public FitnessExerciseCategorySaveDto.SaveResponse saveUnsavedWorkoutsAndSendFeedback(
             Long userId,
             String saveTitle,
             List<Double> intensityList,
-            List<String> feedbackList
+            List<String> feedbackList,
+            LocalDate date
     ) {
-        // 1) 기존 저장 기능 수행
         FitnessExerciseCategorySaveDto.SaveResponse response =
-                saveUnsavedWorkouts(userId, saveTitle);
+                saveUnsavedWorkouts(userId, saveTitle, date);
 
         if (response.getSessionIds() == null || response.getSessionIds().isEmpty()) {
-            log.info("💾 저장된 세션 없음 → AI 호출 생략 userId={}", userId);
             return response;
         }
 
-        // 2) 방금 저장된 운동들 조회
         List<FitnessExerciseCategorySave> records =
                 saveRepository.findByUserIdAndSessionIdIn(userId, response.getSessionIds());
 
-        // 3) AI 요청 DTO 생성 (리스트 기반 매칭 적용)
         ExerciseFeedbackDto.Request req =
                 buildExerciseFeedbackRequest(userId, saveTitle, records, intensityList, feedbackList);
 
-        // 4) AI 서버 호출
         aiServerService.sendExerciseFeedback(req);
 
         return response;
     }
+
 
 
     private ExerciseFeedbackDto.Request buildExerciseFeedbackRequest(

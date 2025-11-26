@@ -16,6 +16,7 @@ import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.AllArgsConstructor;
+import java.time.LocalDate;
 
 //*
 // 운동 기록 페이지
@@ -90,18 +91,23 @@ public class FitnessExerciseCategorySaveController {
     public ResponseEntity<FitnessExerciseCategorySaveDto.SaveResponse> saveWorkout(
             @RequestBody FitnessExerciseCategorySaveDto.SaveRequest request
     ) {
-        log.info("💾 운동 저장 API 호출 userId={}, title={}", request.getUserId(), request.getSaveTitle());
+        log.info("💾 운동 저장 API 호출 userId={}, title={}, date={}",
+                request.getUserId(), request.getSaveTitle(), request.getDate());
+
+        LocalDate date = LocalDate.parse(request.getDate());
 
         FitnessExerciseCategorySaveDto.SaveResponse response =
                 saveService.saveUnsavedWorkoutsAndSendFeedback(
                         request.getUserId(),
                         request.getSaveTitle(),
                         request.getIntensity(),
-                        request.getFeedback()
+                        request.getFeedback(),
+                        date
                 );
 
         return ResponseEntity.ok(response);
     }
+
 
 
 
@@ -121,6 +127,28 @@ public class FitnessExerciseCategorySaveController {
 
         return ResponseEntity.ok(response);
     }
+
+    @Operation(summary = "날짜별 저장된 운동 기록 조회",
+            description = "특정 날짜에 저장된(isSaved=true) 운동 기록을 saveTitle → sessionId 순으로 그룹핑하여 반환합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공")
+    })
+    @GetMapping("/saved/{userId}/{date}")
+    public ResponseEntity<List<FitnessExerciseCategorySaveDto.SavedGroupResponse>>
+    getSavedWorkoutsByDate(
+            @PathVariable Long userId,
+            @PathVariable String date
+    ) {
+        LocalDate parsed = LocalDate.parse(date);
+
+        log.info("📂 저장된 운동 날짜 조회 요청 userId={}, date={}", userId, parsed);
+
+        List<FitnessExerciseCategorySaveDto.SavedGroupResponse> response =
+                saveService.getSavedWorkoutGroupsByDate(userId, parsed);
+
+        return ResponseEntity.ok(response);
+    }
+
 
 
 
