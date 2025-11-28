@@ -37,7 +37,7 @@ public class ExerciseGoal {
 
     @Builder.Default
     @Column(nullable = false)
-    private Long progress = 0L;
+    private long progress = 0L;
 
 
     @CreationTimestamp
