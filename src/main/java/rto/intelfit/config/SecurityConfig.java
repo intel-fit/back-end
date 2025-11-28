@@ -58,7 +58,17 @@ public class SecurityConfig {
                                 "/api/users/find-userId",
                                 "/api/users/reset-password",
                                 "/api/users/change-password",
-                                "/api/users/refresh-token"
+                                "/api/users/refresh-token",
+
+                                // 카카오페이 결제 리다이렉트 (Ready는 인증 필요)
+                                "/api/payments/kakaopay/approve",
+                                "/api/payments/kakaopay/cancel",
+                                "/api/payments/kakaopay/fail",
+
+                                // Stripe Webhook
+                                "/api/payments/stripe/webhook",
+                                "/api/payments/stripe/success",
+                                "/api/payments/stripe/cancel"
                         ).permitAll()
 
                         // Swagger UI 및 API 문서

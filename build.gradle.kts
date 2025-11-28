@@ -75,6 +75,7 @@ dependencies {
 	implementation ("org.springframework.boot:spring-boot-starter-validation")
 
 	implementation ("org.springframework.boot:spring-boot-starter-web")
+	implementation("com.stripe:stripe-java:22.29.0")
 }
 
 tasks.withType<Test> {

@@ -13,7 +13,10 @@ import rto.intelfit.exception.BusinessException;
 import rto.intelfit.exception.ErrorCode;
 import rto.intelfit.repository.AIChatMessageRepository;
 import rto.intelfit.repository.UserRepository;
+import rto.intelfit.service.MembershipService;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -26,6 +29,7 @@ public class AIChatService {
     private final UserRepository userRepository;
     private final AIChatMessageRepository chatMessageRepository;
     private final ObjectMapper objectMapper;
+    private final MembershipService membershipService;
 
     /**
      * AI 코치 챗봇과의 대화를 처리하고, 사용자 메시지와 응답을 저장한다.
@@ -34,6 +38,20 @@ public class AIChatService {
     public Map<String, Object> handleChat(Long userId, String message) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 멤버십 상태 최신화 (만료 처리 포함)
+        membershipService.syncMembership(user.getUserId());
+        user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.getMembershipType() == User.MembershipType.FREE) {
+            resetChatbotTokensIfNeeded(user);
+            if (user.getChatbotTokens() == null || user.getChatbotTokens() <= 0) {
+                throw new BusinessException(ErrorCode.CHATBOT_TOKENS_EXHAUSTED, "무료 사용자의 일일 챗봇 토큰이 부족합니다");
+            }
+            user.setChatbotTokens(user.getChatbotTokens() - 1);
+            userRepository.save(user);
+        }
 
         Map<String, Object> aiResponse = aiServerClient.chatWithCoach(user.getUserId(), message);
 
@@ -86,6 +104,15 @@ public class AIChatService {
         } catch (JsonProcessingException e) {
             log.warn("AI 응답 직렬화 실패 - {}", e.getMessage());
             return response.toString();
+        }
+    }
+
+    private void resetChatbotTokensIfNeeded(User user) {
+        LocalDate today = LocalDate.now();
+        LocalDate lastResetDate = user.getChatbotLastReset() != null ? user.getChatbotLastReset().toLocalDate() : null;
+        if (lastResetDate == null || lastResetDate.isBefore(today)) {
+            user.setChatbotTokens(3);
+            user.setChatbotLastReset(LocalDateTime.now());
         }
     }
 }

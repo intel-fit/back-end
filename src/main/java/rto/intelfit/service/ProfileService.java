@@ -31,6 +31,10 @@ public class ProfileService {
     private final ExerciseRepository exerciseRepository;
     private final RecommendedExercisePlanRepository recommendedExercisePlanRepository;
     private final UserBadgeRepository userBadgeRepository;
+    private final PaymentHistoryRepository paymentHistoryRepository;
+    private final SubscriptionRepository subscriptionRepository;
+    private final AIChatMessageRepository aiChatMessageRepository;
+
 
     public ProfileDto.ProfileResponse getProfile(CustomUserPrincipal userPrincipal) {
         User user = findUserByPrincipal(userPrincipal);
@@ -131,6 +135,11 @@ public class ProfileService {
         // 8. 사용자 뱃지 삭제
         userBadgeRepository.deleteAllByUser(user);
         log.debug("사용자 뱃지 삭제 완료");
+
+        paymentHistoryRepository.deleteAllByUser_Id(user.getId());
+        subscriptionRepository.deleteAllByUserId(user.getUserId());
+        aiChatMessageRepository.deleteAllByUser_UserId(user.getUserId());
+
 
         // 9. 마지막으로 사용자 삭제
         userRepository.delete(user);

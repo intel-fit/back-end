@@ -8,4 +8,6 @@ import java.util.List;
 public interface AIChatMessageRepository extends JpaRepository<AIChatMessage, Long> {
 
     List<AIChatMessage> findTop50ByUser_IdOrderByCreatedAtDesc(Long userId);
+
+    void deleteAllByUser_UserId(String userId);
 }

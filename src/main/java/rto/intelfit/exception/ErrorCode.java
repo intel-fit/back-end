@@ -98,6 +98,9 @@ public enum ErrorCode {
     FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "FILE_004", "파일을 찾을 수 없습니다"),
     EMPTY_FILE(HttpStatus.BAD_REQUEST, "FILE_005", "파일이 비어있습니다"),
 
+    // ==================== 챗봇/토큰 관련 에러 ====================
+    CHATBOT_TOKENS_EXHAUSTED(HttpStatus.BAD_REQUEST, "CHATBOT_001", "무료 사용자의 일일 챗봇 토큰이 부족합니다"),
+
     // ==================== 날짜/시간 관련 에러 ====================
     INVALID_DATE_FORMAT(HttpStatus.BAD_REQUEST, "DATE_001", "올바르지 않은 날짜 형식입니다"),
     INVALID_DATE_RANGE(HttpStatus.BAD_REQUEST, "DATE_002", "올바르지 않은 날짜 범위입니다"),
@@ -113,6 +116,13 @@ public enum ErrorCode {
     EXTERNAL_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "API_001", "외부 API 호출 중 오류가 발생했습니다"),
     EXTERNAL_API_TIMEOUT(HttpStatus.REQUEST_TIMEOUT, "API_002", "외부 API 응답 시간이 초과되었습니다"),
     EXTERNAL_API_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "API_003", "외부 API를 사용할 수 없습니다"),
+
+    // ==================== 결제/카카오페이 관련 에러 ====================
+    KAKAOPAY_CONFIG_MISSING(HttpStatus.BAD_REQUEST, "PAY_001", "카카오페이 설정이 누락되었습니다"),
+    KAKAOPAY_FORBIDDEN(HttpStatus.FORBIDDEN, "PAY_002", "카카오페이 요청이 거부되었습니다. 관리자 키를 확인해주세요"),
+    KAKAOPAY_READY_FAILED(HttpStatus.BAD_REQUEST, "PAY_003", "카카오페이 결제 준비에 실패했습니다"),
+    KAKAOPAY_APPROVE_FAILED(HttpStatus.BAD_REQUEST, "PAY_004", "카카오페이 결제 승인에 실패했습니다"),
+    KAKAOPAY_SESSION_NOT_FOUND(HttpStatus.BAD_REQUEST, "PAY_005", "유효하지 않은 결제 세션입니다. 다시 시도해주세요"),
 
     // ==================== 운동 기록 관련 에러 ====================
     EXERCISE_NOT_FOUND(HttpStatus.NOT_FOUND, "EXERCISE_001", "운동 기록을 찾을 수 없습니다"),
