@@ -148,3 +148,17 @@ kakao:
   auth-url: https://kauth.kakao.com/oauth/authorize
   token-url: https://kauth.kakao.com/oauth/token
   user-info-url: https://kapi.kakao.com/v2/user/me
+
+kakaopay:
+  cid: ${KAKAOPAY_CID:TC0ONETIME}
+  admin-key: ${KAKAOPAY_ADMIN_KEY:}
+  ready-url: https://kapi.kakao.com/v1/payment/ready
+  approve-url: https://kapi.kakao.com/v1/payment/approve
+  redirect:
+    approval: ${KAKAOPAY_APPROVAL_URL:http://localhost:8080/api/payments/kakaopay/approve}
+    cancel: ${KAKAOPAY_CANCEL_URL:http://localhost:8080/api/payments/kakaopay/cancel}
+    fail: ${KAKAOPAY_FAIL_URL:http://localhost:8080/api/payments/kakaopay/fail}
+  plan:
+    item-name: ${KAKAOPAY_PLAN_ITEM_NAME:인텔핏 프리미엄 월 구독}
+    amount: ${KAKAOPAY_PLAN_AMOUNT:4500}
+    tax-free-amount: ${KAKAOPAY_PLAN_TAX_FREE:0}

@@ -114,6 +114,13 @@ public enum ErrorCode {
     EXTERNAL_API_TIMEOUT(HttpStatus.REQUEST_TIMEOUT, "API_002", "외부 API 응답 시간이 초과되었습니다"),
     EXTERNAL_API_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "API_003", "외부 API를 사용할 수 없습니다"),
 
+    // ==================== 결제/카카오페이 관련 에러 ====================
+    KAKAOPAY_CONFIG_MISSING(HttpStatus.BAD_REQUEST, "PAY_001", "카카오페이 설정이 누락되었습니다"),
+    KAKAOPAY_FORBIDDEN(HttpStatus.FORBIDDEN, "PAY_002", "카카오페이 요청이 거부되었습니다. 관리자 키를 확인해주세요"),
+    KAKAOPAY_READY_FAILED(HttpStatus.BAD_REQUEST, "PAY_003", "카카오페이 결제 준비에 실패했습니다"),
+    KAKAOPAY_APPROVE_FAILED(HttpStatus.BAD_REQUEST, "PAY_004", "카카오페이 결제 승인에 실패했습니다"),
+    KAKAOPAY_SESSION_NOT_FOUND(HttpStatus.BAD_REQUEST, "PAY_005", "유효하지 않은 결제 세션입니다. 다시 시도해주세요"),
+
     // ==================== 운동 기록 관련 에러 ====================
     EXERCISE_NOT_FOUND(HttpStatus.NOT_FOUND, "EXERCISE_001", "운동 기록을 찾을 수 없습니다"),
     EXERCISE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "EXERCISE_002", "본인의 운동 기록만 접근할 수 있습니다"),
