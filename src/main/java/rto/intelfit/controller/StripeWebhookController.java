@@ -49,30 +49,31 @@ public class StripeWebhookController {
         String eventType = event.getType();
         log.info("Stripe event received: {}", eventType);
 
+        EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
+        Optional<com.stripe.model.StripeObject> object = deserializer.getObject();
+
+        com.stripe.model.StripeObject stripeObject = object.orElseGet(() -> {
+            log.warn("Stripe deserializer returned empty. Using raw JSON object.");
+            return event.getData().getObject();
+        });
+
         switch (eventType) {
             case "checkout.session.completed" -> {
-                EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
-                Optional<com.stripe.model.StripeObject> object = deserializer.getObject();
-                if (object.isEmpty()) break;
-                stripeService.handleCheckoutCompleted((Session) object.get());
+                Session session = (Session) stripeObject;
+                stripeService.handleCheckoutCompleted(session);
             }
             case "invoice.paid" -> {
-                EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
-                Optional<com.stripe.model.StripeObject> object = deserializer.getObject();
-                if (object.isEmpty()) break;
-                stripeService.handleInvoicePaid((Invoice) object.get());
+                Invoice invoice = (Invoice) stripeObject;
+                stripeService.handleInvoicePaid(invoice);
             }
             case "invoice.payment_failed" -> {
-                EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
-                Optional<com.stripe.model.StripeObject> object = deserializer.getObject();
-                if (object.isEmpty()) break;
-                stripeService.handlePaymentFailed((Invoice) object.get());
+                Invoice invoice = (Invoice) stripeObject;
+                stripeService.handlePaymentFailed(invoice);
             }
             case "customer.subscription.deleted" -> {
-                EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
-                Optional<com.stripe.model.StripeObject> object = deserializer.getObject();
-                if (object.isEmpty()) break;
-                stripeService.handleSubscriptionDeleted((com.stripe.model.Subscription) object.get());
+                com.stripe.model.Subscription sub =
+                        (com.stripe.model.Subscription) stripeObject;
+                stripeService.handleSubscriptionDeleted(sub);
             }
             default -> log.debug("Unhandled Stripe event type: {}", eventType);
         }
