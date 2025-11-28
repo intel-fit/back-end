@@ -148,7 +148,7 @@ public class ExerciseGoalService {
         int minutes = Integer.parseInt(durationPerSession.replaceAll("\\D", ""));
         return minutes * 60L;
     }
-
+//
 
     /** 목표 삭제 */
     public void deleteGoal(CustomUserPrincipal userPrincipal) {
