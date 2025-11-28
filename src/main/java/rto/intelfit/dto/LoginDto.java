@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import rto.intelfit.domain.User;
 
 import jakarta.validation.constraints.*;
 
@@ -56,6 +57,10 @@ public class LoginDto {
 
         @Schema(description = "액세스 토큰 만료 시간 (초)", example = "3600")
         private long expiresIn;
+
+        // ✅ 여기 추가: 유/무료 멤버십 현황
+        @Schema(description = "멤버십 타입", example = "FREE", allowableValues = {"FREE", "PREMIUM"})
+        private User.MembershipType membershipType;
     }
 
     @Data

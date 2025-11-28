@@ -210,7 +210,7 @@ public class UserService {
             throw new BusinessException(ErrorCode.INVALID_LOGIN_CREDENTIALS);
         }
 
-        // 결제 후 설정된 강제 로그아웃 플래그 해제
+        // 강제 로그아웃 플래그 해제
         jwtUtil.clearForceLogout(user.getUserId());
 
         // 마지막 로그인 시간 업데이트
@@ -231,9 +231,12 @@ public class UserService {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .tokenType("Bearer")
-                .expiresIn(accessTokenExpiration / 1000) // 초 단위로 변환
+                .expiresIn(accessTokenExpiration / 1000) // 초 단위
+                // ✅ 여기 한 줄 추가
+                .membershipType(user.getMembershipType())
                 .build();
     }
+
 
     @Transactional
     public LoginDto.LogoutResponse logout(LoginDto.LogoutRequest request) {
