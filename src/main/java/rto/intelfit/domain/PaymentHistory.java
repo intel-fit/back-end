@@ -49,6 +49,9 @@ public class PaymentHistory {
     @Column(name = "item_name", length = 200)
     private String itemName;
 
+    @Column(name = "plan_code", length = 50)
+    private String planCode;
+
     @Column(name = "quantity")
     private Integer quantity;
 

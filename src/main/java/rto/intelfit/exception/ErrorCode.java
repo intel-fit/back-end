@@ -98,6 +98,9 @@ public enum ErrorCode {
     FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "FILE_004", "파일을 찾을 수 없습니다"),
     EMPTY_FILE(HttpStatus.BAD_REQUEST, "FILE_005", "파일이 비어있습니다"),
 
+    // ==================== 챗봇/토큰 관련 에러 ====================
+    CHATBOT_TOKENS_EXHAUSTED(HttpStatus.BAD_REQUEST, "CHATBOT_001", "무료 사용자의 일일 챗봇 토큰이 부족합니다"),
+
     // ==================== 날짜/시간 관련 에러 ====================
     INVALID_DATE_FORMAT(HttpStatus.BAD_REQUEST, "DATE_001", "올바르지 않은 날짜 형식입니다"),
     INVALID_DATE_RANGE(HttpStatus.BAD_REQUEST, "DATE_002", "올바르지 않은 날짜 범위입니다"),

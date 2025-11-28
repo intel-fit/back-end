@@ -10,4 +10,8 @@ import java.util.Optional;
 public interface PaymentHistoryRepository extends JpaRepository<PaymentHistory, Long> {
 
     Optional<PaymentHistory> findByOrderId(String orderId);
+
+    boolean existsByUserLoginIdAndStatus(String userLoginId, PaymentHistory.PaymentStatus status);
+
+    void deleteAllByUser_Id(Long userId);
 }

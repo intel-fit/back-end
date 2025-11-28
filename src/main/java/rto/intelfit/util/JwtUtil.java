@@ -33,6 +33,7 @@ public class JwtUtil {
 
     private static final String REFRESH_TOKEN_PREFIX = "refresh_token:";
     private static final String BLACKLIST_TOKEN_PREFIX = "blacklist_token:";
+    private static final String FORCE_LOGOUT_USER_PREFIX = "force_logout_user:";
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
@@ -107,6 +108,13 @@ public class JwtUtil {
             }
 
             Claims claims = parseToken(token);
+
+            // 사용자 강제 로그아웃 여부 확인
+            String userId = claims.getSubject();
+            if (isUserForceLoggedOut(userId)) {
+                log.warn("사용자가 강제 로그아웃 상태입니다: {}", userId);
+                return false;
+            }
             log.debug("토큰 파싱 성공 - 사용자: {}, 만료시간: {}",
                     claims.getSubject(), claims.getExpiration());
             return true;
@@ -163,6 +171,23 @@ public class JwtUtil {
     // Refresh Token 삭제 (로그아웃 시)
     public void deleteRefreshToken(String userId) {
         String key = REFRESH_TOKEN_PREFIX + userId;
+        redisTemplate.delete(key);
+    }
+
+    // 특정 사용자 강제 로그아웃 (모든 토큰 거부)
+    public void forceLogoutUser(String userId) {
+        String key = FORCE_LOGOUT_USER_PREFIX + userId;
+        redisTemplate.opsForValue().set(key, "force", refreshTokenExpiration, TimeUnit.MILLISECONDS);
+    }
+
+    private boolean isUserForceLoggedOut(String userId) {
+        String key = FORCE_LOGOUT_USER_PREFIX + userId;
+        return redisTemplate.hasKey(key);
+    }
+
+    // 로그인 성공 시 강제 로그아웃 플래그 해제
+    public void clearForceLogout(String userId) {
+        String key = FORCE_LOGOUT_USER_PREFIX + userId;
         redisTemplate.delete(key);
     }
 
