@@ -7,6 +7,11 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import rto.intelfit.domain.*;
+import java.util.ArrayList;
+
+import lombok.Getter;
+import lombok.Setter;
+
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -14,9 +19,65 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import java.util.Map;
+
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
+
+
 public class RecommendedExerciseDto {
 
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(name = "DailyExerciseRecommendationRequest", description = "AI 일일 운동 추천 요청 DTO")
+    public static class DailyRecommendationRequest {
 
+        @Schema(description = "운동 숙련도 (User.ExperienceLevel)", example = "INTERMEDIATE")
+        @NotNull
+        private User.ExperienceLevel experienceLevel;
+
+        @Schema(description = "운동 환경 (home | gym)", example = "gym")
+        @NotBlank
+        private String environment;
+
+        @Schema(description = "사용 가능한 장비 목록", example = "[\"덤벨\", \"머신\"]")
+        @Builder.Default
+        private List<String> availableEquipment = new ArrayList<>();
+
+        @Schema(description = "주의해야 할 건강 상태/질환", example = "[\"허리통증\"]")
+        @Builder.Default
+        private List<String> healthConditions = new ArrayList<>();
+
+        @Schema(description = "목표 운동 시간(분)", example = "60")
+        private Integer targetTimeMin;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(name = "DailyExerciseRecommendationResponse", description = "AI 일일 운동 추천 응답 DTO")
+    public static class DailyRecommendationResponse {
+
+        @Schema(description = "요청 성공 여부")
+        private boolean success;
+
+        @Schema(description = "메시지")
+        private String message;
+
+        @Schema(description = "오늘의 포커스(Upper/Lower/Core 등)")
+        private String focus;
+
+        @Schema(description = "세션 메트릭(총 시간, 추정 칼로리 등)")
+        private Map<String, Object> metrics;
+
+        @Schema(description = "운동 리스트 (AI 서버 raw 구조 그대로 전달)")
+        private List<Map<String, Object>> exercises;
+    }
     @Data
     @Builder
     @NoArgsConstructor

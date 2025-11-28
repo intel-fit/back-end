@@ -38,7 +38,14 @@ public class AIServerClient {
     // ========================================
     // 1️⃣ 식단 관련 API
     // ========================================
-
+    /**
+     * /ai/exercise_plan/daily 호출
+     */
+    public Map<String, Object> requestDailyExercisePlan(Map<String, Object> payload) {
+        String url = aiServerUrl + "/ai/exercise_plan/daily";
+        log.info("AI 서버 일일 운동 추천 호출 - URL: {}, payload: {}", url, payload);
+        return restTemplate.postForObject(url, payload, Map.class);
+    }
     public Map<String, Object> generateMealPlan(Map<String, Object> request) {
         String url = aiServerUrl + "/ai-plan/meal_plan";
         return postRequest(url, request);

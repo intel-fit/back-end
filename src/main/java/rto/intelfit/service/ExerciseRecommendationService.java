@@ -11,6 +11,7 @@ import rto.intelfit.exception.BusinessException;
 import rto.intelfit.exception.ErrorCode;
 import rto.intelfit.repository.*;
 import rto.intelfit.security.CustomUserPrincipal;
+import java.time.LocalDateTime;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -19,7 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
+import java.util.HashMap;
 /**
  * AI 기반 운동 추천 서비스
  * <p>
@@ -46,6 +47,267 @@ public class ExerciseRecommendationService {
     /**
      * ✅ AI 기반 맞춤 운동 추천 생성 (AI 서버 호출)
      */
+    @Transactional
+    public RecommendedExerciseDto.DailyRecommendationResponse generateDailyRecommendation(
+            CustomUserPrincipal userPrincipal,
+            RecommendedExerciseDto.DailyRecommendationRequest request
+    ) {
+
+        User user = getUserById(userPrincipal.getUserId());
+        // ✅ FREE / PREMIUM + 토큰 / 일일 초기화 로직
+        handleWorkoutRecommendToken(user);
+        // 1) 최신 인바디 조회 (없으면 예외)
+        InBody latestInBody = inBodyRepository.findTopByUserOrderByMeasurementDateDesc(user)
+                .orElseThrow(() -> new BusinessException(
+                        ErrorCode.INBODY_NOT_FOUND,
+                        "AI 운동 추천을 위해 인바디 정보가 필요합니다. 먼저 인바디를 등록해주세요.")
+                );
+
+        int age = calculateAge(user);
+        String sex = mapSex(user.getGender());               // "male" / "female"
+        String goal = mapGoal(user.getHealthGoal());         // "hypertrophy" / "fat_loss" 등
+        String experience = mapExperience(request.getExperienceLevel()); // "beginner" / "intermediate" / "advanced"
+        String environment = normalizeEnvironment(request.getEnvironment()); // "home" 또는 "gym"
+
+        int planDays = 1; // 일일 추천이므로 1 고정
+        int targetTimeMin = request.getTargetTimeMin() != null ? request.getTargetTimeMin() : 60;
+        int weightKg = user.getWeight() != null ? user.getWeight() : 70;
+
+        // 2) 인바디 정규화 → inbody 파라미터 조립
+        Map<String, Object> inbodyProfile = buildInbodyProfile(latestInBody, user);
+
+        // 3) AI 서버로 보낼 payload 구성
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("user_id", user.getUserId());
+        payload.put("age", age);
+        payload.put("sex", sex);
+        payload.put("goal", goal);
+        payload.put("experience", experience);
+        payload.put("environment", environment);
+        payload.put("available_equipment", request.getAvailableEquipment());
+        payload.put("health_conditions", request.getHealthConditions());
+        payload.put("plan_days", planDays);
+        payload.put("target_time_min", targetTimeMin);
+        payload.put("weight_kg", weightKg);
+        payload.put("inbody", inbodyProfile);
+
+        log.info("🤖 AI 일일 운동 추천 요청 payload: {}", payload);
+
+        // 4) AI 서버 호출
+        Map<String, Object> aiResponse = aiServerClient.requestDailyExercisePlan(payload);
+
+        log.info("🤖 AI 일일 운동 추천 응답: {}", aiResponse);
+
+        String focus = (String) aiResponse.getOrDefault("focus", null);
+        Map<String, Object> metrics = (Map<String, Object>) aiResponse.getOrDefault("metrics", Map.of());
+        List<Map<String, Object>> exercises = (List<Map<String, Object>>) aiResponse.getOrDefault("exercises", List.of());
+
+        return RecommendedExerciseDto.DailyRecommendationResponse.builder()
+                .success(true)
+                .message("일일 운동 추천이 생성되었습니다")
+                .focus(focus)
+                .metrics(metrics)
+                .exercises(exercises)
+                .build();
+    }
+    /**
+     * FREE / PREMIUM 정책 + 토큰 초기화 + 토큰 차감
+     */
+    private void handleWorkoutRecommendToken(User user) {
+        // ✅ PREMIUM 은 토큰 상관없이 바로 통과
+        if (user.getMembershipType() == User.MembershipType.PREMIUM) {
+            log.info("PREMIUM 사용자 - 운동 추천 토큰 소모 없이 진행, userId={}", user.getUserId());
+            return;
+        }
+
+        // ✅ FREE 사용자는 날짜 기준 초기화 먼저
+        resetWorkoutTokensIfNeeded(user);
+
+        Integer tokens = user.getWorkoutRecommendTokens();
+        if (tokens == null) {
+            tokens = 0;
+        }
+
+        // 토큰이 0 이하면 예외
+        if (tokens <= 0) {
+            log.info("FREE 사용자 토큰 소진 - userId={}", user.getUserId());
+            throw new BusinessException(
+                    ErrorCode.NO_WORKOUT_TOKENS,
+                    "오늘 사용 가능한 운동 추천 토큰이 모두 소진되었습니다."
+            );
+        }
+
+        // 토큰 1개 차감
+        user.setWorkoutRecommendTokens(tokens - 1);
+        log.info("운동 추천 토큰 사용 - userId={}, before={}, after={}",
+                user.getUserId(), tokens, tokens - 1);
+        // @Transactional 이므로 별도 save() 없어도 flush 시점에 DB 반영
+    }
+
+    /**
+     * 하루가 지나면 운동 추천 토큰 1로 초기화
+     */
+    private void resetWorkoutTokensIfNeeded(User user) {
+        LocalDate today = LocalDate.now();
+        LocalDateTime lastReset = user.getWorkoutRecommendLastReset();
+
+        // 아직 한 번도 리셋한 적 없으면 → 오늘 기준으로 세팅 + 토큰 1
+        if (lastReset == null) {
+            user.setWorkoutRecommendTokens(1);
+            user.setWorkoutRecommendLastReset(LocalDateTime.now());
+            log.info("운동 추천 토큰 최초 초기화 - userId={}, tokens=1", user.getUserId());
+            return;
+        }
+
+        LocalDate lastResetDate = lastReset.toLocalDate();
+
+        // 날짜가 바뀐 경우(어제/그전) → 다시 1로 초기화
+        if (!lastResetDate.isEqual(today)) {
+            user.setWorkoutRecommendTokens(1);
+            user.setWorkoutRecommendLastReset(LocalDateTime.now());
+            log.info("운동 추천 토큰 일일 초기화 - userId={}, tokens=1, lastReset={}",
+                    user.getUserId(), lastReset);
+        }
+    }
+
+    /**
+     * 인바디 엔티티를 AI 서버가 요구하는 inbody 파라미터 구조로 정규화.
+     *
+     *  - muscle_score: (실제 근육량 - 표준 근육량) / 표준 근육량
+     *  - fat_score   : (실제 지방량 - 표준 지방량) / 표준 지방량
+     */
+    private Map<String, Object> buildInbodyProfile(InBody inBody, User user) {
+
+        // ❗ 표준값은 대략적인 값으로 잡아두고, 나중에 인바디 기준에 맞춰 조정해도 됨.
+        double armMuscleStd = 3.0;
+        double legMuscleStd = 8.0;
+        double trunkMuscleStd = 20.0;
+
+        double armFatStd = 1.5;
+        double legFatStd = 3.0;
+        double trunkFatStd = 8.0;
+
+        // 부위별 실제값 (kg 단위 평균)
+        double armMuscle = avg(inBody.getLeftArmMuscle(), inBody.getRightArmMuscle());
+        double legMuscle = avg(inBody.getLeftLegMuscle(), inBody.getRightLegMuscle());
+        double trunkMuscle = safe(inBody.getTrunkMuscle());
+
+        double armFat = avg(inBody.getLeftArmFat(), inBody.getRightArmFat());
+        double legFat = avg(inBody.getLeftLegFat(), inBody.getRightLegFat());
+        double trunkFat = safe(inBody.getTrunkFat());
+
+        Map<String, Object> map = new HashMap<>();
+
+        // arms
+        map.put("arms", Map.of(
+                "muscle_score", normalize(armMuscle, armMuscleStd),
+                "fat_score", normalize(armFat, armFatStd)
+        ));
+
+        // chest
+        map.put("chest", Map.of(
+                "muscle_score", normalize(trunkMuscle, trunkMuscleStd),
+                "fat_score", normalize(trunkFat, trunkFatStd)
+        ));
+
+        // back
+        map.put("back", Map.of(
+                "muscle_score", normalize(trunkMuscle, trunkMuscleStd),
+                "fat_score", normalize(trunkFat, trunkFatStd)
+        ));
+
+        // shoulders
+        map.put("shoulders", Map.of(
+                "muscle_score", normalize(trunkMuscle, trunkMuscleStd),
+                "fat_score", normalize(trunkFat, trunkFatStd)
+        ));
+
+        // legs
+        map.put("legs", Map.of(
+                "muscle_score", normalize(legMuscle, legMuscleStd),
+                "fat_score", normalize(legFat, legFatStd)
+        ));
+
+        // glutes (엉덩이) → 다리와 동일 기준 사용
+        map.put("glutes", Map.of(
+                "muscle_score", normalize(legMuscle, legMuscleStd),
+                "fat_score", normalize(legFat, legFatStd)
+        ));
+
+        // core → trunk 기준
+        map.put("core", Map.of(
+                "muscle_score", normalize(trunkMuscle, trunkMuscleStd),
+                "fat_score", normalize(trunkFat, trunkFatStd)
+        ));
+
+        return map;
+    }
+
+    private double avg(BigDecimal a, BigDecimal b) {
+        return (safe(a) + safe(b)) / 2.0;
+    }
+
+    private double safe(BigDecimal v) {
+        return v == null ? 0.0 : v.doubleValue();
+    }
+
+    /**
+     * (actual - standard) / standard  →  -1.0 ~ +1.0 근처 값
+     */
+    private double normalize(double value, double std) {
+        if (std == 0) return 0.0;
+        return (value - std) / std;
+    }
+
+    private String mapSex(User.Gender gender) {
+        if (gender == null) return "male";
+        return gender == User.Gender.M ? "male" : "female";
+    }
+
+    /**
+     * User.HealthGoal → AI goal 문자열 매핑
+     *  - DIET → "fat_loss"
+     *  - MUSCLE_GAIN, BULK, LEAN_MASS → "hypertrophy"
+     *  - 나머지 → "maintenance"
+     */
+    private String mapGoal(User.HealthGoal healthGoal) {
+        if (healthGoal == null) return "maintenance";
+
+        return switch (healthGoal) {
+            case DIET -> "fat_loss";
+            case MUSCLE_GAIN, BULK, LEAN_MASS -> "hypertrophy";
+            case MAINTENANCE -> "maintenance";
+        };
+    }
+
+    /**
+     * User.ExperienceLevel → "beginner" / "intermediate" / "advanced"
+     */
+    private String mapExperience(User.ExperienceLevel level) {
+        if (level == null) return "beginner";
+
+        return switch (level) {
+            case BEGINNER -> "beginner";
+            case INTERMEDIATE -> "intermediate";
+            case ADVANCED -> "advanced";
+        };
+    }
+
+    /**
+     * 프론트에서 들어오는 environment를 AI 서버가 이해할 형태로 정리
+     */
+    private String normalizeEnvironment(String env) {
+        if (env == null) return "gym";
+        String lower = env.toLowerCase().trim();
+        if (lower.contains("home") || lower.contains("집")) {
+            return "home";
+        }
+        return "gym"; // 기본값
+    }
+
+
+
+
     @Transactional
     public RecommendedExerciseDto.GenerateRecommendationResponse generateRecommendation(
             CustomUserPrincipal userPrincipal,
@@ -396,7 +658,7 @@ public class ExerciseRecommendationService {
                 .build();
     }
 
-    /**
+    /** 2
      * 추천 플랜 삭제
      */
     @Transactional

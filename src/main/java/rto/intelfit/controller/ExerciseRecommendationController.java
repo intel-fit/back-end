@@ -12,6 +12,10 @@ import org.springframework.web.bind.annotation.*;
 import rto.intelfit.dto.RecommendedExerciseDto;
 import rto.intelfit.security.CustomUserPrincipal;
 import rto.intelfit.service.ExerciseRecommendationService;
+// import 추가
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.validation.Valid;
 
 import java.time.LocalDate;
 
@@ -32,7 +36,30 @@ public class ExerciseRecommendationController {
 
     private final ExerciseRecommendationService exerciseRecommendationService;
 
+    // ===========================
+    // 🔹 일일 운동 추천 API 추가
+    // ===========================
+    @PostMapping("/generate/daily")
+    @Operation(summary = "AI 일일 운동 추천 생성",
+            description = "사용자 정보 + 인바디 + 프론트 입력을 기반으로 AI 서버의 /ai/exercise_plan/daily 를 호출합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "일일 운동 추천 생성 성공"),
+            @ApiResponse(responseCode = "400", description = "요청 값 오류"),
+            @ApiResponse(responseCode = "401", description = "인증 필요"),
+            @ApiResponse(responseCode = "404", description = "인바디 정보 없음")
+    })
+    public ResponseEntity<RecommendedExerciseDto.DailyRecommendationResponse> generateDailyRecommendation(
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal,
+            @Valid @RequestBody RecommendedExerciseDto.DailyRecommendationRequest request
+    ) {
+        log.info("AI 일일 운동 추천 생성 요청 - 사용자: {}, 요청: {}",
+                userPrincipal.getUserId(), request);
 
+        RecommendedExerciseDto.DailyRecommendationResponse response =
+                exerciseRecommendationService.generateDailyRecommendation(userPrincipal, request);
+
+        return ResponseEntity.ok(response);
+    }
     /**
      * AI 기반 맞춤 운동 추천 생성
      */
@@ -130,7 +157,7 @@ public class ExerciseRecommendationController {
         return ResponseEntity.ok(response);
     }
 
-    /**
+    /**  2
      * 추천 플랜 삭제
      */
     @DeleteMapping("/{planId}")

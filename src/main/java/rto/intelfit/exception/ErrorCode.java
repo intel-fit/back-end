@@ -100,6 +100,7 @@ public enum ErrorCode {
 
     // ==================== 챗봇/토큰 관련 에러 ====================
     CHATBOT_TOKENS_EXHAUSTED(HttpStatus.BAD_REQUEST, "CHATBOT_001", "무료 사용자의 일일 챗봇 토큰이 부족합니다"),
+    NO_WORKOUT_TOKENS(HttpStatus.BAD_REQUEST, "NO_WORKOUT_TOKENS", "오늘 사용 가능한 운동 추천 토큰이 모두 소진되었습니다."),
 
     // ==================== 날짜/시간 관련 에러 ====================
     INVALID_DATE_FORMAT(HttpStatus.BAD_REQUEST, "DATE_001", "올바르지 않은 날짜 형식입니다"),
