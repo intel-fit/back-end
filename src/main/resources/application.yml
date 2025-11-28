@@ -134,7 +134,9 @@ kakao:
   client-secret: gawDrvwObz9jP1SFhVsc8DIymkJvGKCH   # 선택 값 (없으면 빈 값)
   redirect-uri: http://localhost:8080/api/users/kakao/callback
   logout-redirect-uri: http://localhost:8080/api/users/kakao/logout/callback
-  #redirect-uri: http://43.200.40.140:8080/api/users/kakao/callback
+  #redirect-uri: http://43.200.40.140:8080/api/users/kakao/callback #서버용
+  #logout-redirect-uri: http://43.200.40.140:8080/api/users/kakao/logout/callback #서버용
+
   token-url: https://kauth.kakao.com/oauth/token
   user-info-url: https://kapi.kakao.com/v2/user/me
   admin-key: "c1f6609de28440e5c5d0dd973f032e70"
