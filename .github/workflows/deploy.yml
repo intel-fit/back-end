@@ -1,0 +1,198 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - dev
+
+env:
+  DOCKER_IMAGE: intelfit-backend
+  EC2_HOST: 43.200.40.140
+  EC2_USER: ubuntu
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: Admin123!
+          MYSQL_DATABASE: intelfit
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+      redis:
+        image: redis:7.2-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Clean and refresh dependencies
+        run: ./gradlew clean --refresh-dependencies --no-daemon
+
+      - name: Run tests
+        run: ./gradlew test --no-daemon
+        env:
+          SPRING_PROFILES_ACTIVE: test
+          SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/intelfit?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
+          SPRING_DATASOURCE_USERNAME: root
+          SPRING_DATASOURCE_PASSWORD: Admin123!
+          SPRING_DATA_REDIS_HOST: localhost
+          SPRING_DATA_REDIS_PORT: 6379
+
+          # 🔥 JWT
+          JWT_SECRET: intelfit-jwt-secret-key-for-production-use-minimum-32-characters-long-2024
+
+          # 🔥 카카오 OAuth (Secrets에서 가져옴)
+          KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
+          KAKAO_JAVASCRIPT_KEY: ${{ secrets.KAKAO_JAVASCRIPT_KEY }}
+          KAKAO_REDIRECT_URI: ${{ secrets.KAKAO_REDIRECT_URI }}
+
+          # 🔥 이메일 SMTP
+          SPRING_MAIL_HOST: smtp.naver.com
+          SPRING_MAIL_PORT: 587
+          SPRING_MAIL_USERNAME: ${{ secrets.SPRING_MAIL_USERNAME }}
+          SPRING_MAIL_PASSWORD: ${{ secrets.SPRING_MAIL_PASSWORD }}
+
+          # 🔥 AI 서버 더미
+          AI_SERVER_URL: http://localhost:8000
+          AI_SERVER_API_KEY: dummy
+
+  build-and-deploy:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: |
+          echo "🔧 Building Docker image..."
+          docker build --no-cache --pull -t ${{ env.DOCKER_IMAGE }}:${{ github.sha }} .
+          docker tag ${{ env.DOCKER_IMAGE }}:${{ github.sha }} ${{ env.DOCKER_IMAGE }}:latest
+          echo "Docker image built successfully"
+
+      - name: Save Docker image
+        run: |
+          docker save ${{ env.DOCKER_IMAGE }}:latest | gzip > image.tar.gz
+          ls -lh image.tar.gz
+
+      - name: Create Nginx config file
+        run: |
+          mkdir -p docker/nginx
+          cat > docker/nginx/nginx.conf << 'EOF'
+          server {
+              listen 80;
+              server_name _;
+
+              access_log /var/log/nginx/access.log;
+              error_log /var/log/nginx/error.log;
+              client_max_body_size 10M;
+
+              location /health {
+                  access_log off;
+                  return 200 "OK";
+                  add_header Content-Type text/plain;
+              }
+
+              location / {
+                  proxy_pass http://spring-app:8080;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection 'upgrade';
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_cache_bypass $http_upgrade;
+              }
+          }
+          EOF
+
+      - name: Create deploy.sh
+        run: |
+          cat > deploy.sh << 'EOF'
+          #!/bin/bash
+          set -e
+          echo "IntelFit 백엔드 배포 시작..."
+          docker compose down --remove-orphans || true
+          docker image prune -f || true
+          docker compose up -d
+
+          echo "서비스 초기화 중..."
+          sleep 20
+
+          echo "Spring Boot 헬스체크..."
+          if docker exec spring-app curl -sf http://localhost:8080/actuator/health > /dev/null 2>&1; then
+            echo "Spring Boot 정상 작동"
+          else
+            echo "Spring Boot 헬스체크 실패"
+            docker logs --tail 50 spring-app
+            exit 1
+          fi
+
+          echo "🌐 Nginx 리버스 프록시 확인..."
+          if curl -sf http://localhost/health > /dev/null 2>&1; then
+            echo "Nginx 프록시 정상 작동"
+          else
+            echo "Nginx 프록시 응답 없음"
+            docker logs --tail 50 nginx
+            exit 1
+          fi
+
+          echo "배포 완료!"
+          docker compose ps
+          EOF
+          chmod +x deploy.sh
+
+      - name: Copy files to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ env.EC2_HOST }}
+          username: ${{ env.EC2_USER }}
+          key: ${{ secrets.EC2_PRIVATE_KEY }}
+          source: "image.tar.gz,compose.yaml,deploy.sh,docker/nginx/nginx.conf,docker/mysql/exerciseCategoryDataBase.sql"
+          target: "/home/ubuntu/back-end"
+          overwrite: true
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.EC2_HOST }}
+          username: ${{ env.EC2_USER }}
+          key: ${{ secrets.EC2_PRIVATE_KEY }}
+          script: |
+            cd /home/ubuntu/back-end
+            echo "📦 Docker 이미지 로드..."
+            docker load < image.tar.gz
+            rm image.tar.gz
+            ./deploy.sh

@@ -1,0 +1,140 @@
+server:
+  port: 8081
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+      enabled: true
+
+spring:
+  config:
+    activate:
+      on-profile: default
+  application:
+    name: intelfit
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/intelfit?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: Admin123!
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      connection-timeout: 20000
+      maximum-pool-size: 10
+
+  jpa:
+    hibernate:
+      ddl-auto: update  # ✅ 다시 원복
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+        show_sql: true
+    open-in-view: false
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+  # 이메일 설정
+  mail:
+    host: smtp.naver.com
+    port: 587
+    username: lkmm1108@naver.com
+    password: 7BJRP2P6F2LF
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          timeout: 5000
+          connectiontimeout: 5000
+        debug: false
+
+  # 파일 업로드 설정 (AI 이미지 분석용)
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+  endpoint:
+    health:
+      show-details: always
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    url: /v3/api-docs
+  show-actuator: true
+
+logging:
+  level:
+    root: INFO
+    rto.intelfit: DEBUG
+    rto.intelfit.security: DEBUG
+    rto.intelfit.util.JwtUtil: DEBUG
+    org.springframework.mail: DEBUG
+
+# JWT 설정
+jwt:
+  secret: mySecretKeyForJwtTokenGenerationAndValidation1234567890
+  access-token-expiration: 3600000
+  refresh-token-expiration: 604800000
+
+# AI 서버 설정
+ai:
+  server:
+    url: ${AI_SERVER_URL:http://43.200.40.140:8000}
+    api-key: ${AI_SERVER_API_KEY:}
+    timeout:
+      connect: 5000
+      read: 30000
+
+# 앱 설정
+app:
+  name: IntelFit
+
+cloud:
+  aws:
+    region: ${AWS_REGION:ap-northeast-2}
+    s3:
+      bucket: ${AWS_S3_BUCKET:}
+      folder: ${AWS_S3_INBODY_FOLDER:inbody-records}
+      base-url: ${AWS_S3_BASE_URL:}
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: ${GEMINI_MODEL:gemini-2.5-flash}
+  url: ${GEMINI_API_URL:https://generativelanguage.googleapis.com/v1beta/models}
+
+
+#이원웅 추가부분 
+kakao:
+  client-id: 79e6bdafa2342e9a67a47c0e78f80e3e
+  client-secret: gawDrvwObz9jP1SFhVsc8DIymkJvGKCH   # 선택 값 (없으면 빈 값)
+  redirect-uri: http://localhost:8080/api/users/kakao/callback
+  logout-redirect-uri: http://localhost:8080/api/users/kakao/logout/callback
+  #redirect-uri: http://43.200.40.140:8080/api/users/kakao/callback
+  token-url: https://kauth.kakao.com/oauth/token
+  user-info-url: https://kapi.kakao.com/v2/user/me
+  admin-key: "c1f6609de28440e5c5d0dd973f032e70"
