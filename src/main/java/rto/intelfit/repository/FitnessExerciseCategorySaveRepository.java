@@ -16,6 +16,10 @@ public interface FitnessExerciseCategorySaveRepository extends JpaRepository<Fit
     /** 특정 유저의 전체 운동 기록 조회 (최신순) */
     List<FitnessExerciseCategorySave> findByUserOrderByWorkoutDateDesc(User user);
 
+    List<FitnessExerciseCategorySave> findByUserIdAndIsSavedTrueAndDateOrderBySaveTitleAsc(Long userId, LocalDate date);
+
+
+    List<FitnessExerciseCategorySave> findByUserIdAndSessionIdIn(Long userId, List<String> sessionIds);
     /** 특정 세션 ID로 운동 세트 조회 */
     List<FitnessExerciseCategorySave> findBySessionId(String sessionId);
 

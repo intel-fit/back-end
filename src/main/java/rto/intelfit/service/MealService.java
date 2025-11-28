@@ -43,14 +43,6 @@ public class MealService {
 
         User user = findUserByPrincipal(userPrincipal);
 
-        // 1) 날짜·식사 타입 중복 체크
-        mealRepository.findByUserAndMealDateAndMealType(
-                user,
-                request.getMealDate(),
-                request.getMealType()
-        ).ifPresent(m -> {
-            throw new BusinessException(ErrorCode.DUPLICATE_MEAL);
-        });
 
         // 2) 음식 → 영양소 합산
         BigDecimal totalCalories = BigDecimal.ZERO;

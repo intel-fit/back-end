@@ -35,12 +35,17 @@ public class ExerciseGoal {
     @Column(nullable = false)
     private Long weeklyCalorieGoal;  // kcal 제외, 숫자만
 
+    @Builder.Default
     @Column(nullable = false)
-    private Long progress;  // 진행률 (0~100)
+    private Long progress = 0L;
+
 
     @CreationTimestamp
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+
+
 }

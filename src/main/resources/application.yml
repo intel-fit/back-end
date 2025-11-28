@@ -141,10 +141,24 @@ kakaopay:
   ready-url: https://kapi.kakao.com/v1/payment/ready
   approve-url: https://kapi.kakao.com/v1/payment/approve
   redirect:
-    approval: ${KAKAOPAY_APPROVAL_URL:http://localhost:8081/api/payments/kakaopay/approve}
-    cancel: ${KAKAOPAY_CANCEL_URL:http://localhost:8081/api/payments/kakaopay/cancel}
-    fail: ${KAKAOPAY_FAIL_URL:http://localhost:8081/api/payments/kakaopay/fail}
+    approval: ${KAKAOPAY_APPROVAL_URL:http://43.200.40.140:8080/api/payments/kakaopay/approve}
+    cancel: ${KAKAOPAY_CANCEL_URL:http://43.200.40.140:8080/api/payments/kakaopay/cancel}
+    fail: ${KAKAOPAY_FAIL_URL:http://43.200.40.140:8080/api/payments/kakaopay/fail}
   plan:
-    item-name: ${KAKAOPAY_PLAN_ITEM_NAME:인텔핏 프리미엄 월 구독}
-    amount: ${KAKAOPAY_PLAN_AMOUNT:4500}
-    tax-free-amount: ${KAKAOPAY_PLAN_TAX_FREE:0}
+    monthly:
+      item-name: ${KAKAOPAY_PLAN_MONTHLY_ITEM_NAME:인텔핏 프리미엄 월 구독}
+      amount: ${KAKAOPAY_PLAN_MONTHLY_AMOUNT:5900}
+      tax-free-amount: ${KAKAOPAY_PLAN_MONTHLY_TAX_FREE:0}
+    annual:
+      item-name: ${KAKAOPAY_PLAN_ANNUAL_ITEM_NAME:인텔핏 프리미엄 연간 구독}
+      amount: ${KAKAOPAY_PLAN_ANNUAL_AMOUNT:59000}
+      tax-free-amount: ${KAKAOPAY_PLAN_ANNUAL_TAX_FREE:0}
+
+stripe:
+  secret-key: ${STRIPE_SECRET_KEY:}
+  price-id:
+    monthly: ${STRIPE_PRICE_ID_MONTHLY:}
+    annual: ${STRIPE_PRICE_ID_ANNUAL:}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  success-url: ${STRIPE_SUCCESS_URL:http://43.200.40.140:8080/api/payments/stripe/success}
+  cancel-url: ${STRIPE_CANCEL_URL:http://43.200.40.140:8080/api/payments/stripe/cancel}

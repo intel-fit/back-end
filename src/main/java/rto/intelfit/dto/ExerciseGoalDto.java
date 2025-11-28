@@ -46,6 +46,6 @@ public class ExerciseGoalDto {
     public static class SummaryResponse {
         private String weeklyFrequency;
         private String durationPerSession;
-        private Long progress;
+        private Double progress;
     }
 }

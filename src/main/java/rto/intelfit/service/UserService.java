@@ -17,7 +17,8 @@ import rto.intelfit.exception.ErrorCode;
 import rto.intelfit.repository.UserRepository;
 import rto.intelfit.security.CustomUserPrincipal;
 import rto.intelfit.util.JwtUtil;
-
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.security.SecureRandom;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -120,6 +121,40 @@ public class UserService {
                 .userId(savedUser.getId())
                 .build();
     }
+
+    @Transactional
+    public User updateTokensToDefault(CustomUserPrincipal principal) {
+        User user = findByPrincipal(principal);
+
+        user.setMealRecommendTokens(1);
+        user.setWorkoutRecommendTokens(1);
+        user.setChatbotTokens(3);
+
+        user.setMealTokenLastReset(LocalDate.now());
+        user.setWorkoutRecommendLastReset(LocalDateTime.now());
+        user.setChatbotLastReset(LocalDateTime.now());
+
+        return userRepository.save(user);
+    }
+
+    @Transactional
+    public User upgradeToPremium(CustomUserPrincipal principal) {
+        User user = findByPrincipal(principal);
+
+        user.setMembershipType(User.MembershipType.PREMIUM);
+
+        return userRepository.save(user);
+    }
+
+    @Transactional
+    public User downgradeToFree(CustomUserPrincipal principal) {
+        User user = findByPrincipal(principal);
+
+        user.setMembershipType(User.MembershipType.FREE);
+
+        return userRepository.save(user);
+    }
+
 
     public SignUpDto.UserIdCheckResponse checkUserIdAvailability(String userId) {
         // 기본 유효성 검증

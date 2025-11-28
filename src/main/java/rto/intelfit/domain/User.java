@@ -118,6 +118,35 @@ public class User {
     @Column(name = "profile_image")
     private String profileImage;
 
+    // ===== 토큰 관련 =====
+
+    // 식단 추천 토큰 (기본 1, 7일 후 초기화)
+    @Builder.Default
+    @Column(name = "meal_recommend_tokens", nullable = false)
+    private Integer mealRecommendTokens = 1;
+
+    @Column(name = "meal_token_last_reset")
+    private LocalDate mealTokenLastReset;
+
+
+    // 운동 추천 토큰 (기본 1, 7일 후 초기화)
+    @Builder.Default
+    @Column(name = "workout_recommend_tokens", nullable = false)
+    private Integer workoutRecommendTokens = 1;
+
+    @Column(name = "workout_recommend_last_reset")
+    private LocalDateTime workoutRecommendLastReset;
+
+
+    // 챗봇 토큰 (기본 3, 1일 후 초기화)
+    @Builder.Default
+    @Column(name = "chatbot_tokens", nullable = false)
+    private Integer chatbotTokens = 3;
+
+    @Column(name = "chatbot_last_reset")
+    private LocalDateTime chatbotLastReset;
+
+
 
 
     public enum SocialProvider {

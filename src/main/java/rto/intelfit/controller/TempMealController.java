@@ -30,6 +30,7 @@ public class TempMealController {
         return ResponseEntity.ok("TEMP Weekly 생성 완료. tempBundleId=" + id);
     }
 
+
     // 2) TEMP 조회
     @GetMapping("/weekly")
     public ResponseEntity<List<TempMealDto.PlanResponse>> getWeekly(

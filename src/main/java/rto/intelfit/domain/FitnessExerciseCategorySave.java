@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import java.time.LocalDate;
 
 import java.time.LocalDateTime;
 
@@ -85,5 +86,10 @@ public class FitnessExerciseCategorySave {
     /** 저장 제목 */
     @Column(name = "save_title", length = 100)
     private String saveTitle;
+
+    /** 운동 수행 날짜 (프론트에서 보내는 YYYY-MM-DD) */
+    @Builder.Default
+    @Column(name = "date", nullable = false)
+    private LocalDate date = LocalDate.now();
 
 }

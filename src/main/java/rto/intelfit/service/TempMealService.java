@@ -53,6 +53,76 @@ public class TempMealService {
         User user = userRepository.findByUserId(principal.getUserId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
+        // ==== 무료/유료 분기 ====
+        if (user.getMembershipType() == User.MembershipType.FREE) {
+
+            resetWeeklyTokensIfNeeded(user);
+
+            if (user.getMealRecommendTokens() <= 0) {
+                throw new BusinessException(ErrorCode.NO_MEAL_TOKENS,
+                        "무료 식단 추천 토큰이 부족합니다.");
+            }
+
+            // 기존 temp 삭제
+            bundleRepo.findByUser(user).ifPresent(bundleRepo::delete);
+
+            // 새 bundle 생성
+            TempMealBundle bundle = bundleRepo.save(
+                    TempMealBundle.builder().user(user).build()
+            );
+
+            // 하루치만 생성
+            RecommendedMealPlan daily =
+                    aiServerService.requestDailyRecommendedMealPlanWithoutSave(principal);
+
+            TempMealPlan savedPlan = planRepo.save(
+                    TempMealPlan.builder()
+                            .tempBundle(bundle)
+                            .dayIndex(1)
+                            .totalCalories(daily.getTotalCalories())
+                            .totalCarbs(daily.getTotalCarbs())
+                            .totalProtein(daily.getTotalProtein())
+                            .totalFat(daily.getTotalFat())
+                            .build()
+            );
+
+            // Meal, Food 저장
+            for (RecommendedMeal rm : daily.getRecommendedMeals()) {
+
+                TempMeal tm = mealRepo.save(
+                        TempMeal.builder()
+                                .tempMealPlan(savedPlan)
+                                .mealType(rm.getMealType())
+                                .totalCalories(rm.getTotalCalories())
+                                .totalCarbs(rm.getTotalCarbs())
+                                .totalProtein(rm.getTotalProtein())
+                                .totalFat(rm.getTotalFat())
+                                .build()
+                );
+
+                rm.getRecommendedFoods().forEach(rf ->
+                        foodRepo.save(
+                                TempMealFood.builder()
+                                        .tempMeal(tm)
+                                        .foodName(rf.getFoodName())
+                                        .servingSize(rf.getServingSize())
+                                        .calories(rf.getCalories())
+                                        .carbs(rf.getCarbs())
+                                        .protein(rf.getProtein())
+                                        .fat(rf.getFat())
+                                        .build()
+                        )
+                );
+            }
+
+            // 무료 토큰 감소
+            user.setMealRecommendTokens(user.getMealRecommendTokens() - 1);
+
+            return bundle.getId();
+        }
+
+        // ==== 유료 유저 → 기존 7일 생성 ====
+
         // 기존 temp 삭제
         bundleRepo.findByUser(user).ifPresent(bundleRepo::delete);
 
@@ -114,6 +184,25 @@ public class TempMealService {
 
         return bundle.getId();
     }
+
+    // ==== 무료 토큰 자동 리셋 (7일마다) ====
+    private void resetWeeklyTokensIfNeeded(User user) {
+
+        // 첫 요청이면 초기화
+        if (user.getMealTokenLastReset() == null) {
+            user.setMealTokenLastReset(LocalDate.now());
+            user.setMealRecommendTokens(1); // 기본 1개
+            return;
+        }
+
+        // 마지막 리셋 이후 7일이 지나면 리셋
+        if (user.getMealTokenLastReset().plusDays(7).isBefore(LocalDate.now())) {
+            user.setMealRecommendTokens(1); // 1개로 재충전
+            user.setMealTokenLastReset(LocalDate.now());
+        }
+    }
+
+
     //1.5 선택한 식사 삭제 , 식사 id 로 삭제함
     @Transactional
     public void deleteTempMeal(CustomUserPrincipal principal, Long mealId) {

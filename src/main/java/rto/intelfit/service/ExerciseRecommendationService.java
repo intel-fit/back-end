@@ -110,9 +110,8 @@ public class ExerciseRecommendationService {
                 .targetLevel(user.getExperienceLevel() != null
                         ? user.getExperienceLevel()
                         : User.ExperienceLevel.BEGINNER)
-                .weeklyFrequency(user.getWorkoutDaysPerWeek() != null
-                        ? Integer.valueOf(user.getWorkoutDaysPerWeek())
-                        : 3)
+                .weeklyFrequency(parseWorkoutDays(user.getWorkoutDaysPerWeek()))
+
                 .estimatedDurationMinutes(60)
                 .build();
 
@@ -144,6 +143,21 @@ public class ExerciseRecommendationService {
 
     private RecommendedExerciseRoutine convertAIDayToRoutine(Map<String, Object> dayData) {
         return null;
+    }
+
+    private int parseWorkoutDays(Object value) {
+        if (value == null) return 3; // default fallback
+
+        String s = value.toString().replaceAll("[^0-9]", " ").trim();
+        if (s.isEmpty()) return 3;
+
+        // "3 4" → 첫 번째 숫자만 사용
+        String[] arr = s.split("\\s+");
+        try {
+            return Integer.parseInt(arr[0]);
+        } catch (Exception e) {
+            return 3;
+        }
     }
 
     /**
@@ -467,7 +481,7 @@ public class ExerciseRecommendationService {
                 .isSaved(false)
                 .fitnessGoal(user.getHealthGoal())
                 .targetLevel(user.getExperienceLevel())
-                .weeklyFrequency(Integer.valueOf(user.getWorkoutDaysPerWeek()))
+                .weeklyFrequency(parseWorkoutDays(user.getWorkoutDaysPerWeek()))
                 .estimatedDurationMinutes(calculateMinutesFromCalories(recommendedCaloriesBurn))
                 .build();
 

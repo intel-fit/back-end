@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.*;
 import rto.intelfit.dto.ExerciseGoalDto;
 import rto.intelfit.security.CustomUserPrincipal;
 import rto.intelfit.service.ExerciseGoalService;
+import rto.intelfit.repository.DailyProgressRepository;
+
 
 @Slf4j
 @RestController

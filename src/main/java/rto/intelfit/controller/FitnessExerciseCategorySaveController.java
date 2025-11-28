@@ -16,6 +16,7 @@ import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.AllArgsConstructor;
+import java.time.LocalDate;
 
 //*
 // 운동 기록 페이지
@@ -79,28 +80,36 @@ public class FitnessExerciseCategorySaveController {
     }
 
     @Operation(
-            summary = "현재 운동 기록 저장",
-            description = "isSaved=false 상태의 운동들을 하나의 제목으로 저장합니다."
+            summary = "현재 운동 기록 저장 + AI 피드백 전송",
+            description = "isSaved=false 상태의 운동들을 저장 후 AI 서버로 운동 피드백을 전송합니다."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "운동 저장 성공"),
+            @ApiResponse(responseCode = "200", description = "운동 저장 및 AI 피드백 전송 성공"),
             @ApiResponse(responseCode = "404", description = "저장할 운동 없음")
     })
     @PostMapping("/save")
     public ResponseEntity<FitnessExerciseCategorySaveDto.SaveResponse> saveWorkout(
             @RequestBody FitnessExerciseCategorySaveDto.SaveRequest request
     ) {
-        log.info("💾 운동 저장 API 호출 userId={}, title={}",
-                request.getUserId(), request.getSaveTitle());
+        log.info("💾 운동 저장 API 호출 userId={}, title={}, date={}",
+                request.getUserId(), request.getSaveTitle(), request.getDate());
+
+        LocalDate date = LocalDate.parse(request.getDate());
 
         FitnessExerciseCategorySaveDto.SaveResponse response =
-                saveService.saveUnsavedWorkouts(
+                saveService.saveUnsavedWorkoutsAndSendFeedback(
                         request.getUserId(),
-                        request.getSaveTitle()
+                        request.getSaveTitle(),
+                        request.getIntensity(),
+                        request.getFeedback(),
+                        date
                 );
 
         return ResponseEntity.ok(response);
     }
+
+
+
 
     @Operation(summary = "저장된 운동 기록 조회 (제목 → 세션 단위)",
             description = "저장된 운동 기록들을 saveTitle 기준으로 묶고, 내부에서는 sessionId 기준으로 그룹핑하여 반환합니다.")
@@ -118,6 +127,30 @@ public class FitnessExerciseCategorySaveController {
 
         return ResponseEntity.ok(response);
     }
+
+    @Operation(summary = "날짜별 저장된 운동 기록 조회",
+            description = "특정 날짜에 저장된(isSaved=true) 운동 기록을 saveTitle → sessionId 순으로 그룹핑하여 반환합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공")
+    })
+    @GetMapping("/saved/{userId}/{date}")
+    public ResponseEntity<List<FitnessExerciseCategorySaveDto.SavedGroupResponse>>
+    getSavedWorkoutsByDate(
+            @PathVariable Long userId,
+            @PathVariable String date
+    ) {
+        LocalDate parsed = LocalDate.parse(date);
+
+        log.info("📂 저장된 운동 날짜 조회 요청 userId={}, date={}", userId, parsed);
+
+        List<FitnessExerciseCategorySaveDto.SavedGroupResponse> response =
+                saveService.getSavedWorkoutGroupsByDate(userId, parsed);
+
+        return ResponseEntity.ok(response);
+    }
+
+
+
 
 
 
