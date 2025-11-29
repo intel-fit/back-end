@@ -93,9 +93,10 @@ public class SignUpDto {
         @Max(value = 200, message = "목표 체중은 200kg 이하여야 합니다")
         private Integer weightGoal;
 
-        @Schema(description = "운동 목표", example = "DIET", allowableValues = {"DIET", "BULK", "LEAN_MASS"})
+        @Schema(description = "운동 목표", example = "MAINTENANCE", allowableValues = {"DIET", "BULK", "LEAN_MASS", "MAINTENANCE"})
         @NotNull(message = "운동 목표를 선택해주세요")
-        private User.HealthGoal healthGoal;
+        private User.HealthGoal healthGoal = User.HealthGoal.MAINTENANCE;  // 기본값 지정
+
 
         @Schema(description = "주간 운동 일수", example = "3-4일")
         @Size(max = 20, message = "주간 운동 일수는 20자 이내로 입력해주세요")
