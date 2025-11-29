@@ -94,8 +94,7 @@ public class SignUpDto {
         private Integer weightGoal;
 
         @Schema(description = "운동 목표", example = "MAINTENANCE", allowableValues = {"DIET", "BULK", "LEAN_MASS", "MAINTENANCE"})
-        @NotNull(message = "운동 목표를 선택해주세요")
-        private User.HealthGoal healthGoal = User.HealthGoal.MAINTENANCE;  // 기본값 지정
+        private User.HealthGoal healthGoal = User.HealthGoal.MAINTENANCE;
 
 
         @Schema(description = "주간 운동 일수", example = "3-4일")

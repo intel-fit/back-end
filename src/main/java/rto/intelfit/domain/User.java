@@ -54,8 +54,10 @@ public class User {
     private MembershipType membershipType = MembershipType.FREE;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "health_goal")
-    private HealthGoal healthGoal;
+    @Column(name = "health_goal", nullable = false)
+    @Builder.Default
+    private HealthGoal healthGoal = HealthGoal.MAINTENANCE;
+
 
     @Enumerated(EnumType.STRING)
     @Column(name = "experience_level")
@@ -83,7 +85,7 @@ public class User {
     private Boolean agreeTerms = false;
 
     @Column(name = "agreed_at")
-    private LocalDateTime agreedAt;
+    private LocalDa teTime agreedAt;
 
     @Column(name = "fitness_concerns", length = 500)
     private String fitnessConcerns;
