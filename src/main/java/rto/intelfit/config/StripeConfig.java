@@ -6,7 +6,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
 @Configuration
-@Profile("!test")  // ✅ test 프로파일에서는 이 설정 자체를 안 띄움
 public class StripeConfig {
 
     public StripeConfig(@Value("${stripe.secret-key:}") String secretKey) {
