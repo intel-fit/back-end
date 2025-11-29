@@ -68,18 +68,18 @@ jobs:
           # JWT
           JWT_SECRET: intelfit-jwt-secret-key-for-production-use-minimum-32-characters-long-2024
 
-          # Kakao OAuth
-          KAKAO_REST_API_KEY: dummy
-          KAKAO_JAVASCRIPT_KEY: dummy
-          KAKAO_REDIRECT_URI: http://localhost
+          # 🔥 카카오 OAuth (Secrets에서 가져옴)
+          KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
+          KAKAO_JAVASCRIPT_KEY: ${{ secrets.KAKAO_JAVASCRIPT_KEY }}
+          KAKAO_REDIRECT_URI: ${{ secrets.KAKAO_REDIRECT_URI }}
 
-          # Email
+          # 🔥 이메일 SMTP
           SPRING_MAIL_HOST: smtp.naver.com
           SPRING_MAIL_PORT: 587
-          SPRING_MAIL_USERNAME: dummy
-          SPRING_MAIL_PASSWORD: dummy
+          SPRING_MAIL_USERNAME: ${{ secrets.SPRING_MAIL_USERNAME }}
+          SPRING_MAIL_PASSWORD: ${{ secrets.SPRING_MAIL_PASSWORD }}
 
-          # AI Mock
+          # 🔥 AI 서버 더미
           AI_SERVER_URL: http://localhost:8000
           AI_SERVER_API_KEY: dummy
 
