@@ -90,6 +90,8 @@ public class ExerciseRecommendationService {
         payload.put("target_time_min", targetTimeMin);
         payload.put("weight_kg", weightKg);
         payload.put("inbody", inbodyProfile);
+        // ⭐️ 추가된 라인
+        payload.put("like_muscles", request.getLikeMuscles());
 
         log.info("🤖 AI 일일 운동 추천 요청 payload: {}", payload);
 
@@ -178,7 +180,7 @@ public class ExerciseRecommendationService {
      */
     private Map<String, Object> buildInbodyProfile(InBody inBody, User user) {
 
-        // ❗ 표준값은 대략적인 값으로 잡아두고, 나중에 인바디 기준에 맞춰 조정해도 됨.
+        // 표준값은 대략적인 값으로 잡아두고, 나중에 인바디 기준에 맞춰 조정해도 됨.
         double armMuscleStd = 3.0;
         double legMuscleStd = 8.0;
         double trunkMuscleStd = 20.0;

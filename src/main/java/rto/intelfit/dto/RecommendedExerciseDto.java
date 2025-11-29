@@ -53,6 +53,10 @@ public class RecommendedExerciseDto {
 
         @Schema(description = "목표 운동 시간(분)", example = "60")
         private Integer targetTimeMin;
+
+        @Schema(description = "선호하는 부위", example = "60")
+        private List<String> likeMuscles;
+
     }
 
     @Getter
