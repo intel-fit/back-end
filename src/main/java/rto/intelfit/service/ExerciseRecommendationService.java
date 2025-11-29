@@ -271,14 +271,18 @@ public class ExerciseRecommendationService {
      *  - 나머지 → "maintenance"
      */
     private String mapGoal(User.HealthGoal healthGoal) {
-        if (healthGoal == null) return "maintenance";
+
+        if (healthGoal == null) {
+            return "functional"; // 널일 경우 기본값
+        }
 
         return switch (healthGoal) {
             case DIET -> "fat_loss";
-            case MUSCLE_GAIN, BULK, LEAN_MASS -> "hypertrophy";
-            case MAINTENANCE -> "maintenance";
+            case BULK, MUSCLE_GAIN, LEAN_MASS -> "hypertrophy"; // 근비대 / 벌크업 계열
+            case MAINTENANCE -> "functional"; // 유지 → 기능성 & 밸런스계 목표로 매핑
         };
     }
+
 
     /**
      * User.ExperienceLevel → "beginner" / "intermediate" / "advanced"
