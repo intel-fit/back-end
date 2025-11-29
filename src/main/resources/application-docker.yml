@@ -121,7 +121,7 @@ jwt:
 ai:
   server:
     url: ${AI_SERVER_URL:http://43.200.40.140:8000}
-    api-key: ${AI_SERVER_API_KEY:}
+    api-key: ${AI_SERVER_API_KEY:dummy}
     timeout:
       connect: 5000
       read: 30000
