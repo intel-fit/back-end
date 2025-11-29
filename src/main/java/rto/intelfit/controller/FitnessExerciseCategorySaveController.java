@@ -109,7 +109,8 @@ public class FitnessExerciseCategorySaveController {
                         request.getSaveTitle(),
                         request.getIntensity(),
                         request.getFeedback(),
-                        date
+                        date,
+                        request.getSeconds()
                 );
 
         // 🔥 오늘 운동시간 누적

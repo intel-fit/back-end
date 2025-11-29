@@ -16,6 +16,8 @@ import rto.intelfit.domain.DailyProgress;
 import rto.intelfit.dto.ExerciseFeedbackDto;
 import java.util.ArrayList;
 import java.util.HashMap;
+import rto.intelfit.domain.ExerciseGoal;
+import rto.intelfit.repository.ExerciseGoalRepository;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -34,6 +36,7 @@ public class FitnessExerciseCategorySaveService {
     private final DailyProgressService dailyProgressService;
     private final DailyProgressRepository dailyProgressRepository;
     private final AIServerService aiServerService;
+    private final ExerciseGoalRepository exerciseGoalRepository;
 
 
 
@@ -329,14 +332,26 @@ public class FitnessExerciseCategorySaveService {
                 .map(DailyProgress::getTotalExerciseSeconds)
                 .orElse(0L); // 오늘 기록이 없으면 0초로 반환
     }
+    /** 문자열 → 초 단위 운동시간 파싱 ("30분 이상") → 1800 초 */
+    private long parseDurationToSeconds(String durationPerSession) {
+        int minutes = Integer.parseInt(durationPerSession.replaceAll("\\D", ""));
+        return minutes * 60L;
+    }
+
 
     public FitnessExerciseCategorySaveDto.SaveResponse saveUnsavedWorkoutsAndSendFeedback(
             Long userId,
             String saveTitle,
             List<Double> intensityList,
             List<String> feedbackList,
-            LocalDate date
+            LocalDate date,
+            long seconds
     ) {
+        // 🔥 user 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 원래 로직
         FitnessExerciseCategorySaveDto.SaveResponse response =
                 saveUnsavedWorkouts(userId, saveTitle, date);
 
@@ -352,8 +367,43 @@ public class FitnessExerciseCategorySaveService {
 
         aiServerService.sendExerciseFeedback(req);
 
+        // 🔥 DailyProgress 조회 혹은 생성 (user 사용)
+        DailyProgress progress = dailyProgressRepository.findByUserIdAndDate(userId, date)
+                .orElseGet(() -> dailyProgressRepository.save(
+                        DailyProgress.builder()
+                                .user(user)
+                                .date(date)
+                                .totalExerciseSeconds(0L)
+                                .totalCalorie(0.0)
+                                .exerciseRate(0.0)
+                                .build()
+                ));
+
+        // 🔥 운동시간 누적
+        progress.setTotalExerciseSeconds(progress.getTotalExerciseSeconds() + seconds);
+
+        // 3) 목표 조회 (없어도 예외 던지지 않음)
+        ExerciseGoal goal = exerciseGoalRepository.findByUser(user).orElse(null);
+
+        double rate = 0.0;
+
+        if (goal != null) {
+            long requiredSeconds = parseDurationToSeconds(goal.getDurationPerSession());
+            rate = ((double) progress.getTotalExerciseSeconds() / requiredSeconds) * 100.0;
+            rate = Math.min(rate, 100.0);
+        }
+
+// 4) 달성률 저장
+        progress.setExerciseRate(rate);
+        dailyProgressRepository.save(progress);
+
+
+        log.info("🔥 DailyProgress 업데이트 완료: userId={}, seconds={}, rate={}",
+                userId, progress.getTotalExerciseSeconds(), rate);
+
         return response;
     }
+
 
 
 

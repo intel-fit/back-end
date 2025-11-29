@@ -186,4 +186,6 @@ public class DailyProgressService {
         log.info("운동 달성률 재계산 - userId: {}, date: {}", user.getUserId(), date);
         calculateProgressByDate(user, date);
     }
+
+
 }
