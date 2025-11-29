@@ -233,11 +233,13 @@ public class AIServerClient {
     }
 
     public Map<String, Object> chatWithCoach(String userId, String message) {
-        String url = aiServerUrl + "/chat/coach"
-                + "?user_id=" + userId
-                + "&message=" + URLEncoder.encode(message, StandardCharsets.UTF_8);
+        String url = aiServerUrl + "/chat/coach";
 
-        return postRequest(url, null);
+        Map<String, Object> request = new HashMap<>();
+        request.put("user_id", userId);
+        request.put("message", message);
+
+        return postRequest(url, request);
     }
 
     // ========================================
