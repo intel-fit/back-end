@@ -289,22 +289,34 @@ public class FitnessExerciseCategorySaveService {
         LocalDate today = LocalDate.now();
 
         DailyProgress progress = dailyProgressRepository.findByUserIdAndDate(userId, today)
-                .orElseGet(() -> {
-                    DailyProgress newOne = DailyProgress.builder()
-                            .user(user)
-                            .date(today)
-                            .totalExerciseSeconds(0L)
-                            .totalCalorie(0.0)
-                            .exerciseRate(0.0)
-                            .build();
-                    return dailyProgressRepository.save(newOne);
-                });
+                .orElse(null);
+
+        if (progress == null) {
+
+            progress = DailyProgress.builder()
+                    .user(user)
+                    .date(today)
+                    .totalExerciseSeconds(0L)
+                    .totalCalorie(0.0)
+                    .exerciseRate(0.0)
+                    .build();
+
+            try {
+                progress = dailyProgressRepository.save(progress);
+            } catch (Exception e) {
+                // 다른 요청이 먼저 INSERT 하면 여기서 UNIQUE 제약 위반
+                progress = dailyProgressRepository.findByUserIdAndDate(userId, today)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.SERVER_ERROR, "운동 시간 저장 중 충돌 발생"));
+            }
+        }
 
         progress.setTotalExerciseSeconds(progress.getTotalExerciseSeconds() + seconds);
 
-        log.info("✔ 오늘 운동시간 누적 완료 userId={}, totalSeconds={}",
+        log.info("✔ 오늘 운동시간 누적 userId={}, totalSeconds={}",
                 userId, progress.getTotalExerciseSeconds());
     }
+
+
     @Transactional(readOnly = true)
     public long getTodayWorkoutSeconds(Long userId) {
 

@@ -145,11 +145,12 @@ public class FitnessExerciseCategorySaveDto {
     public static class SaveRequest {
         private Long userId;
         private String saveTitle;
-        private String date;          // ← 추가
+        private String date; // YYYY-MM-DD
         private List<Double> intensity;
         private List<String> feedback;
-    }
 
+        private long seconds;   // ⭐ 추가: 오늘 운동 시간(초)
+    }
 
     @Getter
     @Setter

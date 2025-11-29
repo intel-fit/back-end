@@ -23,7 +23,7 @@ import rto.intelfit.repository.DailyProgressRepository;
 public class ExerciseGoalController {
 
     private final ExerciseGoalService exerciseGoalService;
-
+//
     @Operation(summary = "운동 목표 저장", description = "프론트에서 전달된 JSON을 받아 운동 목표를 저장합니다.")
     @PostMapping
     public ResponseEntity<ExerciseGoalDto.Response> saveGoal(

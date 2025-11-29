@@ -17,7 +17,8 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.AllArgsConstructor;
 import java.time.LocalDate;
-
+import rto.intelfit.exception.BusinessException;
+import rto.intelfit.exception.ErrorCode;
 //*
 // 운동 기록 페이지
 // 1. user id 별 운동 기록 리스트 반환
@@ -91,11 +92,17 @@ public class FitnessExerciseCategorySaveController {
     public ResponseEntity<FitnessExerciseCategorySaveDto.SaveResponse> saveWorkout(
             @RequestBody FitnessExerciseCategorySaveDto.SaveRequest request
     ) {
-        log.info("💾 운동 저장 API 호출 userId={}, title={}, date={}",
-                request.getUserId(), request.getSaveTitle(), request.getDate());
+        log.info("💾 운동 저장 API 호출 userId={}, title={}, date={}, seconds={}",
+                request.getUserId(), request.getSaveTitle(), request.getDate(), request.getSeconds());
 
         LocalDate date = LocalDate.parse(request.getDate());
 
+        // 🔥 오늘인지 체크 (오늘 아니면 오류)
+        if (!date.equals(LocalDate.now())) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "오늘 날짜의 운동 시간만 저장할 수 있습니다.");
+        }
+
+        // 🔥 Save + AI 피드백 처리
         FitnessExerciseCategorySaveDto.SaveResponse response =
                 saveService.saveUnsavedWorkoutsAndSendFeedback(
                         request.getUserId(),
@@ -105,8 +112,12 @@ public class FitnessExerciseCategorySaveController {
                         date
                 );
 
+        // 🔥 오늘 운동시간 누적
+        saveService.addDailyExerciseSeconds(request.getUserId(), request.getSeconds());
+
         return ResponseEntity.ok(response);
     }
+
 
 
 

@@ -18,7 +18,7 @@ import java.time.YearMonth;
 import java.util.List;
 
 /**
- * DailyProgressController (운영 DB 기반)
+ * DailyProgressController (  운영 DB 기반)
  * 홈 화면/캘린더용 운동 달성률 & 칼로리 API
  */
 @Tag(name = "DailyProgress API", description = "운동 달성률 및 칼로리 조회")

@@ -21,7 +21,7 @@ import java.util.List;
 
 import rto.intelfit.domain.DailyProgress;
 import rto.intelfit.repository.DailyProgressRepository;
-
+//
 
 
 @Service

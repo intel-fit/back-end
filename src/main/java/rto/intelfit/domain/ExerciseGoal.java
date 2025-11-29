@@ -39,13 +39,11 @@ public class ExerciseGoal {
     @Column(nullable = false)
     private long progress = 0L;
 
-
     @CreationTimestamp
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
-
 
 
 }

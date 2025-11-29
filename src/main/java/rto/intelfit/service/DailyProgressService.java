@@ -38,8 +38,8 @@ public class DailyProgressService {
      */
     @Transactional
     public DailyProgressDto calculateTodayProgress(User user) {
-        LocalDate today = LocalDate.now();
-        return calculateProgressByDate(user, today);
+        LocalDate today = LocalDate.now() ;
+        return calculateProgressByDate(user, today) ;
     }
 
     /**
