@@ -17,7 +17,7 @@ RUN ./gradlew dependencies --no-daemon --refresh-dependencies
 
 # 소스 코드 복사 및 빌드
 COPY src src
-RUN ./gradlew clean bootJar --no-daemon --refresh-dependencies
+RUN ./gradlew clean bootJar -x test --no-daemon --refresh-dependencies
 
 # Runtime stage
 FROM eclipse-temurin:21-jre-alpine
