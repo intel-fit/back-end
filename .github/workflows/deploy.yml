@@ -83,6 +83,26 @@ jobs:
           AI_SERVER_URL: http://localhost:8000
           AI_SERVER_API_KEY: dummy
 
+          # 🔥 Stripe Dummy 
+          STRIPE_PUBLISHABLE_KEY: dummy
+          STRIPE_SECRET_KEY: dummy
+          STRIPE_PRICE_ID_MONTHLY: dummy
+          STRIPE_PRICE_ID_ANNUAL: dummy
+          STRIPE_WEBHOOK_SECRET: dummy
+          STRIPE_SUCCESS_URL: http://localhost
+          STRIPE_CANCEL_URL: http://localhost
+
+          # 🔥 KakaoPay Dummy (테스트용)
+          KAKAOPAY_ADMIN_KEY: dummy
+          KAKAOPAY_CID: TC0ONETIME
+          KAKAOPAY_PLAN_MONTHLY_AMOUNT: 5900
+          KAKAOPAY_PLAN_ANNUAL_AMOUNT: 59000
+          KAKAOPAY_PLAN_MONTHLY_ITEM_NAME: "monthly-test"
+          KAKAOPAY_PLAN_ANNUAL_ITEM_NAME: "annual-test"
+          KAKAOPAY_APPROVAL_URL: http://localhost
+          KAKAOPAY_CANCEL_URL: http://localhost
+          KAKAOPAY_FAIL_URL: http://localhost
+
   build-and-deploy:
     needs: test
     runs-on: ubuntu-latest
