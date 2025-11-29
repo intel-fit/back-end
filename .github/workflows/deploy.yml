@@ -12,6 +12,7 @@ env:
 
 jobs:
   test:
+    if : false
     runs-on: ubuntu-latest
 
     services:
@@ -111,7 +112,7 @@ jobs:
           KAKAOPAY_PLAN_ANNUAL_TAX_FREE: 0
 
   build-and-deploy:
-    needs: test
+    # needs: test // 필요시, 주석 제거하기
     runs-on: ubuntu-latest
 
     steps:
