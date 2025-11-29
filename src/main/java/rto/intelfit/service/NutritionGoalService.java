@@ -65,6 +65,7 @@ public class NutritionGoalService {
     /**
      * 영양 목표 조회
      */
+    @Transactional
     public NutritionGoalDto.NutritionGoalResponse getNutritionGoal(
             CustomUserPrincipal userPrincipal) {
 
