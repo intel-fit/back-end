@@ -34,7 +34,7 @@ public class RecommendedExerciseDto {
     @AllArgsConstructor
     @Schema(name = "DailyExerciseRecommendationRequest", description = "AI 일일 운동 추천 요청 DTO")
     public static class DailyRecommendationRequest {
-
+//
         @Schema(description = "운동 숙련도 (User.ExperienceLevel)", example = "INTERMEDIATE")
         @NotNull
         private User.ExperienceLevel experienceLevel;
