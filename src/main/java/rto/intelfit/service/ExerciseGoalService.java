@@ -66,7 +66,7 @@ public class ExerciseGoalService {
 
 
     /** 운동 목표 요약 계산 + 반환 */
-    @Transactional(readOnly = true)
+    @Transactional
     public ExerciseGoalDto.SummaryResponse getGoalSummary(CustomUserPrincipal userPrincipal) {
 
         User user = userRepository.findByUserId(userPrincipal.getUserId())
