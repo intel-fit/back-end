@@ -23,6 +23,7 @@ import rto.intelfit.service.AIServerClient;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * AI 서버 통합 API
@@ -34,6 +35,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Tag(name = "AI Integration", description = "AI 서버 통합 API")
 public class AIIntegrationController {
+
+    private static final Set<String> SUPPORTED_MODES = Set.of("auto", "nutrition", "exercise");
+    private static final Set<String> SUPPORTED_COACH_STYLES = Set.of("default", "pro", "friend", "soft", "drill");
 
     private final AIServerClient aiServerClient;
     private final AIExerciseSyncService aiExerciseSyncService;
@@ -280,11 +284,20 @@ public class AIIntegrationController {
             throw new BusinessException(ErrorCode.MISSING_REQUIRED_FIELD, "message 파라미터는 필수입니다.");
         }
 
-        log.info("AI 코치 챗봇 - userId: {}, message: {}", userPrincipal.getUserId(), message);
+        String mode = normalizeOrDefault(request != null ? request.getMode() : null, "auto");
+        String coachStyle = normalizeOrDefault(request != null ? request.getCoachStyle() : null, "default");
+
+        validateMode(mode);
+        validateCoachStyle(coachStyle);
+
+        log.info("AI 코치 챗봇 - userId: {}, mode: {}, coachStyle: {}, message: {}",
+                userPrincipal.getUserId(), mode, coachStyle, message);
 
         Map<String, Object> result = aiChatService.handleChat(
                 userPrincipal.getId(),
-                message
+                message,
+                mode,
+                coachStyle
         );
 
         return ResponseEntity.ok(result);
@@ -300,5 +313,24 @@ public class AIIntegrationController {
         List<AIChatMessageDto> history = aiChatService.getRecentMessages(userPrincipal.getId(), sanitizedLimit);
 
         return ResponseEntity.ok(history);
+    }
+
+    private String normalizeOrDefault(String value, String defaultValue) {
+        if (!StringUtils.hasText(value)) {
+            return defaultValue;
+        }
+        return value.trim().toLowerCase();
+    }
+
+    private void validateMode(String mode) {
+        if (!SUPPORTED_MODES.contains(mode)) {
+            throw new BusinessException(ErrorCode.INVALID_PARAMETER, "mode 값은 auto, nutrition, exercise 중 하나여야 합니다.");
+        }
+    }
+
+    private void validateCoachStyle(String coachStyle) {
+        if (!SUPPORTED_COACH_STYLES.contains(coachStyle)) {
+            throw new BusinessException(ErrorCode.INVALID_PARAMETER, "coach_style 값은 default, pro, friend, soft, drill 중 하나여야 합니다.");
+        }
     }
 }

@@ -36,6 +36,15 @@ public class AIChatMessage {
     @Column(name = "ai_response", nullable = false, columnDefinition = "TEXT")
     private String aiResponse;
 
+    @Column(name = "mode", length = 32)
+    private String mode;
+
+    @Column(name = "coach_style", length = 32)
+    private String coachStyle;
+
+    @Column(name = "emotion_detected", length = 64)
+    private String emotionDetected;
+
     @Column(name = "raw_response", columnDefinition = "TEXT")
     private String rawResponse;
 
