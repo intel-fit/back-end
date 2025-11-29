@@ -39,7 +39,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/api/users/send-verification-code",
             "/api/users/find-userId",
             "/api/users/reset-password",
-            "/api/users/change-password"
+            "/api/users/change-password",
+            
+            "/api/payments/stripe/webhook"
     );
 
     @Override
