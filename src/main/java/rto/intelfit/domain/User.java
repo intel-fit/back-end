@@ -85,7 +85,7 @@ public class User {
     private Boolean agreeTerms = false;
 
     @Column(name = "agreed_at")
-    private LocalDa teTime agreedAt;
+    private LocalDateTime agreedAt;
 
     @Column(name = "fitness_concerns", length = 500)
     private String fitnessConcerns;
@@ -97,8 +97,6 @@ public class User {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
-
-
 
     // InBody와의 1:N 관계
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
