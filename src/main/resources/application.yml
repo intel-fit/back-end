@@ -146,11 +146,11 @@ kakaopay:
     fail: ${KAKAOPAY_FAIL_URL:https://intelfit.com/pay/fail}
   plan:
     monthly:
-      item-name: ${KAKAOPAY_PLAN_MONTHLY_ITEM_NAME:인텔핏 프리미엄 월 구독}
+      item-name: ${KAKAOPAY_PLAN_MONTHLY_ITEM_NAME:intelfit premium montly}
       amount: ${KAKAOPAY_PLAN_MONTHLY_AMOUNT:5900}
       tax-free-amount: ${KAKAOPAY_PLAN_MONTHLY_TAX_FREE:0}
     annual:
-      item-name: ${KAKAOPAY_PLAN_ANNUAL_ITEM_NAME:인텔핏 프리미엄 연간 구독}
+      item-name: ${KAKAOPAY_PLAN_ANNUAL_ITEM_NAME:intelfit premium annually}
       amount: ${KAKAOPAY_PLAN_ANNUAL_AMOUNT:59000}
       tax-free-amount: ${KAKAOPAY_PLAN_ANNUAL_TAX_FREE:0}
 

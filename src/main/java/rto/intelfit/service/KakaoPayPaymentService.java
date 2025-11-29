@@ -75,7 +75,7 @@ public class KakaoPayPaymentService {
     @Value("${kakaopay.plan.monthly.item-name}")
     private String monthlyItemName;
 
-    @Value("${kakaopay.plan.monthly.amount}")
+    @Value("${kakaopay.plan.monthly.amount:5900}")
     private Integer monthlyAmount;
 
     @Value("${kakaopay.plan.monthly.tax-free-amount:0}")
@@ -84,7 +84,7 @@ public class KakaoPayPaymentService {
     @Value("${kakaopay.plan.annual.item-name}")
     private String annualItemName;
 
-    @Value("${kakaopay.plan.annual.amount}")
+    @Value("${kakaopay.plan.annual.amount:59000}")
     private Integer annualAmount;
 
     @Value("${kakaopay.plan.annual.tax-free-amount:0}")
