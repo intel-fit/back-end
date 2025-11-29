@@ -35,7 +35,7 @@ public class AIChatService {
      * AI 코치 챗봇과의 대화를 처리하고, 사용자 메시지와 응답을 저장한다.
      */
     @Transactional
-    public Map<String, Object> handleChat(Long userId, String message) {
+    public Map<String, Object> handleChat(Long userId, String message, String mode, String coachStyle) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
@@ -53,12 +53,15 @@ public class AIChatService {
             userRepository.save(user);
         }
 
-        Map<String, Object> aiResponse = aiServerClient.chatWithCoach(user.getUserId(), message);
+        Map<String, Object> aiResponse = aiServerClient.chatWithCoach(user.getUserId(), message, mode, coachStyle);
 
         AIChatMessage chatMessage = AIChatMessage.builder()
                 .user(user)
                 .userMessage(message)
                 .aiResponse(resolveAiReply(aiResponse))
+                .mode(mode)
+                .coachStyle(coachStyle)
+                .emotionDetected(resolveEmotion(aiResponse))
                 .rawResponse(serializeResponse(aiResponse))
                 .build();
 
@@ -84,7 +87,7 @@ public class AIChatService {
             return "";
         }
 
-        List<String> candidateKeys = List.of("ai_reply", "response", "message", "answer");
+        List<String> candidateKeys = List.of("reply", "ai_reply", "response", "message", "answer");
         for (String key : candidateKeys) {
             Object value = response.get(key);
             if (value != null) {
@@ -92,6 +95,14 @@ public class AIChatService {
             }
         }
         return response.toString();
+    }
+
+    private String resolveEmotion(Map<String, Object> response) {
+        if (response == null || response.isEmpty()) {
+            return null;
+        }
+        Object value = response.get("emotion_detected");
+        return value != null ? String.valueOf(value) : null;
     }
 
     private String serializeResponse(Map<String, Object> response) {

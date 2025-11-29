@@ -21,8 +21,6 @@ import java.time.LocalDate;
 import java.time.Period;
 import java.util.HashMap;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 @Slf4j
@@ -232,14 +230,16 @@ public class AIServerClient {
         return getRequest(url);
     }
 
-    public Map<String, Object> chatWithCoach(String userId, String message) {
+    public Map<String, Object> chatWithCoach(String userId, String message, String mode, String coachStyle) {
         String url = aiServerUrl + "/chat/coach";
 
-        Map<String, Object> request = new HashMap<>();
-        request.put("user_id", userId);
-        request.put("message", message);
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("user_id", userId);
+        payload.put("message", message);
+        payload.put("mode", mode);
+        payload.put("coach_style", coachStyle);
 
-        return postRequest(url, request);
+        return postRequest(url, payload);
     }
 
     // ========================================
