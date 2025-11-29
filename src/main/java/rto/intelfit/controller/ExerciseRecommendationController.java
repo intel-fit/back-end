@@ -54,7 +54,7 @@ public class ExerciseRecommendationController {
     ) {
         log.info("AI 일일 운동 추천 생성 요청 - 사용자: {}, 요청: {}",
                 userPrincipal.getUserId(), request);
-
+//
         RecommendedExerciseDto.DailyRecommendationResponse response =
                 exerciseRecommendationService.generateDailyRecommendation(userPrincipal, request);
 

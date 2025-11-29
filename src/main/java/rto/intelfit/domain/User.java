@@ -54,8 +54,10 @@ public class User {
     private MembershipType membershipType = MembershipType.FREE;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "health_goal")
-    private HealthGoal healthGoal;
+    @Column(name = "health_goal", nullable = false)
+    @Builder.Default
+    private HealthGoal healthGoal = HealthGoal.MAINTENANCE;
+
 
     @Enumerated(EnumType.STRING)
     @Column(name = "experience_level")
@@ -95,8 +97,6 @@ public class User {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
-
-
 
     // InBody와의 1:N 관계
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)

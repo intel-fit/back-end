@@ -154,6 +154,7 @@ kakao:
 kakaopay:
   cid: ${KAKAOPAY_CID:TC0ONETIME}
   admin-key: ${KAKAOPAY_ADMIN_KEY:dummy}
+  rest-api-key: ${KAKAOPAY_REST_API_KEY:dummy}
   ready-url: https://kapi.kakao.com/v1/payment/ready
   approve-url: https://kapi.kakao.com/v1/payment/approve
   redirect:

@@ -90,6 +90,8 @@ public class ExerciseRecommendationService {
         payload.put("target_time_min", targetTimeMin);
         payload.put("weight_kg", weightKg);
         payload.put("inbody", inbodyProfile);
+        // ⭐️ 추가된 라인
+        payload.put("like_muscles", request.getLikeMuscles());
 
         log.info("🤖 AI 일일 운동 추천 요청 payload: {}", payload);
 
@@ -178,7 +180,7 @@ public class ExerciseRecommendationService {
      */
     private Map<String, Object> buildInbodyProfile(InBody inBody, User user) {
 
-        // ❗ 표준값은 대략적인 값으로 잡아두고, 나중에 인바디 기준에 맞춰 조정해도 됨.
+        // 표준값은 대략적인 값으로 잡아두고, 나중에 인바디 기준에 맞춰 조정해도 됨.
         double armMuscleStd = 3.0;
         double legMuscleStd = 8.0;
         double trunkMuscleStd = 20.0;
@@ -271,14 +273,18 @@ public class ExerciseRecommendationService {
      *  - 나머지 → "maintenance"
      */
     private String mapGoal(User.HealthGoal healthGoal) {
-        if (healthGoal == null) return "maintenance";
+
+        if (healthGoal == null) {
+            return "functional"; // 널일 경우 기본값
+        }
 
         return switch (healthGoal) {
             case DIET -> "fat_loss";
-            case MUSCLE_GAIN, BULK, LEAN_MASS -> "hypertrophy";
-            case MAINTENANCE -> "maintenance";
+            case BULK, MUSCLE_GAIN, LEAN_MASS -> "hypertrophy"; // 근비대 / 벌크업 계열
+            case MAINTENANCE -> "functional"; // 유지 → 기능성 & 밸런스계 목표로 매핑
         };
     }
+
 
     /**
      * User.ExperienceLevel → "beginner" / "intermediate" / "advanced"
