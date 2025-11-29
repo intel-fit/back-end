@@ -65,7 +65,7 @@ jobs:
           SPRING_DATA_REDIS_HOST: localhost
           SPRING_DATA_REDIS_PORT: 6379
 
-          # 🔥 JWT
+          # JWT
           JWT_SECRET: intelfit-jwt-secret-key-for-production-use-minimum-32-characters-long-2024
 
           # 🔥 카카오 OAuth (Secrets에서 가져옴)
@@ -83,7 +83,12 @@ jobs:
           AI_SERVER_URL: http://localhost:8000
           AI_SERVER_API_KEY: dummy
 
-          # 🔥 Stripe Dummy 
+          # OCR Mock
+          AWS_S3_BUCKET: dummy
+          AWS_S3_BASE_URL: http://localhost
+          GEMINI_API_KEY: dummy
+
+          # Stripe Dummy (Fully Mock)
           STRIPE_PUBLISHABLE_KEY: dummy
           STRIPE_SECRET_KEY: dummy
           STRIPE_PRICE_ID_MONTHLY: dummy
@@ -92,16 +97,18 @@ jobs:
           STRIPE_SUCCESS_URL: http://localhost
           STRIPE_CANCEL_URL: http://localhost
 
-          # 🔥 KakaoPay Dummy (테스트용)
+          # KakaoPay Dummy (Fully Mock)
           KAKAOPAY_ADMIN_KEY: dummy
           KAKAOPAY_CID: TC0ONETIME
           KAKAOPAY_PLAN_MONTHLY_AMOUNT: 5900
           KAKAOPAY_PLAN_ANNUAL_AMOUNT: 59000
-          KAKAOPAY_PLAN_MONTHLY_ITEM_NAME: "monthly-test"
-          KAKAOPAY_PLAN_ANNUAL_ITEM_NAME: "annual-test"
+          KAKAOPAY_PLAN_MONTHLY_ITEM_NAME: "test-monthly"
+          KAKAOPAY_PLAN_ANNUAL_ITEM_NAME: "test-annual"
           KAKAOPAY_APPROVAL_URL: http://localhost
           KAKAOPAY_CANCEL_URL: http://localhost
           KAKAOPAY_FAIL_URL: http://localhost
+          KAKAOPAY_PLAN_MONTHLY_TAX_FREE: 0
+          KAKAOPAY_PLAN_ANNUAL_TAX_FREE: 0
 
   build-and-deploy:
     needs: test
