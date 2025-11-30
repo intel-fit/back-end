@@ -1,6 +1,7 @@
 package rto.intelfit.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import lombok.Data;
 import org.springframework.util.StringUtils;
 
@@ -8,14 +9,18 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class InBodyOcrResult {
 
     private String measurementDate;
+    private String gender;
+    private Integer age;
+    private BigDecimal height;
     private BigDecimal weight;
-    private BigDecimal muscleMass;
     private BigDecimal bodyFatMass;
     private BigDecimal skeletalMuscleMass;
     private BigDecimal bodyFatPercentage;
@@ -33,16 +38,32 @@ public class InBodyOcrResult {
     private BigDecimal protein;
     private BigDecimal mineral;
     private BigDecimal bmi;
-    private BigDecimal bodyFatPercentageStandard;
-    private BigDecimal obesityDegree;
     private BigDecimal visceralFatLevel;
-    private Integer basalMetabolicRate;
+
+    @JsonSetter("height")
+    public void setHeight(Object height) {
+        if (height == null) {
+            this.height = null;
+            return;
+        }
+        String value = height.toString();
+        if (!StringUtils.hasText(value)) {
+            this.height = null;
+            return;
+        }
+        // 숫자와 소수점만 추출 (예: "170cm", "170.5 cm", "170")
+        Matcher matcher = Pattern.compile("(\\d+(?:\\.\\d+)?)").matcher(value);
+        if (matcher.find()) {
+            this.height = new BigDecimal(matcher.group(1));
+        } else {
+            this.height = null;
+        }
+    }
 
     public InBodyDto.InBodyCreateRequest toCreateRequest() {
         return InBodyDto.InBodyCreateRequest.builder()
                 .measurementDate(parseMeasurementDate())
                 .weight(weight)
-                .muscleMass(muscleMass)
                 .bodyFatMass(bodyFatMass)
                 .skeletalMuscleMass(skeletalMuscleMass)
                 .bodyFatPercentage(bodyFatPercentage)
@@ -60,10 +81,7 @@ public class InBodyOcrResult {
                 .protein(protein)
                 .mineral(mineral)
                 .bmi(bmi)
-                .bodyFatPercentageStandard(bodyFatPercentageStandard)
-                .obesityDegree(obesityDegree)
                 .visceralFatLevel(visceralFatLevel)
-                .basalMetabolicRate(basalMetabolicRate)
                 .build();
     }
 

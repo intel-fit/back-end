@@ -423,7 +423,7 @@ public class InBodyDto {
                     .score(calculateScore(inBody, user))
                     .measurementDate(inBody.getMeasurementDate().toString().replace("-", "."))
                     .age(age + "세")
-                    .height(user.getHeight() + "cm")
+                    .height(formatHeight(user.getHeight()))
                     .gender(genderText)
                     .bodyComposition(bodyComp)
                     .muscleFatAnalysis(muscleFat)
@@ -447,6 +447,11 @@ public class InBodyDto {
             BigDecimal lower = value.multiply(BigDecimal.valueOf(lowerRatio));
             BigDecimal upper = value.multiply(BigDecimal.valueOf(upperRatio));
             return String.format("%.1f ( %.1f ~ %.1f )", value, lower, upper);
+        }
+
+        private static String formatHeight(Integer heightCm) {
+            if (heightCm == null) return "N/A";
+            return String.format("%.1fcm", heightCm / 1.0);
         }
 
         private static String determineBmiStatus(BigDecimal bmi) {
