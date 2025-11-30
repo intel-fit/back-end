@@ -192,8 +192,13 @@ public class ProfileDto {
     public static class AccountDeleteRequest {
 
         @Schema(description = "비밀번호 확인", example = "password123!")
-        @NotBlank(message = "비밀번호를 입력해주세요")
+        //카카오 윶저 탈퇴 요청을 위해 주석처리
+        // @NotBlank(message = "비밀번호를 입력해주세요")
         private String password;
+
+        //이원웅 추가
+        @Schema(description = "카카오 ID (카카오 로그인 회원용)", example = "3123123123")
+        private String kakaoId;    //여기까지
 
         @Schema(description = "탈퇴 사유", example = "서비스 불만족")
         @Size(max = 500, message = "탈퇴 사유는 500자 이내로 입력해주세요")

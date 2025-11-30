@@ -127,13 +127,17 @@ gemini:
   model: ${GEMINI_MODEL:gemini-2.5-flash}
   url: ${GEMINI_API_URL:https://generativelanguage.googleapis.com/v1beta/models}
 
+
+#이원웅 추가부분
 kakao:
-  rest-api-key: ${KAKAO_REST_API_KEY:dummy}
-  javascript-key: ${KAKAO_JAVASCRIPT_KEY:dummy}
-  redirect-uri: "${KAKAO_REDIRECT_URI:http://localhost:19002/auth/kakao/callback}"
-  auth-url: https://kauth.kakao.com/oauth/authorize
-  token-url: https://kauth.kakao.com/oauth/token
-  user-info-url: https://kapi.kakao.com/v2/user/me
+    client-id: ${KAKAO_REST_API_KEY}
+    client-secret: ${KAKAO_CLIENT_SECRET}
+    redirect-uri: ${KAKAO_REDIRECT_URI}
+    logout-redirect-uri: ${KAKAO_LOGOUT_REDIRECT_URI}
+    admin-key: ${KAKAO_ADMIN_KEY}
+
+    token-url: https://kauth.kakao.com/oauth/token
+    user-info-url: https://kapi.kakao.com/v2/user/me
 
 kakaopay:
   cid: ${KAKAOPAY_CID:TC0ONETIME}
