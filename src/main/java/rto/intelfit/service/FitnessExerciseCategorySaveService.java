@@ -393,7 +393,7 @@ public class FitnessExerciseCategorySaveService {
             rate = Math.min(rate, 100.0);
         }
 
-// 4) 달성률 저장
+        // 4) 달성률 저장
         progress.setExerciseRate(rate);
         dailyProgressRepository.save(progress);
 
