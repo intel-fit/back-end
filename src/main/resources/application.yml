@@ -142,16 +142,16 @@ kakaopay:
   ready-url: https://kapi.kakao.com/v1/payment/ready
   approve-url: https://kapi.kakao.com/v1/payment/approve
   redirect:
-    approval: "${KAKAOPAY_APPROVAL_URL:https://www.intelfits.com/api/pay/kakao/callback/approve}"
-    cancel: "${KAKAOPAY_CANCEL_URL:https://www.intelfits.com/api/pay/kakao/callback/cancel}"
+    approval: "${KAKAOPAY_APPROVAL_URL:https://intelfit.com/pay/success}"
+    cancel: "${KAKAOPAY_CANCEL_URL:https://intelfit.com/pay/cancel}"
     fail: "${KAKAOPAY_FAIL_URL:https://intelfit.com/pay/fail}"
   plan:
     monthly:
-      item-name: ${KAKAOPAY_PLAN_MONTHLY_ITEM_NAME:인텔핏 프리미엄 월 구독}
+      item-name: ${KAKAOPAY_PLAN_MONTHLY_ITEM_NAME:intelfit premium montly}
       amount: ${KAKAOPAY_PLAN_MONTHLY_AMOUNT:5900}
       tax-free-amount: ${KAKAOPAY_PLAN_MONTHLY_TAX_FREE:0}
     annual:
-      item-name: ${KAKAOPAY_PLAN_ANNUAL_ITEM_NAME:인텔핏 프리미엄 연 구독}
+      item-name: ${KAKAOPAY_PLAN_ANNUAL_ITEM_NAME:intelfit premium annually}
       amount: ${KAKAOPAY_PLAN_ANNUAL_AMOUNT:59000}
       tax-free-amount: ${KAKAOPAY_PLAN_ANNUAL_TAX_FREE:0}
 
@@ -161,5 +161,5 @@ stripe:
     monthly: ${STRIPE_PRICE_ID_MONTHLY:dummy}
     annual: ${STRIPE_PRICE_ID_ANNUAL:dummy}
   webhook-secret: ${STRIPE_WEBHOOK_SECRET:dummy}
-  success-url: "${STRIPE_SUCCESS_URL:https://frontend.intelfits.com/pay/stripe/success}"
-  cancel-url: "${STRIPE_CANCEL_URL:https://frontend.intelfits.com/pay/stripe/cancel}"
+  success-url: "${STRIPE_SUCCESS_URL:https://intelfit.com/pay/success}"
+  cancel-url: "${STRIPE_CANCEL_URL:https://intelfit.com/pay/cancel}"
