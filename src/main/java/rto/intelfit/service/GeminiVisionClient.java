@@ -38,8 +38,9 @@ public class GeminiVisionClient {
             [REQUIRED EXTRACTION RULES]
             1.  Strict Data Extraction: Identify and extract numerical values and the measurement date.
             2.  No Guessing: If any value is ambiguous, blurry, or unreadable, return null for that field. Do not guess or approximate.
-            3.  Field Mapping: Use the units (kg, %, kcal, L) and surrounding labels to map the numbers to the exact fields defined in the schema.
-            4.  Key Integrity: Use the 24 keys exactly as listed. Keys must not be modified or commented.
+            3.  Field Mapping: Use the units (kg, %, L, cm, years) and surrounding labels to map the numbers to the exact fields defined in the schema.
+            4.  Height: Return only the numeric centimeter value without units (e.g., 170.5).
+            5.  Key Integrity: Use the keys exactly as listed. Keys must not be modified or commented.
             
             [FINAL JSON SCHEMA - PURE JSON ONLY]
             Output a single JSON object (starting with {) containing all fields below.
@@ -47,11 +48,15 @@ public class GeminiVisionClient {
             
             {
                 "measurementDate": "yyyy-MM-dd" or null,
+                "gender": "M" or "F" or null,
+                "age": integer or null,
+                "height": integer or null,
                 "weight": float or null,
-                "muscleMass": float or null,
                 "bodyFatMass": float or null,
                 "skeletalMuscleMass": float or null,
                 "bodyFatPercentage": float or null,
+                "bmi": float or null,
+                "visceralFatLevel": float or null,
             
                 "leftArmMuscle": float or null,
                 "rightArmMuscle": float or null,
@@ -67,12 +72,7 @@ public class GeminiVisionClient {
             
                 "totalBodyWater": float or null,
                 "protein": float or null,
-                "mineral": float or null,
-                "bmi": float or null,
-                "bodyFatPercentageStandard": float or null,
-                "obesityDegree": float or null,
-                "visceralFatLevel": float or null,
-                "basalMetabolicRate": float or null
+                "mineral": float or null
             }
             """;
 
@@ -111,8 +111,9 @@ public class GeminiVisionClient {
         List<Map<String, Object>> parts = new ArrayList<>();
         parts.add(Map.of("text", BASE_PROMPT));
 
-        parts.add(Map.of("inline_data", Map.of(
-                "mime_type", "image/jpeg",
+        // Gemini Vision API는 camelCase 필드를 요구하므로 inlineData/mimeType으로 전달해야 한다
+        parts.add(Map.of("inlineData", Map.of(
+                "mimeType", "image/jpeg",
                 "data", Base64.getEncoder().encodeToString(imageBytes)
         )));
 
