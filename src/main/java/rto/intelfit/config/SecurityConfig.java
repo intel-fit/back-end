@@ -53,6 +53,10 @@ public class SecurityConfig {
                                 "/api/users/signup",
                                 "/api/users/login",
                                 "/api/users/kakao/login",
+                                "/api/users/kakao/webview-login", //이원웅 추가
+                                "/api/users/kakao/callback", //이원웅 추가
+                                "/api/users/kakao/logout", //이원웅 추가
+                                "/api/users/kakao/logout/callback", //이원웅 추가
                                 "/api/users/check-userId",
                                 "/api/users/send-verification-code",
                                 "/api/users/find-userId",

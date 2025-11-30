@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import rto.intelfit.domain.User;
 import rto.intelfit.dto.ProfileDto;
 import rto.intelfit.security.CustomUserPrincipal;
 import rto.intelfit.service.ProfileService;
@@ -85,7 +86,17 @@ public class ProfileController {
             @Valid @RequestBody ProfileDto.AccountDeleteRequest request) {
         log.info("회원 탈퇴 요청 - 사용자 ID: {}", userPrincipal.getUserId());
 
+        // 카카오 회원탈퇴: 카카오 ID 입력 확인 (이원웅 추가)
+        if (userPrincipal.getSocialProvider() == User.SocialProvider.KAKAO) {
+            ProfileDto.AccountDeleteResponse response =
+                    profileService.deleteKakaoUser(userPrincipal, request);
+
+            return ResponseEntity.ok(response);
+
+        } //여기까지
+
         ProfileDto.AccountDeleteResponse response = profileService.deleteAccount(userPrincipal, request);
         return ResponseEntity.ok(response);
     }
+
 }

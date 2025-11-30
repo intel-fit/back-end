@@ -34,6 +34,7 @@ public class ProfileService {
     private final PaymentHistoryRepository paymentHistoryRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final AIChatMessageRepository aiChatMessageRepository;
+    private final KakaoAuthService kakaoAuthService;
 
 
     public ProfileDto.ProfileResponse getProfile(CustomUserPrincipal userPrincipal) {
@@ -181,4 +182,47 @@ public class ProfileService {
             user.setWeightGoal(request.getWeightGoal());
         }
     }
+    //이원웅 추가
+    @Transactional
+    public ProfileDto.AccountDeleteResponse deleteKakaoUser(
+            CustomUserPrincipal userPrincipal,
+            ProfileDto.AccountDeleteRequest request) {
+
+        User user = findUserByPrincipal(userPrincipal);
+
+        // socialId 검증
+        if (!request.getKakaoId().equals(user.getSocialId())) {
+            throw new BusinessException(ErrorCode.INVALID_LOGIN_CREDENTIALS, "카카오 ID가 일치하지 않습니다.");
+        }
+
+        // 1) 카카오 unlink 먼저 호출
+        kakaoAuthService.unlinkKakaoUser(user.getSocialId());
+
+        // 2) Refresh Token 삭제
+        jwtUtil.deleteRefreshToken(user.getUserId());
+
+        // 3) 연관 데이터 삭제 (지금 있는 코드 그대로 유지)
+        inBodyRepository.deleteAllByUser(user);
+        userFoodPreferenceRepository.deleteAllByUser(user);
+        dailyNutritionGoalRepository.deleteAllByUser(user);
+        mealRepository.deleteAllByUser(user);
+        recommendedMealPlanRepository.deleteAllByUser(user);
+        exerciseRepository.deleteAllByUser(user);
+        recommendedExercisePlanRepository.deleteAllByUser(user);
+        userBadgeRepository.deleteAllByUser(user);
+
+        // 4) 최종 사용자 삭제
+        userRepository.delete(user);
+
+        log.info("카카오 회원 탈퇴 완료 - 사용자 ID: {}", user.getUserId());
+
+        return ProfileDto.AccountDeleteResponse.builder()
+                .success(true)
+                .message("카카오 회원 탈퇴 완료")
+                .build();
+    }
+
+
+
+
 }
