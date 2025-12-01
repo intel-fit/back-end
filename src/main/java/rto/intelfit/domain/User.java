@@ -104,21 +104,8 @@ public class User {
     private List<InBody> inBodyRecords = new ArrayList<>();
 
 
-    // 소셜 로그인 구분
-    @Enumerated(EnumType.STRING)
-    @Column(name = "social_provider", nullable = false)
-    @Builder.Default
-    private SocialProvider socialProvider = SocialProvider.LOCAL;
 
-    // 소셜 고유 ID(카카오 userId)
-    @Column(name = "social_id", unique = true)
-    private String socialId;
 
-    // 프로필 이미지(카카오)
-    @Column(name = "profile_image")
-    private String profileImage;
-
-    // ===== 토큰 관련 =====
 
     // 식단 추천 토큰 (기본 1, 7일 후 초기화)
     @Builder.Default
