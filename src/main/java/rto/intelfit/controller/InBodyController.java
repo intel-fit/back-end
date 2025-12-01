@@ -16,6 +16,10 @@ import org.springframework.web.multipart.MultipartFile;
 import rto.intelfit.dto.InBodyDto;
 import rto.intelfit.security.CustomUserPrincipal;
 import rto.intelfit.service.InBodyService;
+import org.springframework.format.annotation.DateTimeFormat;
+import java.time.LocalDate;
+import java.util.List;
+
 
 @Slf4j
 @RestController
@@ -82,6 +86,25 @@ public class InBodyController {
         log.info("최신 인바디 조회 요청 - 사용자 ID: {}", userPrincipal.getUserId());
 
         InBodyDto.InBodyDetailResponse response = inBodyService.getLatestInBody(userPrincipal);
+        return ResponseEntity.ok(response);
+    }
+
+
+    @Operation(summary = "날짜별 인바디 기록 조회",
+            description = "특정 날짜의 인바디 기록을 조회합니다")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "인바디 조회 성공"),
+            @ApiResponse(responseCode = "401", description = "인증이 필요합니다"),
+            @ApiResponse(responseCode = "404", description = "해당 날짜의 인바디 기록이 없습니다")
+    })
+    @GetMapping("/date/{date}")
+    public ResponseEntity<InBodyDto.InBodyDetailResponse> getInBodyByDate(
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal,
+            @PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
+        log.info("날짜별 인바디 조회 요청 - 사용자 ID: {}, 날짜: {}",
+                userPrincipal.getUserId(), date);
+
+        InBodyDto.InBodyDetailResponse response = inBodyService.getInBodyByDate(userPrincipal, date);
         return ResponseEntity.ok(response);
     }
 
