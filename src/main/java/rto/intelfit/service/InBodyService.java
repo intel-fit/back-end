@@ -77,6 +77,18 @@ public class InBodyService {
                 .build();
     }
 
+    public InBodyDto.InBodyDetailResponse getInBodyByDate(CustomUserPrincipal userPrincipal, LocalDate date) {
+        User user = findUserByPrincipal(userPrincipal);
+
+        InBody inBody = inBodyRepository.findByUserAndMeasurementDate(user, date)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INPUT_VALUE,
+                        "해당 날짜(" + date + ")의 인바디 기록이 없습니다"));
+
+        log.info("날짜별 인바디 조회 - 사용자 ID: {}, 날짜: {}", user.getUserId(), date);
+
+        return InBodyDto.InBodyDetailResponse.from(inBody, user);
+    }
+
     /**
      * 최신 인바디 기록 조회 (화면용)
      */
