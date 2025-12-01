@@ -33,14 +33,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/actuator",
             "/swagger-ui",
             "/v3/api-docs",
-            "/api/users/signup",
-            "/api/users/login",
-            "/api/users/check-userId",
-            "/api/users/send-verification-code",
-            "/api/users/find-userId",
-            "/api/users/reset-password",
-            "/api/users/change-password",
-            
+            "/auth",             // 카카오 로그인/로그아웃/콜백 다 포함
+            "/auth/",
+
+            "/api/users",        // 일반 로그인/회원가입 등 다 포함
+            "/api/users/",
+
             "/api/payments/stripe/webhook"
     );
 

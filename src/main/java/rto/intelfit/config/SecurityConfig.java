@@ -54,6 +54,7 @@ public class SecurityConfig {
                                 "/api/users/login",
                                 "/auth/kakao/**",     // 카카오 로그인 추가
                                 "/auth/login/kakao",
+                                "/auth/logout/kakao",
                                 "/api/users/check-userId",
                                 "/api/users/send-verification-code",
                                 "/api/users/find-userId",
