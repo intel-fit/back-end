@@ -104,19 +104,24 @@ public class User {
     private List<InBody> inBodyRecords = new ArrayList<>();
 
 
-    // 소셜 로그인 구분
+
+    @Column(name = "kakao_id", unique = true)
+    private String kakaoId;
+
+    @Column(name = "profile_image_url")
+    private String profileImageUrl;
+
     @Enumerated(EnumType.STRING)
-    @Column(name = "social_provider", nullable = false)
+    @Column(name = "provider")
     @Builder.Default
-    private SocialProvider socialProvider = SocialProvider.LOCAL;
+    private Provider provider = Provider.LOCAL;
 
-    // 소셜 고유 ID(카카오 userId)
-    @Column(name = "social_id", unique = true)
-    private String socialId;
-
-    // 프로필 이미지(카카오)
-    @Column(name = "profile_image")
-    private String profileImage;
+    public enum Provider {
+        LOCAL,
+        KAKAO,
+        GOOGLE,
+        APPLE
+    }
 
     // ===== 토큰 관련 =====
 

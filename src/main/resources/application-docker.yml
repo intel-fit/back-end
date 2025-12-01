@@ -143,13 +143,7 @@ gemini:
   model: ${GEMINI_MODEL:gemini-2.5-flash}
   url: ${GEMINI_API_URL:https://generativelanguage.googleapis.com/v1beta/models}
 
-kakao:
-  rest-api-key: ${KAKAO_REST_API_KEY:7fc72724581279e69f3fd90de192b691}
-  javascript-key: ${KAKAO_JAVASCRIPT_KEY:8f93a1757095b48d18fe50b632637f5a}
-  redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:19002/auth/kakao/callback}
-  auth-url: https://kauth.kakao.com/oauth/authorize
-  token-url: https://kauth.kakao.com/oauth/token
-  user-info-url: https://kapi.kakao.com/v2/user/me
+
 
 kakaopay:
   cid: ${KAKAOPAY_CID:TC0ONETIME}
@@ -170,6 +164,12 @@ kakaopay:
       item-name: ${KAKAOPAY_PLAN_ANNUAL_ITEM_NAME:intelfit premium annually}
       amount: ${KAKAOPAY_PLAN_ANNUAL_AMOUNT:59000}
       tax-free-amount: ${KAKAOPAY_PLAN_ANNUAL_TAX_FREE:0}
+
+kakao:
+  client-id: ${KAKAO_CLIENT_ID:3b708ff834987ade5d3538bf9712be3d}
+  client-secret: ${KAKAO_CLIENT_SECRET:EuA2aFrQiYcJrLTH7H7I8VLnJNBfYfdG}
+  redirect-uri: ${KAKAO_REDIRECT_URI:https://www.intelfits.com/auth/login/kakao}
+  admin-key: ${KAKAO_ADMIN_KEY:}
 
 stripe:
   secret-key: ${STRIPE_SECRET_KEY:dummy}

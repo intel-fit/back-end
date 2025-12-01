@@ -23,6 +23,8 @@ public enum ErrorCode {
     INVALID_TEMP_PASSWORD(HttpStatus.BAD_REQUEST, "AUTH_004", "임시 비밀번호가 올바르지 않습니다"),
     TEMP_PASSWORD_EXPIRED(HttpStatus.BAD_REQUEST, "AUTH_005", "임시 비밀번호가 만료되었습니다"),
     AUTHENTICATION_REQUIRED(HttpStatus.UNAUTHORIZED, "AUTH_006", "인증이 필요합니다"),
+    KAKAO_TOKEN_ERROR(HttpStatus.BAD_REQUEST, "KAKAO_001", "카카오 토큰 요청에 실패했습니다"),
+    KAKAO_USER_INFO_ERROR(HttpStatus.BAD_REQUEST, "KAKAO_002", "카카오 사용자 정보 조회에 실패했습니다"),
 
     // ==================== JWT 토큰 관련 에러 ====================
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "JWT_001", "유효하지 않은 토큰입니다"),

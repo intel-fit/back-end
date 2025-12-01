@@ -52,13 +52,15 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/users/signup",
                                 "/api/users/login",
-                                "/api/users/kakao/login",
+                                "/auth/kakao/**",     // 카카오 로그인 추가
+                                "/auth/login/kakao",
                                 "/api/users/check-userId",
                                 "/api/users/send-verification-code",
                                 "/api/users/find-userId",
                                 "/api/users/reset-password",
                                 "/api/users/change-password",
                                 "/api/users/refresh-token",
+
 
                                 // 카카오페이 결제 리다이렉트 (Ready는 인증 필요)
                                 "/api/payments/kakaopay/approve",

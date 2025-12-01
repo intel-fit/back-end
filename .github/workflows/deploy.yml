@@ -69,18 +69,19 @@ jobs:
           # JWT
           JWT_SECRET: intelfit-jwt-secret-key-for-production-use-minimum-32-characters-long-2024
 
-          # 🔥 카카오 OAuth (Secrets에서 가져옴)
-          KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
-          KAKAO_JAVASCRIPT_KEY: ${{ secrets.KAKAO_JAVASCRIPT_KEY }}
+          # 카카오 OAuth
+          KAKAO_CLIENT_ID: ${{ secrets.KAKAO_CLIENT_ID }}
+          KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
           KAKAO_REDIRECT_URI: ${{ secrets.KAKAO_REDIRECT_URI }}
+          KAKAO_ADMIN_KEY: ${{ secrets.KAKAO_ADMIN_KEY }}
 
-          # 🔥 이메일 SMTP
+          # 이메일 SMTP
           SPRING_MAIL_HOST: smtp.naver.com
           SPRING_MAIL_PORT: 587
           SPRING_MAIL_USERNAME: ${{ secrets.SPRING_MAIL_USERNAME }}
           SPRING_MAIL_PASSWORD: ${{ secrets.SPRING_MAIL_PASSWORD }}
 
-          # 🔥 AI 서버 더미
+          # AI 서버 더미
           AI_SERVER_URL: http://localhost:8000
           AI_SERVER_API_KEY: dummy
 
@@ -89,7 +90,7 @@ jobs:
           AWS_S3_BASE_URL: http://localhost
           GEMINI_API_KEY: dummy
 
-          # Stripe Dummy (Fully Mock)
+          # Stripe Dummy
           STRIPE_PUBLISHABLE_KEY: dummy
           STRIPE_SECRET_KEY: dummy
           STRIPE_PRICE_ID_MONTHLY: dummy
@@ -98,7 +99,7 @@ jobs:
           STRIPE_SUCCESS_URL: http://localhost
           STRIPE_CANCEL_URL: http://localhost
 
-          # KakaoPay Dummy (Fully Mock)
+          # KakaoPay Dummy
           KAKAOPAY_ADMIN_KEY: dummy
           KAKAOPAY_REST_API_KEY: dummy
           KAKAOPAY_CID: TC0ONETIME
@@ -113,7 +114,6 @@ jobs:
           KAKAOPAY_PLAN_ANNUAL_TAX_FREE: 0
 
   build-and-deploy:
-    # needs: test // 필요시, 주석 제거하기
     runs-on: ubuntu-latest
 
     steps:
@@ -135,13 +135,143 @@ jobs:
           docker save ${{ env.DOCKER_IMAGE }}:latest | gzip > image.tar.gz
           ls -lh image.tar.gz
 
+      - name: Create .env file
+        run: |
+          cat > .env << EOF
+          # JWT
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          JWT_ACCESS_TOKEN_EXPIRATION=3600000
+          JWT_REFRESH_TOKEN_EXPIRATION=604800000
+
+          # 카카오 OAuth
+          KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
+          KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
+          KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }}
+          KAKAO_APP_REDIRECT_URI=${{ secrets.KAKAO_APP_REDIRECT_URI }}
+
+          # 이메일 SMTP
+          SPRING_MAIL_HOST=smtp.naver.com
+          SPRING_MAIL_PORT=587
+          SPRING_MAIL_USERNAME=${{ secrets.SPRING_MAIL_USERNAME }}
+          SPRING_MAIL_PASSWORD=${{ secrets.SPRING_MAIL_PASSWORD }}
+
+          # AI 서버
+          AI_SERVER_URL=${{ secrets.AI_SERVER_URL }}
+          AI_SERVER_API_KEY=${{ secrets.AI_SERVER_API_KEY }}
+
+          # AWS S3
+          AWS_REGION=${{ secrets.AWS_REGION }}
+          AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}
+          AWS_S3_INBODY_FOLDER=${{ secrets.AWS_S3_INBODY_FOLDER }}
+          AWS_S3_BASE_URL=${{ secrets.AWS_S3_BASE_URL }}
+          AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+          # Gemini
+          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL=gemini-2.5-flash
+          GEMINI_API_URL=https://generativelanguage.googleapis.com/v1beta/models
+
+          # Stripe
+          STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_PRICE_ID_MONTHLY=${{ secrets.STRIPE_PRICE_ID_MONTHLY }}
+          STRIPE_PRICE_ID_ANNUAL=${{ secrets.STRIPE_PRICE_ID_ANNUAL }}
+          STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          STRIPE_SUCCESS_URL=${{ secrets.STRIPE_SUCCESS_URL }}
+          STRIPE_CANCEL_URL=${{ secrets.STRIPE_CANCEL_URL }}
+
+          # KakaoPay
+          KAKAOPAY_CID=${{ secrets.KAKAOPAY_CID }}
+          KAKAOPAY_ADMIN_KEY=${{ secrets.KAKAOPAY_ADMIN_KEY }}
+          KAKAOPAY_REST_API_KEY=${{ secrets.KAKAOPAY_REST_API_KEY }}
+          KAKAOPAY_APPROVAL_URL=${{ secrets.KAKAOPAY_APPROVAL_URL }}
+          KAKAOPAY_CANCEL_URL=${{ secrets.KAKAOPAY_CANCEL_URL }}
+          KAKAOPAY_FAIL_URL=${{ secrets.KAKAOPAY_FAIL_URL }}
+          KAKAOPAY_PLAN_MONTHLY_ITEM_NAME=${{ secrets.KAKAOPAY_PLAN_MONTHLY_ITEM_NAME }}
+          KAKAOPAY_PLAN_MONTHLY_AMOUNT=${{ secrets.KAKAOPAY_PLAN_MONTHLY_AMOUNT }}
+          KAKAOPAY_PLAN_MONTHLY_TAX_FREE=${{ secrets.KAKAOPAY_PLAN_MONTHLY_TAX_FREE }}
+          KAKAOPAY_PLAN_ANNUAL_ITEM_NAME=${{ secrets.KAKAOPAY_PLAN_ANNUAL_ITEM_NAME }}
+          KAKAOPAY_PLAN_ANNUAL_AMOUNT=${{ secrets.KAKAOPAY_PLAN_ANNUAL_AMOUNT }}
+          KAKAOPAY_PLAN_ANNUAL_TAX_FREE=${{ secrets.KAKAOPAY_PLAN_ANNUAL_TAX_FREE }}
+          EOF
+
       - name: Create Nginx config file
         run: |
           mkdir -p docker/nginx
           cat > docker/nginx/nginx.conf << 'EOF'
+          # HTTP 서버 (IP 직접 접근용)
           server {
               listen 80;
               server_name _;
+
+              access_log /var/log/nginx/access.log;
+              error_log /var/log/nginx/error.log;
+              client_max_body_size 10M;
+
+              location ^~ /.well-known/acme-challenge/ {
+                  root /var/www/certbot;
+                  default_type "text/plain";
+                  try_files $uri =404;
+              }
+
+              location /health {
+                  access_log off;
+                  return 200 "OK";
+                  add_header Content-Type text/plain;
+              }
+
+              # AI 서버 프록시 (HTTP)
+              location /ai/ {
+                  if ($request_method = 'OPTIONS') {
+                      add_header 'Access-Control-Allow-Origin' '*';
+                      add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, PATCH, DELETE, OPTIONS';
+                      add_header 'Access-Control-Allow-Headers' '*';
+                      add_header 'Access-Control-Max-Age' 1728000;
+                      return 204;
+                  }
+
+                  proxy_pass http://43.200.40.140:8000/;
+                  proxy_http_version 1.1;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_read_timeout 300s;
+                  proxy_connect_timeout 60s;
+                  proxy_send_timeout 300s;
+              }
+
+              location / {
+                  if ($request_method = 'OPTIONS') {
+                      add_header 'Access-Control-Allow-Origin' '*';
+                      add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, PATCH, DELETE, OPTIONS';
+                      add_header 'Access-Control-Allow-Headers' '*';
+                      add_header 'Access-Control-Max-Age' 1728000;
+                      return 204;
+                  }
+
+                  proxy_pass http://spring-app:8080;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection 'upgrade';
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_cache_bypass $http_upgrade;
+              }
+          }
+
+          # HTTPS 서버 (도메인 접근용)
+          server {
+              listen 443 ssl;
+              server_name intelfits.com www.intelfits.com;
+
+              ssl_certificate /etc/letsencrypt/live/intelfits.com/fullchain.pem;
+              ssl_certificate_key /etc/letsencrypt/live/intelfits.com/privkey.pem;
+
+              ssl_protocols TLSv1.2 TLSv1.3;
+              ssl_prefer_server_ciphers off;
 
               access_log /var/log/nginx/access.log;
               error_log /var/log/nginx/error.log;
@@ -153,7 +283,36 @@ jobs:
                   add_header Content-Type text/plain;
               }
 
+              # AI 서버 프록시 (HTTPS)
+              location /ai/ {
+                  if ($request_method = 'OPTIONS') {
+                      add_header 'Access-Control-Allow-Origin' '*';
+                      add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, PATCH, DELETE, OPTIONS';
+                      add_header 'Access-Control-Allow-Headers' '*';
+                      add_header 'Access-Control-Max-Age' 1728000;
+                      return 204;
+                  }
+
+                  proxy_pass http://43.200.40.140:8000/;
+                  proxy_http_version 1.1;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_read_timeout 300s;
+                  proxy_connect_timeout 60s;
+                  proxy_send_timeout 300s;
+              }
+
               location / {
+                  if ($request_method = 'OPTIONS') {
+                      add_header 'Access-Control-Allow-Origin' '*';
+                      add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, PATCH, DELETE, OPTIONS';
+                      add_header 'Access-Control-Allow-Headers' '*';
+                      add_header 'Access-Control-Max-Age' 1728000;
+                      return 204;
+                  }
+
                   proxy_pass http://spring-app:8080;
                   proxy_http_version 1.1;
                   proxy_set_header Upgrade $http_upgrade;
@@ -209,7 +368,7 @@ jobs:
           host: ${{ env.EC2_HOST }}
           username: ${{ env.EC2_USER }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
-          source: "image.tar.gz,compose.yaml,deploy.sh,docker/nginx/nginx.conf,docker/mysql/exerciseCategoryDataBase.sql"
+          source: "image.tar.gz,compose.yaml,deploy.sh,.env,docker/nginx/nginx.conf,docker/mysql/exerciseCategoryDataBase.sql"
           target: "/home/ubuntu/back-end"
           overwrite: true
 
