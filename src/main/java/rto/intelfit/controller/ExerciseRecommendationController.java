@@ -194,5 +194,6 @@ public class ExerciseRecommendationController {
                 exerciseRecommendationService.applyPlan(userPrincipal, planId, exerciseDate);
 
         return ResponseEntity.ok(response);
+        //d
     }
 }
