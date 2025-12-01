@@ -75,6 +75,9 @@ public class KakaoOAuthService {
         String accessToken = jwtUtil.generateAccessToken(user.getUserId(), user.getId());
         String refreshToken = jwtUtil.generateRefreshToken(user.getUserId(), user.getId());
 
+        // 6. 마지막 로그인 시간 업데이트
+        user.updateLastLoginAt();
+
         return KakaoOAuthDto.KakaoLoginResponse.builder()
                 .success(true)
                 .message(isNewUser ? "카카오 회원가입이 완료되었습니다" : "카카오 로그인 성공")
@@ -84,7 +87,7 @@ public class KakaoOAuthService {
                 .user(KakaoOAuthDto.KakaoLoginResponse.UserInfo.builder()
                         .id(user.getId())
                         .email(user.getEmail())
-                        .nickname(user.getNickname())
+                        .nickname(user.getName())  // name 필드 사용
                         .profileImage(user.getProfileImageUrl())
                         .build())
                 .build();
@@ -197,25 +200,30 @@ public class KakaoOAuthService {
      */
     private User createKakaoUser(KakaoOAuthDto.KakaoUserInfo userInfo) {
         String email = null;
-        String nickname = "카카오유저";
+        String name = "카카오유저";
         String profileImage = null;
 
         if (userInfo.getKakaoAccount() != null) {
             email = userInfo.getKakaoAccount().getEmail();
 
             if (userInfo.getKakaoAccount().getProfile() != null) {
-                nickname = userInfo.getKakaoAccount().getProfile().getNickname();
+                name = userInfo.getKakaoAccount().getProfile().getNickname();
                 profileImage = userInfo.getKakaoAccount().getProfile().getProfileImageUrl();
             }
         }
 
         if (userInfo.getProperties() != null) {
-            if (nickname.equals("카카오유저") && userInfo.getProperties().getNickname() != null) {
-                nickname = userInfo.getProperties().getNickname();
+            if (name.equals("카카오유저") && userInfo.getProperties().getNickname() != null) {
+                name = userInfo.getProperties().getNickname();
             }
             if (profileImage == null) {
                 profileImage = userInfo.getProperties().getProfileImage();
             }
+        }
+
+        // 이메일이 없으면 기본값 생성
+        if (email == null || email.isEmpty()) {
+            email = "kakao_" + userInfo.getId() + "@kakao.local";
         }
 
         // userId 생성 (카카오 ID 기반)
@@ -225,13 +233,14 @@ public class KakaoOAuthService {
                 .userId(generatedUserId)
                 .email(email)
                 .password(UUID.randomUUID().toString())
-                .nickname(nickname)
+                .name(name)
                 .kakaoId(String.valueOf(userInfo.getId()))
                 .profileImageUrl(profileImage)
                 .provider(User.Provider.KAKAO)
-                .role(User.Role.USER)
-                .birthDate(LocalDate.of(2000, 1, 1))
-                .gender(User.Gender.M)
+                .birthDate(LocalDate.of(2000, 1, 1))  // 기본값
+                .gender(User.Gender.M)  // 기본값
+                .agreePrivacy(true)
+                .agreeTerms(true)
                 .build();
 
         return userRepository.save(newUser);
