@@ -137,6 +137,24 @@ public class User {
 
 
 
+    @Column(name = "social_id", unique = true)
+    private String socialId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "social_provider")
+    @Builder.Default
+    private SocialProvider socialProvider = SocialProvider.LOCAL;
+
+    @Column(name = "profile_image_url", length = 500)
+    private String profileImageUrl;
+
+    @Column(name = "profileImange", length = 500)
+    private String profileImage;
+
+    @Column(name = "nickname", length = 50)
+    private String nickname;
+
+
 
     public enum SocialProvider {
         LOCAL, KAKAO
