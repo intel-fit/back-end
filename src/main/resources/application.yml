@@ -127,6 +127,18 @@ gemini:
   model: ${GEMINI_MODEL:gemini-2.5-flash}
   url: ${GEMINI_API_URL:https://generativelanguage.googleapis.com/v1beta/models}
 
+kakao:
+  rest-api-key: ${KAKAO_REST_API_KEY}
+  javascript-key: ${KAKAO_JAVASCRIPT_KEY:dummy}
+  client-secret: ${KAKAO_CLIENT_SECRET:dummy}
+  admin-key: ${KAKAO_ADMIN_KEY:dummy}
+
+  redirect-uri: ${KAKAO_REDIRECT_URI}
+  logout-redirect-uri: ${KAKAO_LOGOUT_REDIRECT_URI}
+
+  auth-url: https://kauth.kakao.com/oauth/authorize
+  token-url: https://kauth.kakao.com/oauth/token
+  user-info-url: https://kapi.kakao.com/v2/user/me
 
 
 kakaopay:

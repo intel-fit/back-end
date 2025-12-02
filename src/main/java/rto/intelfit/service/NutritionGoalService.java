@@ -39,8 +39,12 @@ public class NutritionGoalService {
         User user = findUserByPrincipal(userPrincipal);
 
         DailyNutritionGoal goal = nutritionGoalRepository.findByUser(user)
-                .orElse(DailyNutritionGoal.builder()
+                .orElseGet(() -> DailyNutritionGoal.builder()
                         .user(user)
+                        .targetCalories(BigDecimal.ZERO)
+                        .targetCarbs(BigDecimal.ZERO)
+                        .targetProtein(BigDecimal.ZERO)
+                        .targetFat(BigDecimal.ZERO)
                         .build());
 
         // 목표 설정

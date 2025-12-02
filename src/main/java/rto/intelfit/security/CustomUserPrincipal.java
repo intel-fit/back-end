@@ -20,6 +20,9 @@ public class CustomUserPrincipal implements UserDetails {
     private String email;
     private String password;
     private boolean emailVerified;
+    //이원웅 추가
+    private User.SocialProvider socialProvider;
+    private String socialId;
 
     public static CustomUserPrincipal create(User user) {
         return new CustomUserPrincipal(
@@ -28,7 +31,10 @@ public class CustomUserPrincipal implements UserDetails {
                 user.getName(),
                 user.getEmail(),
                 user.getPassword(),
-                user.getEmailVerified()
+                user.getEmailVerified(),
+                //이원웅 추가
+                user.getSocialProvider(),
+                user.getSocialId()
         );
     }
 
