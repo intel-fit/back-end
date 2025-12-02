@@ -28,7 +28,7 @@ public class KakaoAuthService {
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
 
-    @Value("${kakao.client-id}")
+    @Value("${kakao.rest-api-key}")
     private String kakaoClientId;
 
     @Value("${kakao.client-secret:}")
