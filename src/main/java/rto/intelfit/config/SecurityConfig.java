@@ -18,6 +18,8 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import rto.intelfit.security.JwtAuthenticationFilter;
 import rto.intelfit.security.JwtAuthenticationEntryPoint;
+import org.springframework.http.HttpMethod;
+
 
 import java.util.Arrays;
 
@@ -52,6 +54,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/users/signup",
                                 "/api/users/login",
+
                                 "/api/users/kakao/login",
                                 "/api/users/kakao/webview-login", //이원웅 추가
                                 "/api/users/kakao/callback", //이원웅 추가
@@ -75,6 +78,9 @@ public class SecurityConfig {
                                 "/api/payments/stripe/cancel"
                         ).permitAll()
 
+                        // OPTIONS CORS preflight 허용
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
                         // Swagger UI 및 API 문서
                         .requestMatchers(
                                 "/swagger-ui/**",
@@ -89,6 +95,9 @@ public class SecurityConfig {
 
                         // 기타 공개 페이지
                         .requestMatchers("/", "/error").permitAll()
+
+
+
 
                         // ==================== 인증이 필요한 API ====================
                         // 사용자 API
@@ -123,6 +132,8 @@ public class SecurityConfig {
 
                         // 뱃지 API
                         .requestMatchers("/api/badges/**").authenticated()
+
+
 
                         // 나머지는 인증 필요
                         .anyRequest().authenticated()

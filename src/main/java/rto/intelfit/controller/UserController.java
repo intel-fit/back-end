@@ -231,22 +231,35 @@ public class UserController {
 
     @Operation(summary = "카카오 로그인 콜백", description = "카카오 인증 완료 후 WebView로 JWT 토큰 전달")
     @GetMapping("/kakao/callback")
-    public ResponseEntity<String> kakaoCallback(@RequestParam("code") String code) {
+    public void kakaoCallback(
+            @RequestParam("code") String code,
+            HttpServletResponse response
+    ) throws IOException {
 
         LoginDto.Response loginResult = kakaoAuthService.loginWithKakao(code);
 
-        String script = "<script>"
-                + "window.ReactNativeWebView.postMessage(JSON.stringify({"
-                + "accessToken: '" + loginResult.getAccessToken() + "', "
-                + "refreshToken: '" + loginResult.getRefreshToken() + "', "
-                + "name: '" + loginResult.getName() + "', "
-                + "userId: '" + loginResult.getUserId() + "'"
-                + "}));"
-                + "</script>";
+        // 1) React Native WebView 환경이면 postMessage 사용
+        String script =
+                "<script>" +
+                        "if (window.ReactNativeWebView) {" +
+                        "  window.ReactNativeWebView.postMessage(JSON.stringify({" +
+                        "    accessToken: '" + loginResult.getAccessToken() + "'," +
+                        "    refreshToken: '" + loginResult.getRefreshToken() + "'," +
+                        "    name: '" + loginResult.getName() + "'," +
+                        "    userId: '" + loginResult.getUserId() + "'" +
+                        "  }));" +
+                        "} else {" +
+                        "  window.location.href='/login-success"
+                        + "?accessToken=" + loginResult.getAccessToken()
+                        + "&refreshToken=" + loginResult.getRefreshToken()
+                        + "&name=" + loginResult.getName()
+                        + "&userId=" + loginResult.getUserId()
+                        + "';" +
+                        "}" +
+                        "</script>";
 
-        return ResponseEntity.ok()
-                .contentType(MediaType.TEXT_HTML)
-                .body(script);
+        response.setContentType("text/html;charset=UTF-8");
+        response.getWriter().write(script);
     }
     @Operation(summary = "카카오 로그아웃", description = "카카오 세션에서 로그아웃 후 다시 로그인 페이지로 이동합니다.")
     @GetMapping("/kakao/logout")
