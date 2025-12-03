@@ -22,8 +22,7 @@ public class CustomUserPrincipal implements UserDetails {
     private boolean emailVerified;
     private String socialId;
 
-    public CustomUserPrincipal(Long id, String userId, String name, String email, String password, Boolean emailVerified) {
-    }
+
 
     public static CustomUserPrincipal create(User user) {
         return new CustomUserPrincipal(
@@ -32,8 +31,8 @@ public class CustomUserPrincipal implements UserDetails {
                 user.getName(),
                 user.getEmail(),
                 user.getPassword(),
-                user.getEmailVerified()
-                
+                user.getEmailVerified(),
+                user.getSocialId()
         );
     }
 
