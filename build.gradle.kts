@@ -57,6 +57,10 @@ dependencies {
 	// MySQL - Spring Boot 3.2.10 권장 버전
 	runtimeOnly("com.mysql:mysql-connector-j")
 
+	implementation("org.springframework.boot:spring-boot-starter-webflux")
+	implementation("org.apache.httpcomponents.client5:httpclient5:5.3")
+
+
 	// Swagger
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0")
 
