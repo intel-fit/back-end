@@ -49,8 +49,6 @@ dependencies {
 	// OAuth2 Client
 	implementation ("org.springframework.boot:spring-boot-starter-oauth2-client")
 
-	// HTTP Client (카카오 API 호출용)
-	implementation ("org.springframework.boot:spring-boot-starter-webflux")
 	//JWT
 	implementation("io.jsonwebtoken:jjwt-api:0.11.5")
 	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
