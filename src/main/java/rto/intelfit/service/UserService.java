@@ -46,6 +46,47 @@ public class UserService {
     private static final int TEMP_PASSWORD_LENGTH = 6;
     private static final int TEMP_PASSWORD_EXPIRE_MINUTES = 30;
 
+    @Transactional(readOnly = false)
+    public void createTestUserIfNotExists() {
+
+        String testUserId = "testuser";
+        String testEmail = "test@example.com";
+
+        // 이미 있으면 생략
+        if (userRepository.existsByUserId(testUserId)) {
+            log.info("✔ 테스트 유저 이미 존재: {}", testUserId);
+            return;
+        }
+
+        // 비밀번호 암호화
+        String encodedPassword = passwordEncoder.encode("Test1234!");
+
+        User testUser = User.builder()
+                .userId(testUserId)
+                .name("테스트 유저")
+                .email(testEmail)
+                .emailVerified(true)
+                .password(encodedPassword)
+                .birthDate(LocalDate.of(1990, 1, 1))
+                .gender(User.Gender.M)
+                .height(170)
+                .weight(60)
+                .weightGoal(60)
+                .healthGoal(User.HealthGoal.MAINTENANCE)
+                .workoutDaysPerWeek("3")
+                .agreePrivacy(true)
+                .agreeTerms(true)
+                .agreedAt(LocalDateTime.now())
+                .fitnessConcerns("테스트 계정")
+                .membershipType(User.MembershipType.PREMIUM)
+                .build();
+
+        userRepository.save(testUser);
+
+        log.info("🎉 테스트 유저 자동 생성 완료: {}", testUserId);
+    }
+
+
     @Transactional
     public SignUpDto.Response signUp(SignUpDto.Request request) {
         // 비밀번호 확인
