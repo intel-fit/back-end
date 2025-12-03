@@ -15,11 +15,8 @@ import rto.intelfit.service.UserService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import rto.intelfit.security.CustomUserPrincipal;
 import rto.intelfit.domain.User;
-import rto.intelfit.security.CustomUserPrincipal;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import org.springframework.http.MediaType;
-import rto.intelfit.service.KakaoAuthService;
 import org.springframework.beans.factory.annotation.Value;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -33,16 +30,6 @@ import java.io.IOException;
 public class UserController {
 
     private final UserService userService;
-    private final KakaoAuthService kakaoAuthService; //이원웅 추가
-
-    @Value("${kakao.client-id}") //이원웅 추가
-    private String kakaoClientId; //이원웅 추가
-
-    @Value("${kakao.redirect-uri}") //이원웅 추가
-    private String kakaoRedirectUri; //이원웅 추가
-
-    @Value("${kakao.logout-redirect-uri}")   // 이원웅 추가
-    private String kakaoLogoutRedirectUri; //이원웅 추가
 
 
 
@@ -203,90 +190,6 @@ public class UserController {
         userService.downgradeToFree(principal);
         return ResponseEntity.ok("멤버십이 무료 플랜으로 변경되었습니다.");
     }
-
-    //이원웅 추가
-    @Operation(summary = "카카오 로그인 시작", description = "브라우저 또는 앱에서 카카오 로그인을 시작합니다.")
-    @GetMapping("/kakao/login")
-    public void kakaoLogin(HttpServletResponse response) throws IOException {
-
-        String loginUrl = "https://kauth.kakao.com/oauth/authorize"
-                + "?response_type=code"
-                + "&client_id=" + kakaoClientId
-                + "&redirect_uri=" + kakaoRedirectUri;
-
-        response.sendRedirect(loginUrl);
-    }
-
-    @Operation(summary = "카카오 웹뷰 로그인 시작", description = "카카오 로그인 페이지로 리다이렉트합니다.")
-    @GetMapping("/kakao/webview-login")
-    public void kakaoWebViewLogin(HttpServletResponse response) throws java.io.IOException {
-
-        String redirectUrl = "https://kauth.kakao.com/oauth/authorize"
-                + "?response_type=code"
-                + "&client_id=" + kakaoClientId
-                + "&redirect_uri=" + kakaoRedirectUri;
-
-        response.sendRedirect(redirectUrl);
-    }
-
-    @Operation(summary = "카카오 로그인 콜백", description = "카카오 인증 완료 후 WebView로 JWT 토큰 전달")
-    @GetMapping("/kakao/callback")
-    public void kakaoCallback(
-            @RequestParam("code") String code,
-            HttpServletResponse response
-    ) throws IOException {
-
-        LoginDto.Response loginResult = kakaoAuthService.loginWithKakao(code);
-
-        // 1) React Native WebView 환경이면 postMessage 사용
-        String script =
-                "<script>" +
-                        "if (window.ReactNativeWebView) {" +
-                        "  window.ReactNativeWebView.postMessage(JSON.stringify({" +
-                        "    accessToken: '" + loginResult.getAccessToken() + "'," +
-                        "    refreshToken: '" + loginResult.getRefreshToken() + "'," +
-                        "    name: '" + loginResult.getName() + "'," +
-                        "    userId: '" + loginResult.getUserId() + "'" +
-                        "  }));" +
-                        "} else {" +
-                        "  window.location.href='/login-success"
-                        + "?accessToken=" + loginResult.getAccessToken()
-                        + "&refreshToken=" + loginResult.getRefreshToken()
-                        + "&name=" + loginResult.getName()
-                        + "&userId=" + loginResult.getUserId()
-                        + "';" +
-                        "}" +
-                        "</script>";
-
-        response.setContentType("text/html;charset=UTF-8");
-        response.getWriter().write(script);
-    }
-    @Operation(summary = "카카오 로그아웃", description = "카카오 세션에서 로그아웃 후 다시 로그인 페이지로 이동합니다.")
-    @GetMapping("/kakao/logout")
-    public void kakaoLogout(HttpServletResponse response) throws IOException {
-
-        String logoutUrl = "https://kauth.kakao.com/oauth/logout"
-                + "?client_id=" + kakaoClientId
-                + "&logout_redirect_uri=" + kakaoLogoutRedirectUri;
-
-        response.sendRedirect(logoutUrl);
-    }
-
-    @Operation(summary = "카카오 로그아웃 콜백", description = "카카오 로그아웃 후 처리되는 콜백 URL")
-    @GetMapping("/kakao/logout/callback")
-    public ResponseEntity<String> kakaoLogoutCallback() {
-
-        String html = "<script>"
-                + "alert('카카오 로그아웃 완료! 다시 로그인할 수 있습니다.');"
-                + "window.location.href='/api/users/kakao/webview-login';"
-                + "</script>";
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.TEXT_HTML)
-                .body(html);
-    }
-
-
 
 
 

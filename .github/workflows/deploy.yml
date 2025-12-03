@@ -69,7 +69,6 @@ jobs:
           # JWT
           JWT_SECRET: intelfit-jwt-secret-key-for-production-use-minimum-32-characters-long-2024
 
-
           # 🔥 이메일 SMTP
           SPRING_MAIL_HOST: smtp.naver.com
           SPRING_MAIL_PORT: 587
@@ -108,6 +107,10 @@ jobs:
           KAKAOPAY_PLAN_MONTHLY_TAX_FREE: 0
           KAKAOPAY_PLAN_ANNUAL_TAX_FREE: 0
 
+          # 카카오 로그인 Dummy
+          KAKAO_CLIENT_ID: dummy
+          KAKAO_CLIENT_SECRET: dummy
+
   build-and-deploy:
     # needs: test // 필요시, 주석 제거하기
     runs-on: ubuntu-latest
@@ -143,23 +146,23 @@ jobs:
           server {
               listen 80;
               server_name _;
-              
+          
               access_log /var/log/nginx/access.log;
               error_log /var/log/nginx/error.log;
               client_max_body_size 10M;
-              
+          
               location ^~ /.well-known/acme-challenge/ {
                   root /var/www/certbot;
                   default_type "text/plain";
                   try_files $uri =404;
               }
-              
+          
               location /health {
                   access_log off;
                   return 200 "OK";
                   add_header Content-Type text/plain;
               }
-            
+          
             # AI 서버 프록시 (HTTP)
               location /ai/ {
                   if ($request_method = 'OPTIONS') {
@@ -169,7 +172,7 @@ jobs:
                       add_header 'Access-Control-Max-Age' 1728000;
                       return 204;
                   }
-              
+          
                   proxy_pass http://43.200.40.140:8000/;
                   proxy_http_version 1.1;
                   proxy_set_header Host $host;
@@ -180,7 +183,7 @@ jobs:
                   proxy_connect_timeout 60s;
                   proxy_send_timeout 300s;
               }
-              
+          
               location / {
                   if ($request_method = 'OPTIONS') {
                       add_header 'Access-Control-Allow-Origin' '*';
@@ -189,7 +192,7 @@ jobs:
                       add_header 'Access-Control-Max-Age' 1728000;
                       return 204;
                   }
-              
+          
                   proxy_pass http://spring-app:8080;
                   proxy_http_version 1.1;
                   proxy_set_header Upgrade $http_upgrade;
@@ -201,28 +204,28 @@ jobs:
                   proxy_cache_bypass $http_upgrade;
               }
           }
-            
+          
           # HTTPS 서버 (도메인 접근용)
           server {
               listen 443 ssl;
               server_name intelfits.com www.intelfits.com;
-              
+          
               ssl_certificate /etc/letsencrypt/live/intelfits.com/fullchain.pem;
               ssl_certificate_key /etc/letsencrypt/live/intelfits.com/privkey.pem;
-              
+          
               ssl_protocols TLSv1.2 TLSv1.3;
               ssl_prefer_server_ciphers off;
-              
+          
               access_log /var/log/nginx/access.log;
               error_log /var/log/nginx/error.log;
               client_max_body_size 10M;
-              
+          
               location /health {
                   access_log off;
                   return 200 "OK";
                   add_header Content-Type text/plain;
               }
-            
+          
               # AI 서버 프록시 (HTTPS)
               location /ai/ {
                   if ($request_method = 'OPTIONS') {
@@ -232,7 +235,7 @@ jobs:
                       add_header 'Access-Control-Max-Age' 1728000;
                       return 204;
                   }
-              
+          
                   proxy_pass http://43.200.40.140:8000/;
                   proxy_http_version 1.1;
                   proxy_set_header Host $host;
@@ -243,7 +246,7 @@ jobs:
                   proxy_connect_timeout 60s;
                   proxy_send_timeout 300s;
               }
-              
+          
               location / {
                   if ($request_method = 'OPTIONS') {
                       add_header 'Access-Control-Allow-Origin' '*';
@@ -252,7 +255,7 @@ jobs:
                       add_header 'Access-Control-Max-Age' 1728000;
                       return 204;
                   }
-              
+          
                   proxy_pass http://spring-app:8080;
                   proxy_http_version 1.1;
                   proxy_set_header Upgrade $http_upgrade;
@@ -305,13 +308,20 @@ jobs:
           EOF
           chmod +x deploy.sh
 
+      - name: Create .env file
+        run: |
+          cat > .env << EOF
+          KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
+          KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
+          EOF
+
       - name: Copy files to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ env.EC2_HOST }}
           username: ${{ env.EC2_USER }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
-          source: "image.tar.gz,compose.yaml,deploy.sh,docker/nginx/nginx.conf,docker/mysql/exerciseCategoryDataBase.sql"
+          source: "image.tar.gz,compose.yaml,deploy.sh,docker/nginx/nginx.conf,docker/mysql/exerciseCategoryDataBase.sql,.env"
           target: "/home/ubuntu/back-end"
           overwrite: true
 

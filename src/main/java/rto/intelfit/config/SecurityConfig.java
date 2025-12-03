@@ -55,17 +55,15 @@ public class SecurityConfig {
                                 "/api/users/signup",
                                 "/api/users/login",
 
-                                "/api/users/kakao/login",
-                                "/api/users/kakao/webview-login", //이원웅 추가
-                                "/api/users/kakao/callback", //이원웅 추가
-                                "/api/users/kakao/logout", //이원웅 추가
-                                "/api/users/kakao/logout/callback", //이원웅 추가
                                 "/api/users/check-userId",
                                 "/api/users/send-verification-code",
                                 "/api/users/find-userId",
                                 "/api/users/reset-password",
                                 "/api/users/change-password",
                                 "/api/users/refresh-token",
+                                "/api/auth/kakao/login-url",
+                                "/api/auth/kakao/login",
+                                "/api/auth/kakao/callback",
 
                                 // 카카오페이 결제 리다이렉트 (Ready는 인증 필요)
                                 "/api/payments/kakaopay/approve",
@@ -105,6 +103,9 @@ public class SecurityConfig {
 
                         // 프로필 API
                         .requestMatchers("/api/profile/**").authenticated()
+
+                        .requestMatchers("/api/auth/kakao/logout").authenticated()
+                        .requestMatchers("/api/auth/kakao/unlink").authenticated()
 
                         // 인바디 API
                         .requestMatchers("/api/inbody/**").authenticated()

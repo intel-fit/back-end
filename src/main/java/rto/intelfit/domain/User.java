@@ -36,10 +36,10 @@ public class User {
     @Builder.Default
     private Boolean emailVerified = false;
 
-    @Column(name = "birth_date", nullable = false)
+    @Column(name = "birth_date")
     private LocalDate birthDate;
 
-    @Column(name = "password", nullable = false, length = 255)
+    @Column(name = "password",length = 255)
     private String password;
 
     @Column(name = "height")
@@ -99,6 +99,21 @@ public class User {
     private LocalDateTime updatedAt;
 
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "login_type", nullable = false)
+    @Builder.Default
+    private LoginType loginType = LoginType.LOCAL;
+
+    @Column(name = "social_id")  // 카카오 고유 ID
+    private String socialId;
+
+    @Column(name = "kakao_access_token", length = 500)  // 카카오 로그아웃용
+    private String kakaoAccessToken;
+
+    @Column(name = "profile_image_url", length = 500)
+    private String profileImageUrl;
+
+
 
     // InBody와의 1:N 관계
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -136,33 +151,16 @@ public class User {
     private LocalDateTime chatbotLastReset;
 
 
-
-    @Column(name = "social_id", unique = true)
-    private String socialId;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "social_provider")
-    @Builder.Default
-    private SocialProvider socialProvider = SocialProvider.LOCAL;
-
-    @Column(name = "profile_image_url", length = 500)
-    private String profileImageUrl;
-
-    @Column(name = "profileImange", length = 500)
-    private String profileImage;
-
-    @Column(name = "nickname", length = 50)
-    private String nickname;
-
-
-
-    public enum SocialProvider {
-        LOCAL, KAKAO
-    }
-
     // 열거형 정의
     public enum MembershipType {
         FREE, PREMIUM
+    }
+
+    public enum LoginType {
+        LOCAL,      // 일반 회원가입
+        KAKAO,      // 카카오 로그인
+        GOOGLE,     // 구글 로그인 (추후 확장)
+        APPLE       // 애플 로그인 (추후 확장)
     }
 
     public enum HealthGoal {
@@ -193,6 +191,16 @@ public class User {
         inBodyRecords.add(inBody);
         inBody.setUser(this);
     }
+
+    public void updateKakaoAccessToken(String kakaoAccessToken) {
+        this.kakaoAccessToken = kakaoAccessToken;
+    }
+
+    public void clearKakaoToken() {
+        this.kakaoAccessToken = null;
+    }
+
+
 
     public void removeInBodyRecord(InBody inBody) {
         inBodyRecords.remove(inBody);
