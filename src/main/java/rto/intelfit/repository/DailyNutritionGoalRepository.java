@@ -16,8 +16,6 @@ public interface DailyNutritionGoalRepository extends JpaRepository<DailyNutriti
     // 사용자별 영양 목표 존재 여부
     boolean existsByUser(User user);
 
-    boolean existsByNutritionGoalId(Long nutritionGoalId);
-
     // 사용자의 영양 목표 삭제 (회원 탈퇴 시)
     void deleteAllByUser(User user);
 }
