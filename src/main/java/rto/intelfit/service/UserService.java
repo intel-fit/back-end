@@ -81,7 +81,7 @@ public class UserService {
                 .experienceLevel(User.ExperienceLevel.BEGINNER)
                 .workoutDaysPerWeek("3-4일")
 
-                // 약관 동의
+                // 약관 동의 ..
                 .agreePrivacy(true)
                 .agreeTerms(true)
                 .agreedAt(LocalDateTime.now())
