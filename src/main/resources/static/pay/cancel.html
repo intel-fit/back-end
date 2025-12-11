@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>결제 취소</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a0a0a, #1a1a2e, #16213e, #0f3460);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+        
+        .container {
+            text-align: center;
+            padding: 40px 20px;
+            max-width: 500px;
+        }
+        
+        .icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: bounce 1s ease-in-out;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        .icon-circle {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto 32px;
+            border-radius: 75px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 20px rgba(245, 158, 11, 0.4);
+        }
+        
+        h1 {
+            font-size: 32px;
+            margin-bottom: 12px;
+            font-weight: 800;
+        }
+        
+        p {
+            font-size: 16px;
+            color: #9ca3af;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        
+        .info-card {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+        
+        .info-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .info-text {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .button {
+            background: linear-gradient(135deg, #e3ff7c, #a8e063);
+            color: #111827;
+            padding: 18px 40px;
+            border-radius: 16px;
+            text-decoration: none;
+            display: inline-block;
+            font-weight: 700;
+            font-size: 17px;
+            transition: transform 0.2s;
+            box-shadow: 0 4px 12px rgba(227, 255, 124, 0.3);
+            width: 100%;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .loading {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon-circle">
+            <div style="font-size: 80px;">⚠️</div>
+        </div>
+        
+        <h1>결제 취소</h1>
+        <p>
+            결제가 취소되었습니다.<br>
+            언제든지 다시 이용해 주세요!
+        </p>
+        
+        <div class="info-card">
+            <div class="info-row">
+                <span style="font-size: 20px;">ℹ️</span>
+                <span class="info-text">결제가 정상적으로 취소되었습니다</span>
+            </div>
+            <div class="info-row">
+                <span style="font-size: 20px;">💳</span>
+                <span class="info-text">카드 승인 취소는 즉시 처리됩니다</span>
+            </div>
+        </div>
+        
+        <a href="#" class="button" id="returnButton">앱으로 돌아가기</a>
+        
+        <p class="loading" id="autoRedirect">3초 후 자동으로 앱으로 이동합니다...</p>
+    </div>
+
+    <script>
+        // URL에서 쿼리 파라미터 가져오기
+        const urlParams = new URLSearchParams(window.location.search);
+        const paymentId = urlParams.get('paymentId');
+        const userId = urlParams.get('userId');
+        
+        // Deep Link URL
+        const appScheme = 'intelfit://pay/cancel';
+        const deepLinkUrl = `${appScheme}?paymentId=${paymentId}&userId=${userId}`;
+        
+        // 버튼 클릭 시 앱으로 이동
+        document.getElementById('returnButton').href = deepLinkUrl;
+        
+        // 3초 후 자동으로 앱으로 이동
+        let countdown = 3;
+        const autoRedirectText = document.getElementById('autoRedirect');
+        
+        const timer = setInterval(() => {
+            countdown--;
+            if (countdown > 0) {
+                autoRedirectText.textContent = `${countdown}초 후 자동으로 앱으로 이동합니다...`;
+            } else {
+                clearInterval(timer);
+                window.location.href = deepLinkUrl;
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

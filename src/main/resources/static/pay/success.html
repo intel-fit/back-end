@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>결제 완료</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: linear-gradient(135deg, #0a0a0a, #1a1a2e, #16213e, #0f3460);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: white;
+      }
+
+      .container {
+        text-align: center;
+        padding: 40px 20px;
+        max-width: 500px;
+      }
+
+      .icon {
+        font-size: 80px;
+        margin-bottom: 20px;
+        animation: bounce 1s ease-in-out;
+      }
+
+      @keyframes bounce {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-20px);
+        }
+      }
+
+      h1 {
+        font-size: 32px;
+        margin-bottom: 12px;
+        font-weight: 800;
+      }
+
+      p {
+        font-size: 16px;
+        color: #9ca3af;
+        line-height: 1.6;
+        margin-bottom: 30px;
+      }
+
+      .info-card {
+        background: rgba(227, 255, 124, 0.1);
+        border: 1px solid rgba(227, 255, 124, 0.2);
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 30px;
+        text-align: left;
+      }
+
+      .info-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .info-row:last-child {
+        margin-bottom: 0;
+      }
+
+      .button {
+        background: linear-gradient(135deg, #e3ff7c, #a8e063);
+        color: #111827;
+        padding: 18px 40px;
+        border-radius: 16px;
+        text-decoration: none;
+        display: inline-block;
+        font-weight: 700;
+        font-size: 17px;
+        transition: transform 0.2s;
+        box-shadow: 0 4px 12px rgba(227, 255, 124, 0.3);
+      }
+
+      .button:hover {
+        transform: translateY(-2px);
+      }
+
+      .loading {
+        margin-top: 20px;
+        font-size: 14px;
+        color: #6b7280;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="icon">✅</div>
+      <h1>결제 성공!</h1>
+      <p>
+        프리미엄 회원으로 업그레이드되었습니다.<br />
+        모든 기능을 자유롭게 이용하세요! 🎉
+      </p>
+
+      <div class="info-card">
+        <div class="info-row">
+          <span>⭐</span>
+          <span>무제한 챗봇</span>
+        </div>
+        <div class="info-row">
+          <span>📅</span>
+          <span>매일 무제한 식단 & 루틴 추천</span>
+        </div>
+        <div class="info-row">
+          <span>⚡</span>
+          <span>AI 맞춤 분석 제공</span>
+        </div>
+      </div>
+
+      <a href="#" class="button" id="returnButton">앱으로 돌아가기</a>
+
+      <p class="loading" id="autoRedirect">
+        3초 후 자동으로 앱으로 이동합니다...
+      </p>
+    </div>
+
+    <script>
+      // URL에서 쿼리 파라미터 가져오기
+      const urlParams = new URLSearchParams(window.location.search);
+      const sessionId = urlParams.get("sessionId"); // Stripe
+      const orderId = urlParams.get("orderId"); // 카카오페이
+      const userId = urlParams.get("userId");
+
+      // Deep Link URL 생성
+      let deepLinkUrl;
+      const baseScheme = "intelfit://pay/success";
+
+      if (sessionId) {
+        // Stripe 결제
+        deepLinkUrl = `${baseScheme}?sessionId=${sessionId}`;
+        if (userId) deepLinkUrl += `&userId=${userId}`;
+        console.log("✅ Stripe 결제 완료:", sessionId);
+      } else if (orderId) {
+        // 카카오페이 결제
+        deepLinkUrl = `${baseScheme}?orderId=${orderId}`;
+        if (userId) deepLinkUrl += `&userId=${userId}`;
+        console.log("✅ 카카오페이 결제 완료:", orderId);
+      } else {
+        // 파라미터가 없는 경우 (테스트용)
+        deepLinkUrl = baseScheme;
+        console.log("⚠️ 결제 파라미터 없음 (테스트 모드)");
+      }
+
+      // 버튼 클릭 시 앱으로 이동
+      document.getElementById("returnButton").href = deepLinkUrl;
+
+      // 3초 후 자동으로 앱으로 이동
+      let countdown = 3;
+      const autoRedirectText = document.getElementById("autoRedirect");
+
+      const timer = setInterval(() => {
+        countdown--;
+        if (countdown > 0) {
+          autoRedirectText.textContent = `${countdown}초 후 자동으로 앱으로 이동합니다...`;
+        } else {
+          clearInterval(timer);
+          window.location.href = deepLinkUrl;
+        }
+      }, 1000);
+    </script>
+  </body>
+</html>
