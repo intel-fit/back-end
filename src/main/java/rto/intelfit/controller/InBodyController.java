@@ -89,6 +89,33 @@ public class InBodyController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/comment/daily/weight")
+    @Operation(summary = "일일 체중 코멘트",
+            description = "AI 서버에서 생성한 체중 관련 코멘트를 반환합니다")
+    public ResponseEntity<String> getDailyWeightComment(
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
+        String comment = inBodyService.getDailyWeightComment(userPrincipal);
+        return ResponseEntity.ok(comment);
+    }
+
+    @GetMapping("/comment/daily/fat")
+    @Operation(summary = "일일 체지방 코멘트",
+            description = "AI 서버에서 생성한 체지방 관련 코멘트를 반환합니다")
+    public ResponseEntity<String> getDailyFatComment(
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
+        String comment = inBodyService.getDailyFatComment(userPrincipal);
+        return ResponseEntity.ok(comment);
+    }
+
+    @GetMapping("/comment/daily/muscle")
+    @Operation(summary = "일일 근육 코멘트",
+            description = "AI 서버에서 생성한 근육 관련 코멘트를 반환합니다")
+    public ResponseEntity<String> getDailyMuscleComment(
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
+        String comment = inBodyService.getDailyMuscleComment(userPrincipal);
+        return ResponseEntity.ok(comment);
+    }
+
     /**
      * 3. 인바디 정보 수정
      */

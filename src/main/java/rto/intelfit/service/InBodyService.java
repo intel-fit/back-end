@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 import rto.intelfit.domain.InBody;
 import rto.intelfit.domain.User;
@@ -14,9 +16,14 @@ import rto.intelfit.repository.InBodyRepository;
 import rto.intelfit.repository.UserRepository;
 import rto.intelfit.security.CustomUserPrincipal;
 import rto.intelfit.service.ocr.InBodyOcrPipeline;
+import rto.intelfit.service.InBodyAnalysisService;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -28,6 +35,38 @@ public class InBodyService {
     private final UserRepository userRepository;
     private final S3StorageService s3StorageService;
     private final InBodyOcrPipeline inBodyOcrPipeline;
+    private final AIServerClient aiServerClient;
+    private final InBodyAnalysisService inBodyAnalysisService;
+
+    public String getDailyWeightComment(CustomUserPrincipal userPrincipal) {
+        User user = findUserByPrincipal(userPrincipal);
+        InBodyCommentRequest request = buildInBodyCommentRequest(user);
+        return aiServerClient.analyzeInBodyComment(
+                user.getUserId(),
+                request.startDate(),
+                request.endDate(),
+                request.records());
+    }
+
+    public String getDailyFatComment(CustomUserPrincipal userPrincipal) {
+        User user = findUserByPrincipal(userPrincipal);
+        InBodyCommentRequest request = buildInBodyCommentRequest(user);
+        return aiServerClient.analyzeInBodyComment(
+                user.getUserId(),
+                request.startDate(),
+                request.endDate(),
+                request.records());
+    }
+
+    public String getDailyMuscleComment(CustomUserPrincipal userPrincipal) {
+        User user = findUserByPrincipal(userPrincipal);
+        InBodyCommentRequest request = buildInBodyCommentRequest(user);
+        return aiServerClient.analyzeInBodyComment(
+                user.getUserId(),
+                request.startDate(),
+                request.endDate(),
+                request.records());
+    }
 
     /**
      * 인바디 정보 등록
@@ -48,6 +87,8 @@ public class InBodyService {
 
         log.info("인바디 정보 등록 완료 - 사용자 ID: {}, 측정 날짜: {}",
                 user.getUserId(), request.getMeasurementDate());
+
+        triggerAiInbodyAnalysis(user, savedInBody);
 
         return InBodyDto.InBodyCreateResponse.builder()
                 .success(true)
@@ -187,14 +228,36 @@ public class InBodyService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
 
-    private void ensureUniqueMeasurement(User user, LocalDate measurementDate) {
-        if (measurementDate == null) {
-            throw new BusinessException(ErrorCode.INVALID_MEASUREMENT_DATE, "측정 날짜가 필요합니다");
+    private void triggerAiInbodyAnalysis(User user, InBody inBody) {
+        Runnable analysisTask = () -> {
+            try {
+                String analysisText = aiServerClient.requestInBodyPeriodAnalysis(
+                        user.getUserId(),
+                        inBody.getMeasurementDate(),
+                        inBody.getMeasurementDate());
+                inBodyAnalysisService.saveAnalysisResult(
+                        user,
+                        inBody.getMeasurementDate(),
+                        inBody.getMeasurementDate(),
+                        analysisText);
+                log.info("AI 서버 인바디 분석 요청 완료 - 사용자 ID: {}, 날짜: {}",
+                        user.getUserId(), inBody.getMeasurementDate());
+            } catch (Exception e) {
+                log.error("AI 서버 인바디 분석 요청 실패 - 사용자 ID: {}, 날짜: {}, 오류: {}",
+                        user.getUserId(), inBody.getMeasurementDate(), e.getMessage(), e);
+            }
+        };
+
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    analysisTask.run();
+                }
+            });
+        } else {
+            analysisTask.run();
         }
-        inBodyRepository.findByUserAndMeasurementDate(user, measurementDate)
-                .ifPresent(existing -> {
-                    throw new BusinessException(ErrorCode.DUPLICATE_INBODY_DATE, "해당 날짜에 이미 인바디 기록이 존재합니다");
-                });
     }
 
     private InBody buildInBodyFromRequest(User user, InBodyDto.InBodyCreateRequest request) {
@@ -226,6 +289,16 @@ public class InBodyService {
                 .basalMetabolicRate(request.getBasalMetabolicRate())
                 .achievementBadge(InBody.AchievementBadge.NONE)
                 .build();
+    }
+
+    private void ensureUniqueMeasurement(User user, LocalDate measurementDate) {
+        if (measurementDate == null) {
+            throw new BusinessException(ErrorCode.INVALID_MEASUREMENT_DATE, "측정 날짜가 필요합니다");
+        }
+        inBodyRepository.findByUserAndMeasurementDate(user, measurementDate)
+                .ifPresent(existing -> {
+                    throw new BusinessException(ErrorCode.DUPLICATE_INBODY_DATE, "해당 날짜에 이미 인바디 기록이 존재합니다");
+                });
     }
 
     private void updateInBodyFields(InBody inBody, InBodyDto.InBodyUpdateRequest request) {
@@ -304,5 +377,41 @@ public class InBodyService {
         if (request.getAchievementBadge() != null) {
             inBody.setAchievementBadge(request.getAchievementBadge());
         }
+    }
+
+    private InBodyCommentRequest buildInBodyCommentRequest(User user) {
+        List<InBody> records = inBodyRepository.findByUserOrderByMeasurementDateDesc(user);
+        if (records.isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "인바디 기록이 없습니다");
+        }
+        List<InBody> sortedRecords = records.stream()
+                .sorted(Comparator.comparing(InBody::getMeasurementDate))
+                .toList();
+
+        LocalDate startDate = sortedRecords.get(0).getMeasurementDate();
+        LocalDate endDate = sortedRecords.get(sortedRecords.size() - 1).getMeasurementDate();
+        List<Map<String, Object>> payloadRecords = sortedRecords.stream()
+                .map(this::mapInBodyForAiPayload)
+                .toList();
+
+        return new InBodyCommentRequest(startDate, endDate, payloadRecords);
+    }
+
+    private Map<String, Object> mapInBodyForAiPayload(InBody inBody) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("measurement_date", inBody.getMeasurementDate());
+        payload.put("weight", toDouble(inBody.getWeight()));
+        payload.put("skeletal_muscle_mass", toDouble(inBody.getSkeletalMuscleMass()));
+        payload.put("body_fat_percentage", toDouble(inBody.getBodyFatPercentage()));
+        return payload;
+    }
+
+    private Double toDouble(BigDecimal value) {
+        return value != null ? value.doubleValue() : null;
+    }
+
+    private record InBodyCommentRequest(LocalDate startDate,
+                                        LocalDate endDate,
+                                        List<Map<String, Object>> records) {
     }
 }
