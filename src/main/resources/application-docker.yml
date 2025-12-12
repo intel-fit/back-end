@@ -144,12 +144,9 @@ gemini:
   url: ${GEMINI_API_URL:https://generativelanguage.googleapis.com/v1beta/models}
 
 kakao:
-  rest-api-key: ${KAKAO_REST_API_KEY:7fc72724581279e69f3fd90de192b691}
-  javascript-key: ${KAKAO_JAVASCRIPT_KEY:8f93a1757095b48d18fe50b632637f5a}
-  redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:19002/auth/kakao/callback}
-  auth-url: https://kauth.kakao.com/oauth/authorize
-  token-url: https://kauth.kakao.com/oauth/token
-  user-info-url: https://kapi.kakao.com/v2/user/me
+  client-id: ${KAKAO_CLIENT_ID:99baee411cc547822f138712b19b032c}
+  client-secret: ${KAKAO_CLIENT_SECRET:}
+  redirect-uri: https://www.intelfits.com/api/auth/kakao/callback
 
 kakaopay:
   cid: ${KAKAOPAY_CID:TC0ONETIME}
