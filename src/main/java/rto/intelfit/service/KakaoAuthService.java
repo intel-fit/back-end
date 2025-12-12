@@ -99,6 +99,7 @@ public class KakaoAuthService {
                 .nickname(user.getName())
                 .profileImageUrl(user.getProfileImageUrl())
                 .isNewUser(isNewUser)
+                .isOnboarded(user.getIsOnboarded())
                 .build();
     }
 
