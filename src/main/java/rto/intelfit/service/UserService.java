@@ -47,6 +47,68 @@ public class UserService {
     private static final int TEMP_PASSWORD_EXPIRE_MINUTES = 30;
 
     @Transactional
+    public void createTestUserIfNotExists() {
+
+        String testUserId = "testuser";
+        String testEmail = "test@example.com";
+
+        // 이미 있으면 AI 서버 동기화만 보장
+        if (userRepository.existsByUserId(testUserId)) {
+            User existing = userRepository.findByUserId(testUserId).get();
+            log.info("✔ 테스트 유저 이미 존재: {} → AI 서버와 동기화만 수행", testUserId);
+
+            aiServerService.createUserOnAI(existing);
+            return;
+        }
+
+        // 비밀번호 암호화
+        String encodedPassword = passwordEncoder.encode("Test1234!");
+
+        User testUser = User.builder()
+                .userId(testUserId)
+                .name("테스트 유저")
+                .email(testEmail)
+                .emailVerified(true)
+                .password(encodedPassword)
+
+                // 필수 정보 기본값 설정
+                .birthDate(LocalDate.of(1990, 1, 1))
+                .gender(User.Gender.M)
+                .height(170)
+                .weight(60)
+                .weightGoal(60)
+                .healthGoal(User.HealthGoal.MAINTENANCE)
+                .experienceLevel(User.ExperienceLevel.BEGINNER)
+                .workoutDaysPerWeek("3-4일")
+
+                // 약관 동의 ..
+                .agreePrivacy(true)
+                .agreeTerms(true)
+                .agreedAt(LocalDateTime.now())
+
+                // 기타 정보
+                .fitnessConcerns("테스트 계정")
+                .membershipType(User.MembershipType.PREMIUM)
+                .socialProvider(User.SocialProvider.LOCAL)
+                .build();
+
+        // DB 저장
+        User saved = userRepository.save(testUser);
+
+        log.info("🎉 테스트 유저 자동 생성 완료: {}", testUserId);
+
+        // AI 서버 동기화
+        try {
+            aiServerService.createUserOnAI(saved);
+            log.info("🤖 AI 서버 테스트 유저 동기화 완료");
+        } catch (Exception e) {
+            log.warn("⚠ AI 테스트 유저 동기화 실패: {}", e.getMessage());
+        }
+    }
+
+
+
+    @Transactional
     public SignUpDto.Response signUp(SignUpDto.Request request) {
         // 비밀번호 확인
         if (!request.getPassword().equals(request.getPasswordConfirm())) {

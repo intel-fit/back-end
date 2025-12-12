@@ -27,6 +27,17 @@ public class UserController {
 
     private final UserService userService;
 
+    @Operation(summary = "테스트 유저 자동 생성", description = "JWT 없이 호출 가능, 테스트 계정이 없으면 자동 생성합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "생성 완료 또는 이미 존재"),
+    })
+    @PostMapping("/create-test-user")
+    public ResponseEntity<?> createTestUser() {
+        userService.createTestUserIfNotExists();
+        return ResponseEntity.ok("테스트 유저 준비 완료");
+    }
+
+
     @Operation(summary = "회원가입", description = "새로운 사용자를 등록합니다")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "회원가입 성공"),
