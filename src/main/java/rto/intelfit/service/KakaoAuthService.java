@@ -48,7 +48,7 @@ public class KakaoAuthService {
                 + "?client_id=" + clientId
                 + "&redirect_uri=" + redirectUri
                 + "&response_type=code"
-                + "&scope=profile_nickname,profile_image,account_email";
+                + "&scope=profile_nickname,profile_image";
 
         return KakaoAuthDto.LoginUrlResponse.builder()
                 .url(url)
