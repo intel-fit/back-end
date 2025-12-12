@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
 import rto.intelfit.dto.KakaoAuthDto;
 import rto.intelfit.service.KakaoAuthService;
 
@@ -51,9 +52,20 @@ public class KakaoAuthController {
             HttpServletResponse response
     ) throws IOException {
 
-        String deepLink =
-                "https://intelfits.com/auth?code=" +
-                        URLEncoder.encode(code, StandardCharsets.UTF_8);
+        // 🔥 여기서 로그인 처리 끝내기
+        KakaoAuthDto.LoginResponse loginResponse =
+                kakaoAuthService.login(KakaoAuthDto.LoginRequest.of(code));
+
+        // 🔥 앱 딥링크 생성
+        String deepLink = UriComponentsBuilder
+                .fromUriString("intelfit://auth/kakao")
+                .queryParam("accessToken", loginResponse.getAccessToken())
+                .queryParam("refreshToken", loginResponse.getRefreshToken())
+                .queryParam("userId", loginResponse.getUserId())
+                .queryParam("isNewUser", loginResponse.isNewUser())
+                .queryParam("isOnboarded", loginResponse.isOnboarded())
+                .build()
+                .toUriString();
 
         response.sendRedirect(deepLink);
     }
