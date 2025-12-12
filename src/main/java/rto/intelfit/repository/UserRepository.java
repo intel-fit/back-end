@@ -19,7 +19,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
 
-    Optional<User> findByLoginTypeAndSocialId(User.LoginType loginType, String socialId);
+    Optional<User> findByLoginTypeAndSocialId(User.SocialProvider loginType, String socialId);
 
     boolean existsBySocialId(String socialId);
 }
