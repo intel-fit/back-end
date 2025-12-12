@@ -16,6 +16,8 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/auth/kakao")
@@ -52,23 +54,19 @@ public class KakaoAuthController {
             HttpServletResponse response
     ) throws IOException {
 
-        // 🔥 여기서 로그인 처리 끝내기
         KakaoAuthDto.LoginResponse loginResponse =
-                kakaoAuthService.login(KakaoAuthDto.LoginRequest.of(code));
+                kakaoAuthService.login(new KakaoAuthDto.LoginRequest(code));
 
-        // 🔥 앱 딥링크 생성
-        String deepLink = UriComponentsBuilder
-                .fromUriString("intelfit://auth/kakao")
-                .queryParam("accessToken", loginResponse.getAccessToken())
-                .queryParam("refreshToken", loginResponse.getRefreshToken())
-                .queryParam("userId", loginResponse.getUserId())
-                .queryParam("isNewUser", loginResponse.isNewUser())
-                .queryParam("isOnboarded", loginResponse.isOnboarded())
-                .build()
-                .toUriString();
+        String deepLink =
+                "intelfit://auth/kakao"
+                        + "?accessToken=" + URLEncoder.encode(loginResponse.getAccessToken(), UTF_8)
+                        + "&refreshToken=" + URLEncoder.encode(loginResponse.getRefreshToken(), UTF_8)
+                        + "&userId=" + loginResponse.getUserId()
+                        + "&membershipType=FREE";
 
         response.sendRedirect(deepLink);
     }
+
 
 
 
