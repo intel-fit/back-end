@@ -51,11 +51,13 @@ public class KakaoAuthController {
             HttpServletResponse response
     ) throws IOException {
 
-        String deepLink = "exp://exp.host/@intelfit/intelfit-mobile/auth"
-                + "?code=" + URLEncoder.encode(code, StandardCharsets.UTF_8);
+        String deepLink =
+                "https://intelfits.com/auth?code=" +
+                        URLEncoder.encode(code, StandardCharsets.UTF_8);
 
         response.sendRedirect(deepLink);
     }
+
 
 
 
