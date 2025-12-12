@@ -24,6 +24,8 @@ import java.util.UUID;
 @Slf4j
 public class KakaoAuthService {
 
+    private final UserService userService;
+    private final PasswordEncoder passwordEncoder; //이원웅 추가
     private final WebClient webClient;
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
@@ -104,14 +106,14 @@ public class KakaoAuthService {
             user = existingUserOpt.get();
         } else {
             // 신규 유저 생성
-            String generatedUserId = socialId;  // 카카오 ID 그대로 userId 사용
+            String generatedUserId = "kakao_" + socialId;  // 카카오 ID 그대로 userId 사용
             String finalEmail = (email != null) ? email : generatedUserId + "@kakao-user.com";
 
             user = User.builder()
                     .userId(generatedUserId)
                     .name(nickname != null ? nickname : "카카오사용자")
                     .email(finalEmail)
-                    .password(socialId)
+                    .password(passwordEncoder.encode(UUID.randomUUID().toString()))
                     .socialProvider(User.SocialProvider.KAKAO)
                     .socialId(socialId)
                     .profileImage(profileImage)
@@ -121,25 +123,7 @@ public class KakaoAuthService {
             user = userRepository.save(user);
         }
 
-        user.updateLastLoginAt();
-        userRepository.save(user);
-
-        // 4. JWT 발급
-        String jwtAccess = jwtUtil.generateAccessToken(user.getUserId(), user.getId());
-        String jwtRefresh = jwtUtil.generateRefreshToken(user.getUserId(), user.getId());
-        log.info("JWT ACCESS TOKEN = {}", jwtAccess);
-        log.info("JWT REFRESH TOKEN = {}", jwtRefresh);
-
-        return LoginDto.Response.builder()
-                .success(true)
-                .message("카카오 로그인 성공")
-                .userId(user.getId())
-                .name(user.getName())
-                .accessToken(jwtAccess)
-                .refreshToken(jwtRefresh)
-                .tokenType("Bearer")
-                .expiresIn(accessTokenExpiration / 1000)
-                .build();
+        return userService.issueTokens(user, "카카오 로그인 성공");
     }
     @Transactional
     public void unlinkKakaoUser(String socialId) {

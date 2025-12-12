@@ -79,6 +79,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     String userId = jwtUtil.getUserIdFromToken(jwt);
                     log.debug("JWT 토큰 유효함 - 사용자 ID: {}", userId);
 
+                    if (jwtUtil.isForceLogoutUser(userId)) {
+                        log.warn("강제 로그아웃된 사용자 접근 차단 - userId={}", userId);
+                        throw new RuntimeException("강제 로그아웃된 사용자입니다.");
+                    }
+
+
                     UserDetails userDetails = userDetailsService.loadUserByUsername(userId);
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());

@@ -102,6 +102,9 @@ public class ProfileService {
         // 사용자의 모든 토큰 무효화
         jwtUtil.deleteRefreshToken(user.getUserId());
 
+        // 🔥 access token까지 즉시 차단
+        jwtUtil.forceLogoutUser(user.getUserId());
+
         // User와 연관된 모든 데이터를 명시적으로 삭제 (FK 제약 조건 문제 해결)
         log.info("회원 탈퇴 시작 - 사용자 ID: {}, 연관 데이터 삭제 시작", user.getUserId());
 
@@ -200,6 +203,9 @@ public class ProfileService {
 
         // 2) Refresh Token 삭제
         jwtUtil.deleteRefreshToken(user.getUserId());
+
+        // 🔥 access token 즉시 차단
+        jwtUtil.forceLogoutUser(user.getUserId());
 
         // 3) 연관 데이터 삭제 (지금 있는 코드 그대로 유지)
         inBodyRepository.deleteAllByUser(user);

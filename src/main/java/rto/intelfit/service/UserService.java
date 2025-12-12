@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 @Transactional(readOnly = true)
 public class UserService {
 
+    private final UserService userService;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RedisTemplate<String, String> redisTemplate;
@@ -217,54 +218,42 @@ public class UserService {
         user.updateLastLoginAt();
         userRepository.save(user);
 
-        // JWT 토큰 생성
-        String accessToken = jwtUtil.generateAccessToken(user.getUserId(), user.getId());
-        String refreshToken = jwtUtil.generateRefreshToken(user.getUserId(), user.getId());
 
-        log.info("로그인 성공 - 사용자 ID: {}, 사용자명: {}", user.getUserId(), user.getName());
-
-        return LoginDto.Response.builder()
-                .success(true)
-                .message("로그인이 완료되었습니다")
-                .userId(user.getId())
-                .name(user.getName())
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .tokenType("Bearer")
-                .expiresIn(accessTokenExpiration / 1000) // 초 단위
-                // ✅ 여기 한 줄 추가
-                .membershipType(user.getMembershipType())
-                .build();
-    }
+        return issueTokens(user, "로그인이 완료되었습니다.");
 
 
-    @Transactional
-    public LoginDto.LogoutResponse logout(LoginDto.LogoutRequest request) {
-        String accessToken = request.getAccessToken();
 
-        // 토큰 유효성 검증
-        if (!jwtUtil.validateToken(accessToken)) {
-            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        @Transactional
+        public LoginDto.LogoutResponse logout(LoginDto.LogoutRequest request) {
+            String accessToken = request.getAccessToken();
+
+            // 1. 토큰 유효성 검증
+            if (!jwtUtil.validateToken(accessToken)) {
+                throw new BusinessException(ErrorCode.INVALID_TOKEN);
+            }
+
+            // 2. 사용자 ID 추출
+            String userId = jwtUtil.getUserIdFromToken(accessToken);
+
+            // 3. Access Token 블랙리스트 등록
+            jwtUtil.blacklistToken(accessToken);
+
+            // 4. Refresh Token 삭제
+            jwtUtil.deleteRefreshToken(userId);
+
+            // 🔥 5. 강제 로그아웃 플래그 (이게 핵심)
+            jwtUtil.forceLogoutUser(userId);
+
+            log.info("로그아웃 완료 - 사용자 ID: {}", userId);
+
+            return LoginDto.LogoutResponse.builder()
+                    .success(true)
+                    .message("로그아웃이 완료되었습니다")
+                    .build();
         }
 
-        // 사용자 ID 추출
-        String userId = jwtUtil.getUserIdFromToken(accessToken);
 
-        // Access Token을 블랙리스트에 추가
-        jwtUtil.blacklistToken(accessToken);
-
-        // Refresh Token 삭제
-        jwtUtil.deleteRefreshToken(userId);
-
-        log.info("로그아웃 완료 - 사용자 ID: {}", userId);
-
-        return LoginDto.LogoutResponse.builder()
-                .success(true)
-                .message("로그아웃이 완료되었습니다")
-                .build();
-    }
-
-    @Transactional
+        @Transactional
     public LoginDto.TokenRefreshResponse refreshToken(LoginDto.TokenRefreshRequest request) {
         String refreshToken = request.getRefreshToken();
 
@@ -403,6 +392,41 @@ public class UserService {
                 .message("비밀번호가 변경되었습니다")
                 .build();
     }
+    //이원웅 추가
+    @Transactional
+    public LoginDto.Response issueTokens(User user, String message) {
+
+        // 강제 로그아웃 상태 해제 (있다면)
+        jwtUtil.clearForceLogout(user.getUserId());
+
+        // 마지막 로그인 시간 업데이트
+        user.updateLastLoginAt();
+        userRepository.save(user);
+
+        // 🔐 토큰 생성 (여기가 유일한 토큰 생성 지점)
+        String accessToken = jwtUtil.generateAccessToken(
+                user.getUserId(),
+                user.getId()
+        );
+
+        String refreshToken = jwtUtil.generateRefreshToken(
+                user.getUserId(),
+                user.getId()
+        );
+
+        return LoginDto.Response.builder()
+                .success(true)
+                .message(message)
+                .userId(user.getId())
+                .name(user.getName())
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .tokenType("Bearer")
+                .expiresIn(jwtUtil.getAccessTokenExpirationSeconds())
+                .membershipType(user.getMembershipType())
+                .build();
+    }
+
 
     private boolean verifyEmailCode(String email, String code) {
         String key = EMAIL_VERIFICATION_PREFIX + email;
