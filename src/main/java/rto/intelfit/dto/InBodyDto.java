@@ -200,6 +200,68 @@ public class InBodyDto {
         private InBody.AchievementBadge achievementBadge;
     }
 
+    // ==================== 목록 조회용 요약 응답 ====================
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "인바디 목록 요약 응답")
+    public static class InBodySummaryResponse {
+
+        @Schema(description = "인바디 기록 ID", example = "1")
+        private Long id;
+
+        @Schema(description = "측정 날짜", example = "2025-08-04")
+        @JsonFormat(pattern = "yyyy-MM-dd")
+        private LocalDate measurementDate;
+
+        @Schema(description = "체중 (kg)", example = "58.8")
+        private BigDecimal weight;
+
+        @Schema(description = "골격근량 (kg)", example = "22.9")
+        private BigDecimal skeletalMuscleMass;
+
+        @Schema(description = "체지방률 (%)", example = "29.4")
+        private BigDecimal bodyFatPercentage;
+
+        @Schema(description = "BMI", example = "22.4")
+        private BigDecimal bmi;
+
+        @Schema(description = "인바디 점수", example = "74")
+        private Integer score;
+
+        @Schema(description = "달성 뱃지", example = "GOLD")
+        private InBody.AchievementBadge achievementBadge;
+
+        public static InBodySummaryResponse from(InBody inBody) {
+            return InBodySummaryResponse.builder()
+                    .id(inBody.getId())
+                    .measurementDate(inBody.getMeasurementDate())
+                    .weight(inBody.getWeight())
+                    .skeletalMuscleMass(inBody.getSkeletalMuscleMass())
+                    .bodyFatPercentage(inBody.getBodyFatPercentage())
+                    .bmi(inBody.getBmi())
+                    .score(calculateSimpleScore(inBody))
+                    .achievementBadge(inBody.getAchievementBadge())
+                    .build();
+        }
+
+        private static Integer calculateSimpleScore(InBody inBody) {
+            int score = 70;
+            if (inBody.getBmi() != null) {
+                BigDecimal bmi = inBody.getBmi();
+                if (bmi.compareTo(BigDecimal.valueOf(18.5)) >= 0 &&
+                        bmi.compareTo(BigDecimal.valueOf(23)) < 0) {
+                    score += 15;
+                }
+            }
+            if (inBody.getSkeletalMuscleMass() != null) {
+                score += 15;
+            }
+            return Math.min(100, score);
+        }
+    }
+
     // ==================== 상세 응답 (화면 맞춤) ====================
     @Data
     @Builder
@@ -346,20 +408,35 @@ public class InBodyDto {
         @NoArgsConstructor
         @AllArgsConstructor
         public static class SegmentalMuscleAnalysis {
-            @Schema(description = "좌측 팔", example = "표준")
-            private String leftArm;
+            @Schema(description = "좌측 팔 근육량 (kg)", example = "2.5")
+            private BigDecimal leftArm;
 
-            @Schema(description = "우측 팔", example = "표준")
-            private String rightArm;
+            @Schema(description = "좌측 팔 상태", example = "표준")
+            private String leftArmStatus;
 
-            @Schema(description = "몸통", example = "표준")
-            private String trunk;
+            @Schema(description = "우측 팔 근육량 (kg)", example = "2.6")
+            private BigDecimal rightArm;
 
-            @Schema(description = "좌측 다리", example = "표준")
-            private String leftLeg;
+            @Schema(description = "우측 팔 상태", example = "표준")
+            private String rightArmStatus;
 
-            @Schema(description = "우측 다리", example = "표준")
-            private String rightLeg;
+            @Schema(description = "몸통 근육량 (kg)", example = "23.5")
+            private BigDecimal trunk;
+
+            @Schema(description = "몸통 상태", example = "표준")
+            private String trunkStatus;
+
+            @Schema(description = "좌측 다리 근육량 (kg)", example = "8.2")
+            private BigDecimal leftLeg;
+
+            @Schema(description = "좌측 다리 상태", example = "표준")
+            private String leftLegStatus;
+
+            @Schema(description = "우측 다리 근육량 (kg)", example = "8.3")
+            private BigDecimal rightLeg;
+
+            @Schema(description = "우측 다리 상태", example = "표준")
+            private String rightLegStatus;
         }
 
         // ========== 변환 메서드 ==========
@@ -409,13 +486,18 @@ public class InBodyDto {
                             targetWeight.multiply(BigDecimal.valueOf(0.40))))
                     .build();
 
-            // 부위별 근육 분석
+            // 부위별 근육 분석 (수치 + 상태 포함)
             SegmentalMuscleAnalysis segmental = SegmentalMuscleAnalysis.builder()
-                    .leftArm("표준")
-                    .rightArm("표준")
-                    .trunk("표준")
-                    .leftLeg("표준")
-                    .rightLeg("표준")
+                    .leftArm(inBody.getLeftArmMuscle())
+                    .leftArmStatus(determineSegmentalStatus(inBody.getLeftArmMuscle(), user.getGender(), "arm"))
+                    .rightArm(inBody.getRightArmMuscle())
+                    .rightArmStatus(determineSegmentalStatus(inBody.getRightArmMuscle(), user.getGender(), "arm"))
+                    .trunk(inBody.getTrunkMuscle())
+                    .trunkStatus(determineSegmentalStatus(inBody.getTrunkMuscle(), user.getGender(), "trunk"))
+                    .leftLeg(inBody.getLeftLegMuscle())
+                    .leftLegStatus(determineSegmentalStatus(inBody.getLeftLegMuscle(), user.getGender(), "leg"))
+                    .rightLeg(inBody.getRightLegMuscle())
+                    .rightLegStatus(determineSegmentalStatus(inBody.getRightLegMuscle(), user.getGender(), "leg"))
                     .build();
 
             return InBodyDetailResponse.builder()
@@ -589,5 +671,33 @@ public class InBodyDto {
 
         @Schema(description = "인바디 상세 정보")
         private InBodyDetailResponse inBody;
+    }
+
+    private static String determineSegmentalStatus(BigDecimal value, User.Gender gender, String bodyPart) {
+        if (value == null) return "N/A";
+
+        // 성별 및 부위별 표준 범위 (대략적인 기준)
+        double lowerBound, upperBound;
+
+        if (gender == User.Gender.M) {
+            switch (bodyPart) {
+                case "arm" -> { lowerBound = 2.8; upperBound = 4.0; }
+                case "trunk" -> { lowerBound = 24.0; upperBound = 30.0; }
+                case "leg" -> { lowerBound = 9.0; upperBound = 12.0; }
+                default -> { lowerBound = 0; upperBound = Double.MAX_VALUE; }
+            }
+        } else {
+            switch (bodyPart) {
+                case "arm" -> { lowerBound = 1.8; upperBound = 2.8; }
+                case "trunk" -> { lowerBound = 18.0; upperBound = 24.0; }
+                case "leg" -> { lowerBound = 6.5; upperBound = 9.0; }
+                default -> { lowerBound = 0; upperBound = Double.MAX_VALUE; }
+            }
+        }
+
+        double val = value.doubleValue();
+        if (val < lowerBound) return "낮음";
+        if (val > upperBound) return "높음";
+        return "표준";
     }
 }
