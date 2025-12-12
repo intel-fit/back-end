@@ -89,7 +89,6 @@ public class UserService {
                 // 기타 정보
                 .fitnessConcerns("테스트 계정")
                 .membershipType(User.MembershipType.PREMIUM)
-                .socialProvider(User.SocialProvider.LOCAL)
                 .build();
 
         // DB 저장
