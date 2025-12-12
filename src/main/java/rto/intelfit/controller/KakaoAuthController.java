@@ -46,16 +46,16 @@ public class KakaoAuthController {
 
 
     @GetMapping("/callback")
-    public ResponseEntity<KakaoAuthDto.LoginResponse> callback(
-            @RequestParam String code
-    ) {
-        KakaoAuthDto.LoginResponse loginResponse =
-                kakaoAuthService.login(KakaoAuthDto.LoginRequest.of(code));
+    public void callback(
+            @RequestParam String code,
+            HttpServletResponse response
+    ) throws IOException {
 
-        return ResponseEntity.ok(loginResponse);
+        String deepLink = "exp://exp.host/@intelfit/intelfit-mobile/auth"
+                + "?code=" + URLEncoder.encode(code, StandardCharsets.UTF_8);
+
+        response.sendRedirect(deepLink);
     }
-
-
 
 
 
