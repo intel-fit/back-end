@@ -41,57 +41,68 @@ public class StripeWebhookController {
 
             String sigHeader = request.getHeader("Stripe-Signature");
             if (sigHeader == null) {
-                log.error("Missing Stripe-Signature header");
+                log.error("❌ Missing Stripe-Signature header");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("");
             }
 
             Event event;
-
             try {
                 event = Webhook.constructEvent(payload, sigHeader, webhookSecret);
             } catch (SignatureVerificationException e) {
-                log.error("Stripe webhook signature verification failed", e);
+                log.error("❌ Stripe webhook signature verification failed", e);
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("");
             }
 
             String eventType = event.getType();
-            log.info("Stripe webhook event received: {}", eventType);
+            log.info("✅ Stripe webhook event received: {}", eventType);
 
             EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
             Optional<com.stripe.model.StripeObject> object = deserializer.getObject();
 
             com.stripe.model.StripeObject stripeObject = object.orElseGet(() -> {
-                log.warn("Stripe deserializer returned empty, using raw object");
+                log.warn("⚠️ Stripe deserializer returned empty, using raw object");
                 return event.getData().getObject();
             });
 
             switch (eventType) {
+
+                // 🔹 Checkout 완료 (결제 성공 직후)
                 case "checkout.session.completed" -> {
                     Session session = (Session) stripeObject;
                     stripeService.handleCheckoutCompleted(session);
                 }
-                case "invoice.paid" -> {
+
+                // 🔹 인보이스 결제 성공 (최종 승인)
+                case "invoice.payment_succeeded",
+                     "invoice_payment.paid",
+                     "invoice.paid" -> {
                     Invoice invoice = (Invoice) stripeObject;
                     stripeService.handleInvoicePaid(invoice);
                 }
+
+                // 🔹 결제 실패
                 case "invoice.payment_failed" -> {
                     Invoice invoice = (Invoice) stripeObject;
                     stripeService.handlePaymentFailed(invoice);
                 }
+
+                // 🔹 구독 해지
                 case "customer.subscription.deleted" -> {
                     com.stripe.model.Subscription sub =
                             (com.stripe.model.Subscription) stripeObject;
                     stripeService.handleSubscriptionDeleted(sub);
                 }
-                default -> log.debug("Unhandled Stripe event type: {}", eventType);
+
+                default -> log.debug("ℹ️ Unhandled Stripe event type: {}", eventType);
             }
 
             return ResponseEntity.ok("ok");
+
         } catch (IOException e) {
-            log.error("Failed to read Stripe webhook payload", e);
+            log.error("❌ Failed to read Stripe webhook payload", e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("");
         } catch (Exception e) {
-            log.error("Unexpected Stripe webhook handling error", e);
+            log.error("❌ Unexpected Stripe webhook handling error", e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("");
         }
     }

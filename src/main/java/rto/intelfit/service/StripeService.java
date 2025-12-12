@@ -124,6 +124,7 @@ public class StripeService {
     @Transactional
     public void processCheckoutSuccess(String sessionId) throws Exception {
         Session session = Session.retrieve(sessionId);
+        validateSessionPaid(session);
         handleCheckoutCompleted(session);
 
         String subscriptionId = session.getSubscription();
@@ -146,6 +147,20 @@ public class StripeService {
                 recordStripePayment(userId, invoiceLikeOrderId(sessionId, stripeSub.getId()), stripeSub.getCustomer(), amountFromSubscription(stripeSub), planInfo.planCode(), PaymentHistory.PaymentStatus.APPROVED);
                 membershipService.syncMembership(userId);
             }
+        }
+    }
+
+    private void validateSessionPaid(Session session) {
+        if (session == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "유효하지 않은 Stripe 세션입니다.");
+        }
+        String status = session.getStatus();
+        if (!"complete".equalsIgnoreCase(status)) {
+            throw new BusinessException(ErrorCode.PAYMENT_NOT_APPROVED, "Stripe 결제가 완료되지 않았습니다. (status=" + status + ")");
+        }
+        String paymentStatus = session.getPaymentStatus();
+        if (StringUtils.hasText(paymentStatus) && !"paid".equalsIgnoreCase(paymentStatus)) {
+            throw new BusinessException(ErrorCode.PAYMENT_NOT_APPROVED, "Stripe 결제 상태가 유효하지 않습니다. (paymentStatus=" + paymentStatus + ")");
         }
     }
 

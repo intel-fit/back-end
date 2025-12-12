@@ -133,6 +133,9 @@ public enum ErrorCode {
     INVALID_EXERCISE_CATEGORY(HttpStatus.BAD_REQUEST, "EXERCISE_005", "유효하지 않은 운동 카테고리입니다"),
     FUTURE_EXERCISE_DATE(HttpStatus.BAD_REQUEST, "EXERCISE_006", "미래 날짜의 운동은 등록할 수 없습니다"),
 
+    // ==================== 결제 관련 에러 ====================
+    PAYMENT_NOT_APPROVED(HttpStatus.BAD_REQUEST, "PAYMENT_001", "결제가 완료되지 않았습니다"),
+
     // ==================== 추천 운동 관련 에러 ====================
     RECOMMENDED_EXERCISE_PLAN_NOT_FOUND(HttpStatus.NOT_FOUND, "REC_EXERCISE_001", "추천 운동 플랜을 찾을 수 없습니다"),
     RECOMMENDED_EXERCISE_PLAN_ACCESS_DENIED(HttpStatus.FORBIDDEN, "REC_EXERCISE_002", "본인의 추천 운동 플랜만 접근할 수 있습니다"),
