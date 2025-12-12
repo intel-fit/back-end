@@ -54,7 +54,6 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/users/signup",
                                 "/api/users/login",
-
                                 "/api/users/kakao/login",
                                 "/api/users/kakao/webview-login", //이원웅 추가
                                 "/api/users/kakao/callback", //이원웅 추가
@@ -67,7 +66,10 @@ public class SecurityConfig {
                                 "/api/users/change-password",
                                 "/api/users/refresh-token",
 
-                                // 카카오페이 결제 리다이렉트 (Ready는 인증 필요)
+                                // 테스트 유저 자동 생성 API (JWT 인증 불필요)
+                                "/api/users/create-test-user",
+
+                                // 카카오페이 결제 리다이렉트
                                 "/api/payments/kakaopay/approve",
                                 "/api/payments/kakaopay/cancel",
                                 "/api/payments/kakaopay/fail",

@@ -86,7 +86,7 @@ public class FitnessExerciseCategorySaveService {
                 .deletedCount(sessionRecords.size())
                 .build();
     }
-
+//
     public String addWorkoutSession(FitnessExerciseCategorySaveDto.CreateRequest request) {
         log.info("💪 운동 세션 추가 요청 - userId={}, exerciseId={}, exerciseName={}, sets={}",
                 request.getUserId(), request.getExternalId(), request.getExerciseName(), request.getSets().size());
