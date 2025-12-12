@@ -41,7 +41,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/api/users/reset-password",
             "/api/users/change-password",
             
-            "/api/payments/stripe/webhook"
+            "/api/payments/stripe/webhook",
+            "/api/payments/kakaopay/approve",
+            "/api/payments/kakaopay/cancel",
+            "/api/payments/kakaopay/fail"
     );
 
     @Override
