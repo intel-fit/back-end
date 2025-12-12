@@ -74,6 +74,16 @@ public class SecurityConfig {
                                 "/api/payments/stripe/cancel"
                         ).permitAll()
 
+                        // 결제 리다이렉트 정적 페이지
+                        .requestMatchers(
+                                "/pay/**",
+                                "/static/**",
+                                "/css/**",
+                                "/js/**",
+                                "/images/**",
+                                "/favicon.ico"
+                        ).permitAll()
+
 
                         // Swagger UI 및 API 문서
                         .requestMatchers(
