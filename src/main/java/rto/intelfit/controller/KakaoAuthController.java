@@ -57,12 +57,17 @@ public class KakaoAuthController {
         KakaoAuthDto.LoginResponse loginResponse =
                 kakaoAuthService.login(new KakaoAuthDto.LoginRequest(code));
 
-        String deepLink =
-                "intelfit://auth/kakao"
-                        + "?accessToken=" + URLEncoder.encode(loginResponse.getAccessToken(), UTF_8)
-                        + "&refreshToken=" + URLEncoder.encode(loginResponse.getRefreshToken(), UTF_8)
-                        + "&userId=" + loginResponse.getUserId()
-                        + "&membershipType=FREE";
+        String deepLink = "intelfit://auth/kakao"
+                + "?accessToken=" + URLEncoder.encode(loginResponse.getAccessToken(), UTF_8)
+                + "&refreshToken=" + URLEncoder.encode(loginResponse.getRefreshToken(), UTF_8)
+                + "&userId=" + loginResponse.getUserId()
+                + "&nickname=" + URLEncoder.encode(
+                loginResponse.getNickname() != null ? loginResponse.getNickname() : "", UTF_8)
+                + "&profileImageUrl=" + URLEncoder.encode(
+                loginResponse.getProfileImageUrl() != null ? loginResponse.getProfileImageUrl() : "", UTF_8)
+                + "&isNewUser=" + loginResponse.isNewUser()
+                + "&isOnboarded=" + loginResponse.isOnboarded()
+                + "&membershipType=FREE";
 
         response.sendRedirect(deepLink);
     }
