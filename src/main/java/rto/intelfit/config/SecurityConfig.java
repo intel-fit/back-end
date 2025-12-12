@@ -55,6 +55,7 @@ public class SecurityConfig {
                                 "/api/auth/kakao/login-url",
                                 "/api/auth/kakao/login",
                                 "/api/auth/kakao/callback",
+                                "/login/callback",
                                 "/api/users/check-userId",
                                 "/api/users/send-verification-code",
                                 "/api/users/find-userId",
