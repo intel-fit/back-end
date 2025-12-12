@@ -48,6 +48,8 @@ public class User {
     @Column(name = "weight")
     private Integer weight;
 
+    /* ===================== ENUM 컬럼 ===================== */
+
     @Enumerated(EnumType.STRING)
     @Column(name = "membership_type", nullable = false)
     @Builder.Default
@@ -58,10 +60,20 @@ public class User {
     @Builder.Default
     private HealthGoal healthGoal = HealthGoal.MAINTENANCE;
 
-
     @Enumerated(EnumType.STRING)
     @Column(name = "experience_level")
     private ExperienceLevel experienceLevel;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "gender")
+    private Gender gender;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "login_type", nullable = false)
+    @Builder.Default
+    private SocialProvider loginType = SocialProvider.LOCAL;
+
+    /* ===================== 기본 정보 ===================== */
 
     @Column(name = "workout_days_per_week", length = 20)
     private String workoutDaysPerWeek;
@@ -71,10 +83,6 @@ public class User {
 
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "gender")
-    private Gender gender;
 
     @Column(name = "agree_privacy", nullable = false)
     @Builder.Default
@@ -90,25 +98,7 @@ public class User {
     @Column(name = "fitness_concerns", length = 500)
     private String fitnessConcerns;
 
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
-
-    // InBody와의 1:N 관계
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<InBody> inBodyRecords = new ArrayList<>();
-
-
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "login_type", nullable = false)
-    @Builder.Default
-    private LoginType loginType = LoginType.LOCAL;
+    /* ===================== 소셜 로그인 ===================== */
 
     @Column(name = "social_id")
     private String socialId;
@@ -119,13 +109,8 @@ public class User {
     @Column(name = "profile_image_url", length = 500)
     private String profileImageUrl;
 
-    // Enum 추가
-    public enum LoginType {
-        LOCAL, KAKAO, GOOGLE, APPLE
-    }
+    /* ===================== 토큰 관리 ===================== */
 
-
-    // 식단 추천 토큰 (기본 1, 7일 후 초기화)
     @Builder.Default
     @Column(name = "meal_recommend_tokens", nullable = false)
     private Integer mealRecommendTokens = 1;
@@ -133,8 +118,6 @@ public class User {
     @Column(name = "meal_token_last_reset")
     private LocalDate mealTokenLastReset;
 
-
-    // 운동 추천 토큰 (기본 1, 7일 후 초기화)
     @Builder.Default
     @Column(name = "workout_recommend_tokens", nullable = false)
     private Integer workoutRecommendTokens = 1;
@@ -142,8 +125,6 @@ public class User {
     @Column(name = "workout_recommend_last_reset")
     private LocalDateTime workoutRecommendLastReset;
 
-
-    // 챗봇 토큰 (기본 3, 1일 후 초기화)
     @Builder.Default
     @Column(name = "chatbot_tokens", nullable = false)
     private Integer chatbotTokens = 3;
@@ -151,10 +132,56 @@ public class User {
     @Column(name = "chatbot_last_reset")
     private LocalDateTime chatbotLastReset;
 
+    /* ===================== 타임스탬프 ===================== */
 
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
 
-    // 열거형 정의
+    /* ===================== InBody 관계 ===================== */
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<InBody> inBodyRecords = new ArrayList<>();
+
+    public void addInBodyRecord(InBody inBody) {
+        inBodyRecords.add(inBody);
+        inBody.setUser(this);
+    }
+
+    public void removeInBodyRecord(InBody inBody) {
+        inBodyRecords.remove(inBody);
+        inBody.setUser(null);
+    }
+
+    /* ===================== 편의 메서드 ===================== */
+
+    public boolean isSocialUser() {
+        return this.loginType != SocialProvider.LOCAL;
+    }
+
+    public void updateKakaoAccessToken(String kakaoAccessToken) {
+        this.kakaoAccessToken = kakaoAccessToken;
+    }
+
+    public void clearKakaoToken() {
+        this.kakaoAccessToken = null;
+    }
+
+    public void updateLastLoginAt() {
+        this.lastLoginAt = LocalDateTime.now();
+    }
+
+    /* ===================== ENUM 정의 ===================== */
+
+    public enum SocialProvider {
+        LOCAL, KAKAO, GOOGLE, APPLE
+    }
+
     public enum MembershipType {
         FREE, PREMIUM
     }
@@ -168,41 +195,12 @@ public class User {
     }
 
     public enum ExperienceLevel {
-        BEGINNER,      // 초보자
-        INTERMEDIATE,  // 중급자
-        ADVANCED       // 숙련자
+        BEGINNER,
+        INTERMEDIATE,
+        ADVANCED
     }
 
     public enum Gender {
         M, F
-    }
-
-
-    // InBody 관계 편의 메서드
-    public void addInBodyRecord(InBody inBody) {
-        inBodyRecords.add(inBody);
-        inBody.setUser(this);
-    }
-
-
-    public boolean isSocialUser() {
-        return this.loginType != LoginType.LOCAL;
-    }
-
-    public void removeInBodyRecord(InBody inBody) {
-        inBodyRecords.remove(inBody);
-        inBody.setUser(null);
-    }
-
-    public void updateKakaoAccessToken(String kakaoAccessToken) {
-        this.kakaoAccessToken = kakaoAccessToken;
-    }
-
-    public void clearKakaoToken() {
-        this.kakaoAccessToken = null;
-    }
-
-    public void updateLastLoginAt() {
-        this.lastLoginAt = LocalDateTime.now();
     }
 }
