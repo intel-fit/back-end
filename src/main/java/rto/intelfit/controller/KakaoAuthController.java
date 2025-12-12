@@ -46,23 +46,15 @@ public class KakaoAuthController {
 
 
     @GetMapping("/callback")
-    public void callback(
-            @RequestParam String code,
-            HttpServletResponse response
-    ) throws IOException {
-
+    public ResponseEntity<KakaoAuthDto.LoginResponse> callback(
+            @RequestParam String code
+    ) {
         KakaoAuthDto.LoginResponse loginResponse =
                 kakaoAuthService.login(KakaoAuthDto.LoginRequest.of(code));
 
-        String redirectUrl =
-                "exp://exp.host/@intelfit/intelfit-mobile/login/callback"
-                        + "?isNewUser=" + loginResponse.isNewUser()
-                        + "&isOnboarded=" + loginResponse.isOnboarded()
-                        + "&accessToken=" + URLEncoder.encode(loginResponse.getAccessToken(), StandardCharsets.UTF_8)
-                        + "&refreshToken=" + URLEncoder.encode(loginResponse.getRefreshToken(), StandardCharsets.UTF_8);
-
-        response.sendRedirect(redirectUrl);
+        return ResponseEntity.ok(loginResponse);
     }
+
 
 
 
