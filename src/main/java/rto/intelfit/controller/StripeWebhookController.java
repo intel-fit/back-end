@@ -34,63 +34,65 @@ public class StripeWebhookController {
 
     @PostMapping("/webhook")
     public ResponseEntity<String> handleWebhook(HttpServletRequest request) {
-        String payload;
         try {
-            payload = request.getReader()
+            String payload = request.getReader()
                     .lines()
                     .collect(Collectors.joining("\n"));
+
+            String sigHeader = request.getHeader("Stripe-Signature");
+            if (sigHeader == null) {
+                log.error("Missing Stripe-Signature header");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("");
+            }
+
+            Event event;
+
+            try {
+                event = Webhook.constructEvent(payload, sigHeader, webhookSecret);
+            } catch (SignatureVerificationException e) {
+                log.error("Stripe webhook signature verification failed", e);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("");
+            }
+
+            String eventType = event.getType();
+            log.info("Stripe webhook event received: {}", eventType);
+
+            EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
+            Optional<com.stripe.model.StripeObject> object = deserializer.getObject();
+
+            com.stripe.model.StripeObject stripeObject = object.orElseGet(() -> {
+                log.warn("Stripe deserializer returned empty, using raw object");
+                return event.getData().getObject();
+            });
+
+            switch (eventType) {
+                case "checkout.session.completed" -> {
+                    Session session = (Session) stripeObject;
+                    stripeService.handleCheckoutCompleted(session);
+                }
+                case "invoice.paid" -> {
+                    Invoice invoice = (Invoice) stripeObject;
+                    stripeService.handleInvoicePaid(invoice);
+                }
+                case "invoice.payment_failed" -> {
+                    Invoice invoice = (Invoice) stripeObject;
+                    stripeService.handlePaymentFailed(invoice);
+                }
+                case "customer.subscription.deleted" -> {
+                    com.stripe.model.Subscription sub =
+                            (com.stripe.model.Subscription) stripeObject;
+                    stripeService.handleSubscriptionDeleted(sub);
+                }
+                default -> log.debug("Unhandled Stripe event type: {}", eventType);
+            }
+
+            return ResponseEntity.ok("ok");
         } catch (IOException e) {
             log.error("Failed to read Stripe webhook payload", e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("");
-        }
-
-        String sigHeader = request.getHeader("Stripe-Signature");
-        if (sigHeader == null) {
-            log.error("Missing Stripe-Signature header");
+        } catch (Exception e) {
+            log.error("Unexpected Stripe webhook handling error", e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("");
         }
-
-        Event event;
-
-        try {
-            event = Webhook.constructEvent(payload, sigHeader, webhookSecret);
-        } catch (SignatureVerificationException e) {
-            log.error("Stripe webhook signature verification failed", e);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("");
-        }
-
-        String eventType = event.getType();
-        log.info("Stripe webhook event received: {}", eventType);
-
-        EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
-        Optional<com.stripe.model.StripeObject> object = deserializer.getObject();
-
-        com.stripe.model.StripeObject stripeObject = object.orElseGet(() -> {
-            log.warn("Stripe deserializer returned empty, using raw object");
-            return event.getData().getObject();
-        });
-
-        switch (eventType) {
-            case "checkout.session.completed" -> {
-                Session session = (Session) stripeObject;
-                stripeService.handleCheckoutCompleted(session);
-            }
-            case "invoice.paid" -> {
-                Invoice invoice = (Invoice) stripeObject;
-                stripeService.handleInvoicePaid(invoice);
-            }
-            case "invoice.payment_failed" -> {
-                Invoice invoice = (Invoice) stripeObject;
-                stripeService.handlePaymentFailed(invoice);
-            }
-            case "customer.subscription.deleted" -> {
-                com.stripe.model.Subscription sub =
-                        (com.stripe.model.Subscription) stripeObject;
-                stripeService.handleSubscriptionDeleted(sub);
-            }
-            default -> log.debug("Unhandled Stripe event type: {}", eventType);
-        }
-
-        return ResponseEntity.ok("ok");
     }
 }
