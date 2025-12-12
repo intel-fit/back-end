@@ -210,6 +210,8 @@ public class KakaoAuthService {
                 .loginType(User.SocialProvider.KAKAO)
                 .socialId(String.valueOf(userInfo.getId()))
                 .profileImageUrl(userInfo.getProfileImageUrl())
+                .birthDate(java.time.LocalDate.of(2000, 1, 1))
+                .isOnboarded(false)
                 .password("")
                 .agreePrivacy(true)
                 .agreeTerms(true)
