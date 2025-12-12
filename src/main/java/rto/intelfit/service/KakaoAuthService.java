@@ -69,7 +69,7 @@ public class KakaoAuthService {
 
         // 3. 기존 회원 확인 또는 신규 생성
         boolean isNewUser = false;
-        User user = userRepository.findByLoginTypeAndSocialId(User.LoginType.KAKAO, String.valueOf(userInfo.getId()))
+        User user = userRepository.findByLoginTypeAndSocialId(User.SocialProvider.KAKAO, String.valueOf(userInfo.getId()))
                 .orElse(null);
 
         if (user == null) {
@@ -206,7 +206,7 @@ public class KakaoAuthService {
                 .name(userInfo.getNickname() != null ? userInfo.getNickname() : "카카오 사용자")
                 .email(userInfo.getEmail() != null ? userInfo.getEmail() : uniqueUserId + "@kakao.user")
                 .emailVerified(true)
-                .loginType(User.LoginType.KAKAO)
+                .loginType(User.SocialProvider.KAKAO)
                 .socialId(String.valueOf(userInfo.getId()))
                 .profileImageUrl(userInfo.getProfileImageUrl())
                 .password("")
