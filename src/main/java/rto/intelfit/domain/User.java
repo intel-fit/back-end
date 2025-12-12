@@ -104,21 +104,26 @@ public class User {
     private List<InBody> inBodyRecords = new ArrayList<>();
 
 
-    // 소셜 로그인 구분
-    @Enumerated(EnumType.STRING)
-    @Column(name = "social_provider", nullable = false)
-    @Builder.Default
-    private SocialProvider socialProvider = SocialProvider.LOCAL;
 
-    // 소셜 고유 ID(카카오 userId)
-    @Column(name = "social_id", unique = true)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "login_type", nullable = false)
+    @Builder.Default
+    private LoginType loginType = LoginType.LOCAL;
+
+    @Column(name = "social_id")
     private String socialId;
 
-    // 프로필 이미지(카카오)
-    @Column(name = "profile_image")
-    private String profileImage;
+    @Column(name = "kakao_access_token", length = 500)
+    private String kakaoAccessToken;
 
-    // ===== 토큰 관련 =====
+    @Column(name = "profile_image_url", length = 500)
+    private String profileImageUrl;
+
+    // Enum 추가
+    public enum LoginType {
+        LOCAL, KAKAO, GOOGLE, APPLE
+    }
+
 
     // 식단 추천 토큰 (기본 1, 7일 후 초기화)
     @Builder.Default
@@ -149,10 +154,6 @@ public class User {
 
 
 
-    public enum SocialProvider {
-        LOCAL, KAKAO
-    }
-
     // 열거형 정의
     public enum MembershipType {
         FREE, PREMIUM
@@ -176,10 +177,6 @@ public class User {
         M, F
     }
 
-    // 마지막 로그인 시간 업데이트 메서드
-    public void updateLastLoginAt() {
-        this.lastLoginAt = LocalDateTime.now();
-    }
 
     // InBody 관계 편의 메서드
     public void addInBodyRecord(InBody inBody) {
@@ -187,8 +184,25 @@ public class User {
         inBody.setUser(this);
     }
 
+
+    public boolean isSocialUser() {
+        return this.loginType != LoginType.LOCAL;
+    }
+
     public void removeInBodyRecord(InBody inBody) {
         inBodyRecords.remove(inBody);
         inBody.setUser(null);
+    }
+
+    public void updateKakaoAccessToken(String kakaoAccessToken) {
+        this.kakaoAccessToken = kakaoAccessToken;
+    }
+
+    public void clearKakaoToken() {
+        this.kakaoAccessToken = null;
+    }
+
+    public void updateLastLoginAt() {
+        this.lastLoginAt = LocalDateTime.now();
     }
 }

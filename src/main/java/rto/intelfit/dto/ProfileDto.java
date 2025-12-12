@@ -2,10 +2,7 @@ package rto.intelfit.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import rto.intelfit.domain.User;
 
 import jakarta.validation.constraints.*;
@@ -128,6 +125,28 @@ public class ProfileDto {
         @Min(value = 30, message = "목표 체중은 30kg 이상이어야 합니다")
         @Max(value = 200, message = "목표 체중은 200kg 이하여야 합니다")
         private Integer weightGoal;
+    }
+
+
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class DeleteAccountRequest {
+        private String password;  // 일반 회원만 필요
+    }
+
+    @Getter
+    @Builder
+    public static class DeleteAccountResponse {
+        private boolean success;
+        private String message;
+    }
+
+    @Getter
+    @Builder
+    public static class LoginTypeResponse {
+        private String loginType;      // LOCAL, KAKAO, GOOGLE, APPLE
+        private boolean isSocialLogin;
     }
 
     @Data

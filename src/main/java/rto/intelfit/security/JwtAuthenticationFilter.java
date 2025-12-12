@@ -40,7 +40,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/api/users/find-userId",
             "/api/users/reset-password",
             "/api/users/change-password",
-            
+            "/api/auth/kakao/login-url",
+            "/api/auth/kakao/login",
+            "/api/auth/kakao/callback",
             "/api/payments/stripe/webhook"
     );
 
