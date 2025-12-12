@@ -64,7 +64,10 @@ public class SecurityConfig {
                                 "/api/users/change-password",
                                 "/api/users/refresh-token",
 
-                                // 카카오페이 결제 리다이렉트 (Ready는 인증 필요)
+                                // 테스트 유저 자동 생성 API (JWT 인증 불필요)
+                                "/api/users/create-test-user",
+
+                                // 카카오페이 결제 리다이렉트
                                 "/api/payments/kakaopay/approve",
                                 "/api/payments/kakaopay/cancel",
                                 "/api/payments/kakaopay/fail",
@@ -74,6 +77,7 @@ public class SecurityConfig {
                                 "/api/payments/stripe/success",
                                 "/api/payments/stripe/cancel"
                         ).permitAll()
+
 
                         // Swagger UI 및 API 문서
                         .requestMatchers(
