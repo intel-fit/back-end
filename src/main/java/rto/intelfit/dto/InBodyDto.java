@@ -303,6 +303,9 @@ public class InBodyDto {
         @Schema(description = "부위별 근육 분석")
         private SegmentalMuscleAnalysis segmentalMuscleAnalysis;
 
+        @Schema(description = "부위별 지방 분석")  // 추가
+        private SegmentalFatAnalysis segmentalFatAnalysis;
+
         @Schema(description = "부분별지방률", example = "0.86")
         private BigDecimal segmentalFatRatio;
 
@@ -439,6 +442,43 @@ public class InBodyDto {
             private String rightLegStatus;
         }
 
+
+        @Data
+        @Builder
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class SegmentalFatAnalysis {
+            @Schema(description = "좌측 팔 지방량 (kg)", example = "1.2")
+            private BigDecimal leftArm;
+
+            @Schema(description = "좌측 팔 상태", example = "표준")
+            private String leftArmStatus;
+
+            @Schema(description = "우측 팔 지방량 (kg)", example = "1.3")
+            private BigDecimal rightArm;
+
+            @Schema(description = "우측 팔 상태", example = "표준")
+            private String rightArmStatus;
+
+            @Schema(description = "몸통 지방량 (kg)", example = "10.5")
+            private BigDecimal trunk;
+
+            @Schema(description = "몸통 상태", example = "표준")
+            private String trunkStatus;
+
+            @Schema(description = "좌측 다리 지방량 (kg)", example = "3.5")
+            private BigDecimal leftLeg;
+
+            @Schema(description = "좌측 다리 상태", example = "표준")
+            private String leftLegStatus;
+
+            @Schema(description = "우측 다리 지방량 (kg)", example = "3.6")
+            private BigDecimal rightLeg;
+
+            @Schema(description = "우측 다리 상태", example = "표준")
+            private String rightLegStatus;
+        }
+
         // ========== 변환 메서드 ==========
 
         public static InBodyDetailResponse from(InBody inBody, User user) {
@@ -500,6 +540,19 @@ public class InBodyDto {
                     .rightLegStatus(determineSegmentalStatus(inBody.getRightLegMuscle(), user.getGender(), "leg"))
                     .build();
 
+            SegmentalFatAnalysis segmentalFat = SegmentalFatAnalysis.builder()
+                    .leftArm(inBody.getLeftArmFat())
+                    .leftArmStatus(determineSegmentalFatStatus(inBody.getLeftArmFat(), user.getGender(), "arm"))
+                    .rightArm(inBody.getRightArmFat())
+                    .rightArmStatus(determineSegmentalFatStatus(inBody.getRightArmFat(), user.getGender(), "arm"))
+                    .trunk(inBody.getTrunkFat())
+                    .trunkStatus(determineSegmentalFatStatus(inBody.getTrunkFat(), user.getGender(), "trunk"))
+                    .leftLeg(inBody.getLeftLegFat())
+                    .leftLegStatus(determineSegmentalFatStatus(inBody.getLeftLegFat(), user.getGender(), "leg"))
+                    .rightLeg(inBody.getRightLegFat())
+                    .rightLegStatus(determineSegmentalFatStatus(inBody.getRightLegFat(), user.getGender(), "leg"))
+                    .build();
+
             return InBodyDetailResponse.builder()
                     .id(inBody.getId())
                     .score(calculateScore(inBody, user))
@@ -512,6 +565,7 @@ public class InBodyDto {
                     .obesityAnalysis(obesity)
                     .weightControl(weightCtrl)
                     .segmentalMuscleAnalysis(segmental)
+                    .segmentalFatAnalysis(segmentalFat)
                     .segmentalFatRatio(BigDecimal.valueOf(0.86))
                     .visceralFatLevel(inBody.getVisceralFatLevel() != null ?
                             inBody.getVisceralFatLevel().intValue() + " (1~20)" : "N/A")
@@ -691,6 +745,34 @@ public class InBodyDto {
                 case "arm" -> { lowerBound = 1.8; upperBound = 2.8; }
                 case "trunk" -> { lowerBound = 18.0; upperBound = 24.0; }
                 case "leg" -> { lowerBound = 6.5; upperBound = 9.0; }
+                default -> { lowerBound = 0; upperBound = Double.MAX_VALUE; }
+            }
+        }
+
+        double val = value.doubleValue();
+        if (val < lowerBound) return "낮음";
+        if (val > upperBound) return "높음";
+        return "표준";
+    }
+
+
+    private static String determineSegmentalFatStatus(BigDecimal value, User.Gender gender, String bodyPart) {
+        if (value == null) return "N/A";
+
+        double lowerBound, upperBound;
+
+        if (gender == User.Gender.M) {
+            switch (bodyPart) {
+                case "arm" -> { lowerBound = 0.8; upperBound = 1.5; }
+                case "trunk" -> { lowerBound = 6.0; upperBound = 12.0; }
+                case "leg" -> { lowerBound = 2.0; upperBound = 4.0; }
+                default -> { lowerBound = 0; upperBound = Double.MAX_VALUE; }
+            }
+        } else {
+            switch (bodyPart) {
+                case "arm" -> { lowerBound = 1.0; upperBound = 2.0; }
+                case "trunk" -> { lowerBound = 8.0; upperBound = 15.0; }
+                case "leg" -> { lowerBound = 3.0; upperBound = 5.5; }
                 default -> { lowerBound = 0; upperBound = Double.MAX_VALUE; }
             }
         }
