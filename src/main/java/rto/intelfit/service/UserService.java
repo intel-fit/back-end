@@ -1,6 +1,8 @@
 package rto.intelfit.service;
 
 import lombok.RequiredArgsConstructor;
+import rto.intelfit.dto.UserOnboardingDto;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -182,6 +184,32 @@ public class UserService {
                 .userId(savedUser.getId())
                 .build();
     }
+
+
+    @Transactional
+    public void completeOnboarding(CustomUserPrincipal principal, UserOnboardingDto dto) {
+
+        User user = findByPrincipal(principal);
+
+        // 이미 온보딩 완료한 경우 차단
+        if (Boolean.TRUE.equals(user.getIsOnboarded())) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "이미 온보딩이 완료된 사용자입니다");
+        }
+
+        user.setGender(dto.getGender());
+        user.setHeight(dto.getHeight());
+        user.setWeight(dto.getWeight());
+        user.setWeightGoal(dto.getWeightGoal());
+        user.setHealthGoal(dto.getHealthGoal());
+        user.setWorkoutDaysPerWeek(dto.getWorkoutDaysPerWeek());
+        user.setExperienceLevel(dto.getExperienceLevel());
+        user.setFitnessConcerns(dto.getFitnessConcerns());
+
+        user.setIsOnboarded(true);
+
+        userRepository.save(user);
+    }
+
 
     @Transactional
     public User updateTokensToDefault(CustomUserPrincipal principal) {

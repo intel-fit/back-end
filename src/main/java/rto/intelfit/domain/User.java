@@ -48,6 +48,11 @@ public class User {
     @Column(name = "weight")
     private Integer weight;
 
+    @Column(name = "is_onboarded", nullable = false)
+    @Builder.Default
+    private Boolean isOnboarded = false;
+
+
     /* ===================== ENUM 컬럼 ===================== */
 
     @Enumerated(EnumType.STRING)

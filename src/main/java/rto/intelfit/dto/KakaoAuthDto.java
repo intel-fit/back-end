@@ -32,6 +32,7 @@ public class KakaoAuthDto {
         private String nickname;
         private String profileImageUrl;
         private boolean isNewUser;
+        private boolean isOnboarded;
     }
 
     @Getter

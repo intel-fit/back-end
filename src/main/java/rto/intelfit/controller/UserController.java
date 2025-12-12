@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import rto.intelfit.dto.LoginDto;
 import rto.intelfit.dto.SignUpDto;
+import rto.intelfit.dto.UserOnboardingDto;
 import rto.intelfit.service.UserService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import rto.intelfit.security.CustomUserPrincipal;
@@ -51,6 +52,23 @@ public class UserController {
         SignUpDto.Response response = userService.signUp(request);
         return ResponseEntity.ok(response);
     }
+
+    @Operation(summary = "온보딩 완료", description = "카카오/소셜 로그인 후 초기 피트니스 정보 입력")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "온보딩 완료"),
+            @ApiResponse(responseCode = "400", description = "이미 온보딩 완료됨"),
+            @ApiResponse(responseCode = "401", description = "인증 필요")
+    })
+    @PostMapping("/onboarding")
+    public ResponseEntity<?> completeOnboarding(
+            @AuthenticationPrincipal CustomUserPrincipal principal,
+            @Valid @RequestBody UserOnboardingDto request
+    ) {
+        userService.completeOnboarding(principal, request);
+        return ResponseEntity.ok("온보딩이 완료되었습니다.");
+    }
+
+
 
     @Operation(summary = "아이디 중복 확인", description = "사용자 ID의 중복 여부를 확인합니다")
     @ApiResponses({
