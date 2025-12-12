@@ -43,7 +43,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/api/auth/kakao/login-url",
             "/api/auth/kakao/login",
             "/api/auth/kakao/callback",
-            "/login/callback",
         
             
             "/api/payments/stripe/webhook",
