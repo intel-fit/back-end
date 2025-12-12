@@ -42,7 +42,8 @@ public class DailyProgressService {
         return calculateProgressByDate(user, today) ;
     }
 
-    /**
+    /**LocalDate workoutDate = first.getWorkoutDate().toLocalDate();
+
      *   특정 날짜의 운동 달성률 계산 및 저장
      * - 해당 날짜의 세션(운동 종목) 중 완료된 비율로 계산
      * - 각 세션의 모든 세트가 완료되어야 해당 세션이 완료된 것으로 간주

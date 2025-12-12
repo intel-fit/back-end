@@ -39,7 +39,6 @@ public class FitnessExerciseCategorySaveService {
     private final ExerciseGoalRepository exerciseGoalRepository;
 
 
-
     @Transactional(readOnly = true)
     public List<FitnessExerciseCategorySaveDto.SessionResponse> getUserGroupedSessions(Long userId) {
         log.info("🔍 유저 ID={} 의 운동 세션 기록 조회 시작", userId);
@@ -64,21 +63,51 @@ public class FitnessExerciseCategorySaveService {
 
 
     public FitnessExerciseCategorySaveDto.DeleteResponse deleteBySessionId(String sessionId) {
+
         log.info("🗑 세션 ID={} 삭제 요청", sessionId);
 
-        List<FitnessExerciseCategorySave> sessionRecords = saveRepository.findBySessionId(sessionId);
+        List<FitnessExerciseCategorySave> sessionRecords =
+                saveRepository.findBySessionId(sessionId);
+
         if (sessionRecords.isEmpty()) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "해당 세션 ID에 해당하는 기록이 없습니다.");
         }
 
-        User user = sessionRecords.get(0).getUser();
-        LocalDate workoutDate = sessionRecords.get(0).getWorkoutDate().toLocalDate();
-        String externalId = sessionRecords.get(0).getExternalId();   // ✅ 운동 ID 추출
+        FitnessExerciseCategorySave first = sessionRecords.get(0);
+        User user = first.getUser();
+        String externalId = first.getExternalId();
 
+        // 🔥 기준 날짜는 무조건 "오늘"
+        LocalDate progressDate = LocalDate.now();
+
+        ExerciseGoal goal =
+                exerciseGoalRepository.findByUser(user).orElse(null);
+
+        if (goal != null && first.isSaved()) {
+
+            long sessionSeconds = first.getExerciseSeconds();
+
+            DailyProgress progress =
+                    dailyProgressRepository
+                            .findByUserIdAndDate(user.getId(), progressDate)
+                            .orElse(null);
+
+            if (progress != null) {
+
+                long updatedSeconds =
+                        progress.getTotalExerciseSeconds() - sessionSeconds;
+
+                progress.setTotalExerciseSeconds(
+                        Math.max(0L, updatedSeconds)
+                );
+
+                log.info("✔ DailyProgress 차감 userId={}, date={}, remainingSeconds={}",
+                        user.getId(), progressDate, progress.getTotalExerciseSeconds());
+            }
+        }
+
+        // 🔥 세션 삭제
         saveRepository.deleteAll(sessionRecords);
-        log.info("✅ 세션 ID={} 삭제 완료 ({}개 세트)", sessionId, sessionRecords.size());
-
-        dailyProgressService.recalculateProgress(user, workoutDate);
 
         return FitnessExerciseCategorySaveDto.DeleteResponse.builder()
                 .sessionId(sessionId)
@@ -86,39 +115,53 @@ public class FitnessExerciseCategorySaveService {
                 .deletedCount(sessionRecords.size())
                 .build();
     }
+
+
+
+
+
+
+
 //
-    public String addWorkoutSession(FitnessExerciseCategorySaveDto.CreateRequest request) {
-        log.info("💪 운동 세션 추가 요청 - userId={}, exerciseId={}, exerciseName={}, sets={}",
-                request.getUserId(), request.getExternalId(), request.getExerciseName(), request.getSets().size());
+public String addWorkoutSession(FitnessExerciseCategorySaveDto.CreateRequest request) {
 
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+    log.info("💪 운동 세션 추가 요청 - userId={}, exerciseName={}, seconds={}",
+            request.getUserId(), request.getExerciseName(), request.getSeconds());
 
-        String sessionId = "S-" + System.currentTimeMillis();
+    User user = userRepository.findById(request.getUserId())
+            .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+    String sessionId = "S-" + System.currentTimeMillis();
+
+    long sessionSeconds = request.getSeconds();
+    double met = resolveMet(request.getCategory());
+
+    List<FitnessExerciseCategorySave> entities =
+            request.getSets().stream()
+                    .map(set -> FitnessExerciseCategorySave.builder()
+                            .user(user)
+                            .sessionId(sessionId)
+                            .externalId(request.getExternalId())
+                            .exerciseName(request.getExerciseName())
+                            .category(request.getCategory())
+                            .setNumber(set.getSetNumber())
+                            .weight(set.getWeight())
+                            .reps(set.getReps())
+                            .workoutDate(request.getWorkoutDate())
+                            .exerciseSeconds(sessionSeconds)
+                            .met(met)
+                            .caloriesBurned(sessionSeconds * met)
+                            .isSaved(false)
+                            .completed(false)
+                            .build())
+                    .toList();
+
+    saveRepository.saveAll(entities);
+
+    return sessionId;
+}
 
 
-        List<FitnessExerciseCategorySave> entities = request.getSets().stream()
-                .map(set -> FitnessExerciseCategorySave.builder()
-                        .user(user)
-                        .sessionId(sessionId)
-                        .externalId(request.getExternalId())
-                        .exerciseName(request.getExerciseName())
-                        .category(request.getCategory())
-                        .setNumber(set.getSetNumber())
-                        .weight(set.getWeight())
-                        .reps(set.getReps())
-                        .workoutDate(request.getWorkoutDate())
-                        .build())
-                .collect(Collectors.toList());
-
-        saveRepository.saveAll(entities);
-        log.info("✅ 세션ID={} 운동 '{}' 저장 완료 (미완료 상태)", sessionId, request.getExerciseName());
-
-        LocalDate workoutDate = request.getWorkoutDate().toLocalDate();
-        dailyProgressService.recalculateProgress(user, workoutDate);
-
-        return sessionId;
-    }
 
 
     public FitnessExerciseCategorySaveDto.SaveResponse saveUnsavedWorkouts(
@@ -252,38 +295,37 @@ public class FitnessExerciseCategorySaveService {
 
 
 
-    public FitnessExerciseCategorySaveDto.ToggleResponse toggleSessionCompletion(String sessionId) {
-        log.info("🔄 세션 완료 상태 토글 요청 - sessionId={}", sessionId);
+public FitnessExerciseCategorySaveDto.ToggleResponse toggleSessionCompletion(String sessionId) {
 
-        List<FitnessExerciseCategorySave> sessionRecords = saveRepository.findBySessionId(sessionId);
-        if (sessionRecords.isEmpty()) {
-            throw new BusinessException(ErrorCode.NOT_FOUND, "해당 세션 ID에 해당하는 기록이 없습니다.");
-        }
+    List<FitnessExerciseCategorySave> sessionRecords =
+            saveRepository.findBySessionId(sessionId);
 
-        // 현재 상태 확인 (하나라도 미완료면 전체를 완료로, 모두 완료면 전체를 미완료로)
-        boolean hasIncomplete = sessionRecords.stream().anyMatch(record -> !record.isCompleted());
-        boolean newCompletionStatus = hasIncomplete;  // 미완료가 있으면 → 완료로, 모두 완료면 → 미완료로
-
-        // 모든 세트의 완료 상태 변경
-        sessionRecords.forEach(record -> record.setCompleted(newCompletionStatus));
-        saveRepository.saveAll(sessionRecords);
-
-        log.info("✅ 세션 ID={} 완료 상태 변경: {} ({}개 세트)", 
-                sessionId, newCompletionStatus ? "완료" : "미완료", sessionRecords.size());
-
-        // 달성률 재계산
-        User user = sessionRecords.get(0).getUser();
-        LocalDate workoutDate = sessionRecords.get(0).getWorkoutDate().toLocalDate();
-        dailyProgressService.recalculateProgress(user, workoutDate);
-
-        return FitnessExerciseCategorySaveDto.ToggleResponse.builder()
-                .sessionId(sessionId)
-                .completed(newCompletionStatus)
-                .affectedSets(sessionRecords.size())
-                .build();
+    if (sessionRecords.isEmpty()) {
+        throw new BusinessException(ErrorCode.NOT_FOUND, "해당 세션 ID에 해당하는 기록이 없습니다.");
     }
 
-    @Transactional
+    boolean hasIncomplete =
+            sessionRecords.stream().anyMatch(r -> !r.isCompleted());
+
+    boolean newStatus = hasIncomplete;
+
+    sessionRecords.forEach(r -> r.setCompleted(newStatus));
+    saveRepository.saveAll(sessionRecords);
+
+    User user = sessionRecords.get(0).getUser();
+    LocalDate date = sessionRecords.get(0).getWorkoutDate().toLocalDate();
+
+    // ✅ 달성률 재계산 복구
+    dailyProgressService.recalculateProgress(user, date);
+
+    return FitnessExerciseCategorySaveDto.ToggleResponse.builder()
+            .sessionId(sessionId)
+            .completed(newStatus)
+            .affectedSets(sessionRecords.size())
+            .build();
+}
+
+@Transactional
     public void addDailyExerciseSeconds(Long userId, long seconds) {
 
         User user = userRepository.findById(userId)
@@ -339,75 +381,86 @@ public class FitnessExerciseCategorySaveService {
     }
 
 
-    public FitnessExerciseCategorySaveDto.SaveResponse saveUnsavedWorkoutsAndSendFeedback(
-            Long userId,
-            String saveTitle,
-            List<Double> intensityList,
-            List<String> feedbackList,
-            LocalDate date,
-            long seconds
-    ) {
-        // 🔥 user 조회
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+public FitnessExerciseCategorySaveDto.SaveResponse saveUnsavedWorkoutsAndSendFeedback(
+        Long userId,
+        String saveTitle,
+        List<Double> intensityList,
+        List<String> feedbackList,
+        LocalDate date
 
-        // 원래 로직
-        FitnessExerciseCategorySaveDto.SaveResponse response =
-                saveUnsavedWorkouts(userId, saveTitle, date);
+) {
+    User user = userRepository.findById(userId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        if (response.getSessionIds() == null || response.getSessionIds().isEmpty()) {
-            return response;
-        }
+    // 1️⃣ 저장 전 unsaved 세션 확보
+    List<FitnessExerciseCategorySave> unsavedRows =
+            saveRepository.findByUserIdAndIsSavedFalse(userId);
 
-        List<FitnessExerciseCategorySave> records =
-                saveRepository.findByUserIdAndSessionIdIn(userId, response.getSessionIds());
-
-        ExerciseFeedbackDto.Request req =
-                buildExerciseFeedbackRequest(userId, saveTitle, records, intensityList, feedbackList);
-
-        aiServerService.sendExerciseFeedback(req);
-
-        // 🔥 DailyProgress 조회 혹은 생성 (user 사용)
-        DailyProgress progress = dailyProgressRepository.findByUserIdAndDate(userId, date)
-                .orElseGet(() -> dailyProgressRepository.save(
-                        DailyProgress.builder()
-                                .user(user)
-                                .date(date)
-                                .totalExerciseSeconds(0L)
-                                .totalCalorie(0.0)
-                                .exerciseRate(0.0)
-                                .build()
-                ));
-
-        // 🔥 운동시간 누적
-        progress.setTotalExerciseSeconds(progress.getTotalExerciseSeconds() + seconds);
-
-        // 3) 목표 조회 (없어도 예외 던지지 않음)
-        ExerciseGoal goal = exerciseGoalRepository.findByUser(user).orElse(null);
-
-        double rate = 0.0;
-
-        if (goal != null) {
-            long requiredSeconds = parseDurationToSeconds(goal.getDurationPerSession());
-            rate = ((double) progress.getTotalExerciseSeconds() / requiredSeconds) * 100.0;
-            rate = Math.min(rate, 100.0);
-        }
-
-        // 4) 달성률 저장
-        progress.setExerciseRate(rate);
-        dailyProgressRepository.save(progress);
-
-
-        log.info("🔥 DailyProgress 업데이트 완료: userId={}, seconds={}, rate={}",
-                userId, progress.getTotalExerciseSeconds(), rate);
-
-        return response;
+    if (unsavedRows.isEmpty()) {
+        throw new BusinessException(ErrorCode.NOT_FOUND, "저장할 운동 기록이 없습니다.");
     }
 
+    // 2️⃣ sessionId 기준 중복 제거 후 시간 합산
+    long totalSessionSeconds =
+            unsavedRows.stream()
+                    .collect(Collectors.groupingBy(FitnessExerciseCategorySave::getSessionId))
+                    .values()
+                    .stream()
+                    .mapToLong(list -> list.get(0).getExerciseSeconds())
+                    .sum();
+
+    // 3️⃣ 저장 처리
+    FitnessExerciseCategorySaveDto.SaveResponse response =
+            saveUnsavedWorkouts(userId, saveTitle, date);
+
+    // 4️⃣ DailyProgress 조회 또는 생성
+    DailyProgress progress =
+            dailyProgressRepository.findByUserIdAndDate(userId, date)
+                    .orElseGet(() -> dailyProgressRepository.save(
+                            DailyProgress.builder()
+                                    .user(user)
+                                    .date(date)
+                                    .totalExerciseSeconds(0L)
+                                    .totalCalorie(0.0)
+                                    .exerciseRate(0.0)
+                                    .build()
+                    ));
+
+    // 5️⃣ 운동 시간 누적
+    progress.setTotalExerciseSeconds(
+            progress.getTotalExerciseSeconds() + totalSessionSeconds
+    );
+
+    // 6️⃣ 달성률 재계산
+    ExerciseGoal goal = exerciseGoalRepository.findByUser(user).orElse(null);
+    if (goal != null) {
+        long requiredSeconds = parseDurationToSeconds(goal.getDurationPerSession());
+        double rate = Math.min(
+                ((double) progress.getTotalExerciseSeconds() / requiredSeconds) * 100.0,
+                100.0
+        );
+        progress.setExerciseRate(rate);
+    }
+
+    dailyProgressRepository.save(progress);
+
+    // 7️⃣ AI 피드백 전송
+    List<FitnessExerciseCategorySave> records =
+            saveRepository.findByUserIdAndSessionIdIn(userId, response.getSessionIds());
+
+    ExerciseFeedbackDto.Request req =
+            buildExerciseFeedbackRequest(userId, saveTitle, records, intensityList, feedbackList);
+
+    aiServerService.sendExerciseFeedback(req);
+
+    return response;
+}
 
 
 
-    private ExerciseFeedbackDto.Request buildExerciseFeedbackRequest(
+
+
+private ExerciseFeedbackDto.Request buildExerciseFeedbackRequest(
             Long userId,
             String saveTitle,
             List<FitnessExerciseCategorySave> records,
@@ -475,5 +528,33 @@ public class FitnessExerciseCategorySaveService {
                 .items(items)
                 .build();
     }
+    private static final Map<String, List<String>> BODY_PART_MAP = Map.of(
+            "가슴", List.of("가슴", "흉근", "대흉근"),
+            "등", List.of("등", "광배근", "승모근", "척추기립근"),
+            "어깨", List.of("어깨", "삼각근", "전면삼각근", "측면삼각근", "후면삼각근"),
+            "팔", List.of("팔", "이두", "삼두", "전완근", "이두근", "삼두근"),
+            "하체", List.of("하체", "허벅지", "햄스트링", "종아리", "둔근", "대퇴사두근", "엉덩이"),
+            "복부", List.of("복부", "복근", "복직근", "복사근", "코어")
+    );
+
+    private static final Map<String, Double> MET_MAP = Map.of(
+            "가슴", 6.0,
+            "등", 6.5,
+            "어깨", 5.5,
+            "팔", 5.0,
+            "하체", 7.5,
+            "복부", 4.5
+    );
+    private double resolveMet(String rawCategory) {
+        if (rawCategory == null) return 5.0; // default
+
+        for (Map.Entry<String, List<String>> entry : BODY_PART_MAP.entrySet()) {
+            if (entry.getValue().stream().anyMatch(rawCategory::contains)) {
+                return MET_MAP.get(entry.getKey());
+            }
+        }
+        return 5.0; // fallback
+    }
+
 
 }

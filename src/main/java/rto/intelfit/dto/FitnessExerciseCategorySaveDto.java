@@ -58,6 +58,10 @@ public class FitnessExerciseCategorySaveDto {
 
         @Schema(description = "세트 목록")
         private List<SetDetail> sets;
+
+        @Schema(description = "운동 기록에 소요된 시간")
+        private long seconds;
+
     }
 
     // ✅ 세션 단위 조회 응답 DTO
@@ -149,7 +153,6 @@ public class FitnessExerciseCategorySaveDto {
         private List<Double> intensity;
         private List<String> feedback;
 
-        private long seconds;   // ⭐ 추가: 오늘 운동 시간(초)
     }
 
     @Getter

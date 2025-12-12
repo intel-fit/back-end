@@ -93,7 +93,7 @@ public class FitnessExerciseCategorySaveController {
             @RequestBody FitnessExerciseCategorySaveDto.SaveRequest request
     ) {
         log.info("💾 운동 저장 API 호출 userId={}, title={}, date={}, seconds={}",
-                request.getUserId(), request.getSaveTitle(), request.getDate(), request.getSeconds());
+                request.getUserId(), request.getSaveTitle(), request.getDate());
 
         LocalDate date = LocalDate.parse(request.getDate());
 
@@ -109,12 +109,9 @@ public class FitnessExerciseCategorySaveController {
                         request.getSaveTitle(),
                         request.getIntensity(),
                         request.getFeedback(),
-                        date,
-                        request.getSeconds()
+                        date
                 );
 
-        // 🔥 오늘 운동시간 누적
-        saveService.addDailyExerciseSeconds(request.getUserId(), request.getSeconds());
 
         return ResponseEntity.ok(response);
     }
