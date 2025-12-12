@@ -51,39 +51,15 @@ public class KakaoAuthController {
             HttpServletResponse response
     ) throws IOException {
 
-        log.info("카카오 콜백 요청");
-
         KakaoAuthDto.LoginResponse loginResponse =
                 kakaoAuthService.login(KakaoAuthDto.LoginRequest.of(code));
 
-        // 1️⃣ Access Token 쿠키
-        ResponseCookie accessCookie = ResponseCookie.from(
-                        "accessToken", loginResponse.getAccessToken())
-                .httpOnly(true)
-                .secure(true)
-                .path("/")
-                .maxAge(60 * 60) // 1시간
-                .sameSite("None")
-                .build();
-
-        // 2️⃣ Refresh Token 쿠키
-        ResponseCookie refreshCookie = ResponseCookie.from(
-                        "refreshToken", loginResponse.getRefreshToken())
-                .httpOnly(true)
-                .secure(true)
-                .path("/")
-                .maxAge(60 * 60 * 24 * 14) // 14일
-                .sameSite("None")
-                .build();
-
-        response.addHeader("Set-Cookie", accessCookie.toString());
-        response.addHeader("Set-Cookie", refreshCookie.toString());
-
-        // 3️⃣ 상태값만 redirect
         String redirectUrl =
-                "https://www.intelfits.com/login/callback"
+                "exp://exp.host/@intelfit/intelfit-mobile/login/callback"
                         + "?isNewUser=" + loginResponse.isNewUser()
-                        + "&isOnboarded=" + loginResponse.isOnboarded();
+                        + "&isOnboarded=" + loginResponse.isOnboarded()
+                        + "&accessToken=" + URLEncoder.encode(loginResponse.getAccessToken(), StandardCharsets.UTF_8)
+                        + "&refreshToken=" + URLEncoder.encode(loginResponse.getRefreshToken(), StandardCharsets.UTF_8);
 
         response.sendRedirect(redirectUrl);
     }
