@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -16,6 +17,9 @@ import org.springframework.web.multipart.MultipartFile;
 import rto.intelfit.dto.InBodyDto;
 import rto.intelfit.security.CustomUserPrincipal;
 import rto.intelfit.service.InBodyService;
+
+import java.time.LocalDate;
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -106,6 +110,69 @@ public class InBodyController {
                 userPrincipal.getUserId(), inBodyId);
 
         InBodyDto.InBodyUpdateResponse response = inBodyService.updateInBody(userPrincipal, inBodyId, request);
+        return ResponseEntity.ok(response);
+    }
+
+
+
+    /**
+     * 4. 인바디 기록 목록 조회 (날짜별)
+     */
+    @Operation(summary = "인바디 기록 목록 조회",
+            description = "로그인한 사용자의 인바디 기록 목록을 조회합니다")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "인바디 목록 조회 성공"),
+            @ApiResponse(responseCode = "401", description = "인증이 필요합니다")
+    })
+    @GetMapping
+    public ResponseEntity<List<InBodyDto.InBodySummaryResponse>> getInBodyList(
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
+        log.info("인바디 목록 조회 요청 - 사용자 ID: {}", userPrincipal.getUserId());
+
+        List<InBodyDto.InBodySummaryResponse> response = inBodyService.getInBodyList(userPrincipal);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 5. 특정 인바디 기록 상세 조회
+     */
+    @Operation(summary = "특정 인바디 기록 조회",
+            description = "인바디 ID로 상세 정보를 조회합니다")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "인바디 조회 성공"),
+            @ApiResponse(responseCode = "401", description = "인증이 필요합니다"),
+            @ApiResponse(responseCode = "403", description = "본인의 기록만 조회할 수 있습니다"),
+            @ApiResponse(responseCode = "404", description = "인바디 기록을 찾을 수 없습니다")
+    })
+    @GetMapping("/{inBodyId}")
+    public ResponseEntity<InBodyDto.InBodyDetailResponse> getInBodyById(
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal,
+            @PathVariable Long inBodyId) {
+        log.info("인바디 상세 조회 요청 - 사용자 ID: {}, 인바디 ID: {}",
+                userPrincipal.getUserId(), inBodyId);
+
+        InBodyDto.InBodyDetailResponse response = inBodyService.getInBodyById(userPrincipal, inBodyId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 6. 날짜로 인바디 기록 조회
+     */
+    @Operation(summary = "날짜별 인바디 기록 조회",
+            description = "특정 날짜의 인바디 기록을 조회합니다")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "인바디 조회 성공"),
+            @ApiResponse(responseCode = "401", description = "인증이 필요합니다"),
+            @ApiResponse(responseCode = "404", description = "해당 날짜의 인바디 기록이 없습니다")
+    })
+    @GetMapping("/date/{date}")
+    public ResponseEntity<InBodyDto.InBodyDetailResponse> getInBodyByDate(
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal,
+            @PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
+        log.info("날짜별 인바디 조회 요청 - 사용자 ID: {}, 날짜: {}",
+                userPrincipal.getUserId(), date);
+
+        InBodyDto.InBodyDetailResponse response = inBodyService.getInBodyByDate(userPrincipal, date);
         return ResponseEntity.ok(response);
     }
 }

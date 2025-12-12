@@ -16,6 +16,7 @@ import rto.intelfit.security.CustomUserPrincipal;
 import rto.intelfit.service.ocr.InBodyOcrPipeline;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -91,6 +92,59 @@ public class InBodyService {
                 user.getUserId(), latestInBody.getMeasurementDate());
 
         return InBodyDto.InBodyDetailResponse.from(latestInBody, user);
+    }
+
+
+
+
+
+    /**
+     * 인바디 기록 목록 조회
+     */
+    public List<InBodyDto.InBodySummaryResponse> getInBodyList(CustomUserPrincipal userPrincipal) {
+        User user = findUserByPrincipal(userPrincipal);
+
+        List<InBody> inBodyList = inBodyRepository.findByUserOrderByMeasurementDateDesc(user);
+
+        log.info("인바디 목록 조회 - 사용자 ID: {}, 총 {}건", user.getUserId(), inBodyList.size());
+
+        return inBodyList.stream()
+                .map(InBodyDto.InBodySummaryResponse::from)
+                .toList();
+    }
+
+    /**
+     * 특정 인바디 기록 상세 조회
+     */
+    public InBodyDto.InBodyDetailResponse getInBodyById(CustomUserPrincipal userPrincipal, Long inBodyId) {
+        User user = findUserByPrincipal(userPrincipal);
+
+        InBody inBody = inBodyRepository.findById(inBodyId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "인바디 기록을 찾을 수 없습니다"));
+
+        // 본인의 기록인지 확인
+        if (!inBody.getUser().getId().equals(user.getId())) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED, "본인의 인바디 기록만 조회할 수 있습니다");
+        }
+
+        log.info("인바디 상세 조회 - 사용자 ID: {}, 인바디 ID: {}", user.getUserId(), inBodyId);
+
+        return InBodyDto.InBodyDetailResponse.from(inBody, user);
+    }
+
+    /**
+     * 날짜별 인바디 기록 조회
+     */
+    public InBodyDto.InBodyDetailResponse getInBodyByDate(CustomUserPrincipal userPrincipal, LocalDate date) {
+        User user = findUserByPrincipal(userPrincipal);
+
+        InBody inBody = inBodyRepository.findByUserAndMeasurementDate(user, date)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INPUT_VALUE,
+                        "해당 날짜(" + date + ")의 인바디 기록이 없습니다"));
+
+        log.info("날짜별 인바디 조회 - 사용자 ID: {}, 날짜: {}", user.getUserId(), date);
+
+        return InBodyDto.InBodyDetailResponse.from(inBody, user);
     }
 
     /**
