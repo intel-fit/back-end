@@ -50,25 +50,19 @@ public class DailyProgressService {
      */
     @Transactional
     public DailyProgressDto calculateProgressByDate(User user, LocalDate date) {
-        // 해당 날짜의 전체 세션 수
+
+        // 기존 세션 기반 계산 (원래 있는 로직 그대로)
         long totalSessions = saveRepository.countTotalSessionsByDate(user, date);
-        
-        // 해당 날짜의 완료된 세션 수
         long completedSessions = saveRepository.countCompletedSessionsByDate(user, date);
 
-        log.debug("운동 달성률 계산 - 날짜: {}, 전체 세션: {}, 완료 세션: {}", 
-                date, totalSessions, completedSessions);
-
-        // 운동 달성률 계산
         double exerciseRate;
         if (totalSessions == 0) {
             exerciseRate = 0.0;
         } else {
-            // (완료된 세션 / 전체 세션) * 100
             exerciseRate = Math.round(((double) completedSessions / totalSessions) * 1000.0) / 10.0;
         }
 
-        // 해당 날짜 섭취 칼로리 합산
+        // 칼로리 합산
         BigDecimal totalCalories = mealRepository
                 .findByUserAndMealDateOrderByMealTypeAsc(user, date)
                 .stream()
@@ -76,19 +70,24 @@ public class DailyProgressService {
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // DB에 저장 또는 업데이트
-        DailyProgress progress = dailyProgressRepository.findByUserIdAndDate(user.getId(), date)
-                .orElseGet(() -> {
-                    DailyProgress newProgress = new DailyProgress();
-                    newProgress.setUser(user);
-                    newProgress.setDate(date);
-                    newProgress.setExerciseRate(0.0);
-                    newProgress.setTotalCalorie(0.0);
-                    return newProgress;
-                });
+        /**
+         *  🔥 핵심 수정: 이 부분
+         *  - 기존 findByUserIdAndDate() → 경쟁 상태 발생 가능
+         *  - findByUserIdAndDateForUpdate() 사용하면 DB가 레코드를 락 걸고 보장
+         */
+        DailyProgress progress =
+                dailyProgressRepository.findByUserIdAndDateForUpdate(user.getId(), date)
+                        .orElseGet(() -> {
+                            DailyProgress p = new DailyProgress();
+                            p.setUser(user);
+                            p.setDate(date);
+                            return p;
+                        });
 
         progress.setExerciseRate(exerciseRate);
         progress.setTotalCalorie(totalCalories.doubleValue());
+
+        // 저장 (INSERT or UPDATE)
         dailyProgressRepository.save(progress);
 
         log.info("DailyProgress 저장 - userId: {}, date: {}, rate: {}%, kcal: {}, 완료세션: {}/{}",

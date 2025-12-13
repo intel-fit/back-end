@@ -20,16 +20,16 @@ import java.util.List;
 public class TempMealController {
 
     private final TempMealService tempMealService;
-
     @PostMapping("/daily")
     public ResponseEntity<?> generateDailyPaid(
             @AuthenticationPrincipal CustomUserPrincipal principal,
             @RequestBody TempMealDto.DailyRequest request
     ) {
-        return ResponseEntity.ok(
-                tempMealService.generateDailyPaid(principal, request)
-        );
+        Long id = tempMealService.generateDailyPaid(principal, request);
+        return ResponseEntity.ok("TEMP Daily 생성 완료. tempBundleId=" + id);
     }
+
+
     @PostMapping("/weekly")
     public ResponseEntity<?> generateWeekly(
             @AuthenticationPrincipal CustomUserPrincipal principal,
