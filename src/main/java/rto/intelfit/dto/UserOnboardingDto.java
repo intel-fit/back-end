@@ -14,14 +14,20 @@ import java.time.LocalDate;
 public class UserOnboardingDto {
 
     @NotNull
+    private LocalDate birthDate;
+
+    @NotNull
+    private Boolean agreePrivacy;
+
+    @NotNull
+    private Boolean agreeTerms;
+
+    @NotNull
     private User.Gender gender;
 
     @NotNull
     @Min(100) @Max(250)
     private Integer height;
-
-    @NotNull
-    private LocalDate birthDate;
 
     @NotNull
     @Min(30) @Max(200)
@@ -36,10 +42,4 @@ public class UserOnboardingDto {
 
     @Size(max = 20)
     private String workoutDaysPerWeek;
-
-    @NotNull
-    private User.ExperienceLevel experienceLevel;
-
-    @Size(max = 500)
-    private String fitnessConcerns;
 }
