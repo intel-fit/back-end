@@ -17,6 +17,7 @@ public interface FitnessExerciseCategorySaveRepository extends JpaRepository<Fit
     List<FitnessExerciseCategorySave> findByUserOrderByWorkoutDateDesc(User user);
 
     List<FitnessExerciseCategorySave> findByUserIdAndIsSavedTrueAndDateOrderBySaveTitleAsc(Long userId, LocalDate date);
+    List<FitnessExerciseCategorySave> findByUserIdAndDateOrderBySessionIdAsc(Long userId, LocalDate date);
 
 
     List<FitnessExerciseCategorySave> findByUserIdAndSessionIdIn(Long userId, List<String> sessionIds);

@@ -49,6 +49,30 @@ public class FitnessExerciseCategorySaveController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "하루 운동 소모 칼로리 조회",
+            description = "특정 날짜의 운동 세션별 소모 칼로리 합산 및 총합을 반환합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "404", description = "유저 없음")
+    })
+    @GetMapping("/{userId}/calories/{date}")
+    public ResponseEntity<FitnessExerciseCategorySaveDto.DailyCaloriesResponse>
+    getDailyCalories(
+            @PathVariable Long userId,
+            @PathVariable String date
+    ) {
+
+        LocalDate parsed = LocalDate.parse(date);
+
+        log.info("🔥 하루 운동 칼로리 조회: userId={}, date={}", userId, parsed);
+
+        FitnessExerciseCategorySaveDto.DailyCaloriesResponse response =
+                saveService.getDailyCalories(userId, parsed);
+
+        return ResponseEntity.ok(response);
+    }
+
+
     @Operation(summary = "운동 기록 세션 삭제",
             description = "세션 ID를 기준으로 해당 운동 기록(모든 세트)을 삭제합니다.")
     @ApiResponses({

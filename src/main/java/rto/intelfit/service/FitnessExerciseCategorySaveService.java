@@ -60,6 +60,59 @@ public class FitnessExerciseCategorySaveService {
         log.info("✅ 유저 ID={} 의 운동 세션 {}개 반환", userId, result.size());
         return result;
     }
+    @Transactional(readOnly = true)
+    public FitnessExerciseCategorySaveDto.DailyCaloriesResponse getDailyCalories(Long userId, LocalDate date) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 해당 날짜의 모든 운동 기록 불러오기
+        List<FitnessExerciseCategorySave> records =
+                saveRepository.findByUserIdAndDateOrderBySessionIdAsc(userId, date);
+
+        if (records.isEmpty()) {
+            return FitnessExerciseCategorySaveDto.DailyCaloriesResponse.builder()
+                    .date(date)
+                    .totalCalories(0)
+                    .sessions(List.of())
+                    .build();
+        }
+
+        // 🔥 sessionId 기준 그룹핑
+        Map<String, List<FitnessExerciseCategorySave>> grouped =
+                records.stream()
+                        .collect(Collectors.groupingBy(FitnessExerciseCategorySave::getSessionId));
+
+        // 🔥 session별 칼로리 합산
+        List<FitnessExerciseCategorySaveDto.DailyCaloriesResponse.SessionCalories> sessionList =
+                grouped.entrySet().stream()
+                        .map(entry -> {
+
+                            // 🔥 세션 내 첫 번째 세트의 칼로리만 사용
+                            double sessionCalories = entry.getValue().stream()
+                                    .findFirst()
+                                    .map(FitnessExerciseCategorySave::getCaloriesBurned)
+                                    .orElse(0.0);
+
+                            return FitnessExerciseCategorySaveDto.DailyCaloriesResponse.SessionCalories.builder()
+                                    .sessionId(entry.getKey())
+                                    .sessionCalories(sessionCalories)
+                                    .build();
+                        })
+                        .toList();
+
+
+        double dayTotal = sessionList.stream()
+                .mapToDouble(FitnessExerciseCategorySaveDto.DailyCaloriesResponse.SessionCalories::getSessionCalories)
+                .sum();
+
+        return FitnessExerciseCategorySaveDto.DailyCaloriesResponse.builder()
+                .date(date)
+                .totalCalories(dayTotal)
+                .sessions(sessionList)
+                .build();
+    }
+
 
 
     public FitnessExerciseCategorySaveDto.DeleteResponse deleteBySessionId(String sessionId) {

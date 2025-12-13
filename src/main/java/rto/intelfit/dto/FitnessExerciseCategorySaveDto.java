@@ -3,6 +3,7 @@ package rto.intelfit.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import rto.intelfit.domain.FitnessExerciseCategorySave;
+import java.time.LocalDate;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -32,6 +33,24 @@ public class FitnessExerciseCategorySaveDto {
         private Integer reps;
     }
 
+    @Getter
+    @Setter
+    @Builder
+    public static class DailyCaloriesResponse {
+
+        private LocalDate date;
+        private double totalCalories;
+
+        private List<SessionCalories> sessions;
+
+        @Getter
+        @Setter
+        @Builder
+        public static class SessionCalories {
+            private String sessionId;
+            private double sessionCalories;
+        }
+    }
 
     // ✅ 운동 기록 추가 요청 DTO
     @Getter
