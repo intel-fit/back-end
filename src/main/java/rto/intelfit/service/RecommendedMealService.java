@@ -433,6 +433,9 @@ public class RecommendedMealService {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "저장할 식단 정보가 없습니다");
         }
 
+        // 중복 저장 방지를 위해 기존 추천 번들을 삭제하고 최신 번들을 등록
+        recommendedMealPlanRepository.deleteAllByUser(user);
+
         String bundleId = UUID.randomUUID().toString();
 
         List<RecommendedMealPlan> entities = new ArrayList<>();

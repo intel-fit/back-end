@@ -21,6 +21,7 @@ import rto.intelfit.repository.TempMealRepo;
 import rto.intelfit.repository.TempFoodRepo;
 
 import rto.intelfit.repository.UserRepository;
+import rto.intelfit.repository.RecommendedMealPlanRepository;
 import rto.intelfit.security.CustomUserPrincipal;
 import rto.intelfit.exception.BusinessException;
 import rto.intelfit.exception.ErrorCode;
@@ -43,6 +44,7 @@ public class TempMealService {
     private final TempFoodRepo foodRepo;
 
     private final UserRepository userRepository;
+    private final RecommendedMealPlanRepository recommendedMealPlanRepository;
     private final AIServerService aiServerService;
 
     // -----------------------------------------------------------
@@ -388,6 +390,9 @@ public class TempMealService {
 
         List<TempMealPlan> tempPlans =
                 planRepo.findByTempBundleId(bundle.getId());
+
+        // 최신 추천 번들만 유지: 기존 저장본 제거 후 새 번들로 교체
+        recommendedMealPlanRepository.deleteAllByUser(user);
 
         String bundleId = UUID.randomUUID().toString();
 

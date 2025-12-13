@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -231,23 +232,46 @@ public class ExerciseRecommendationService {
 
     @Transactional
     public void saveAiRecommendedExercises(User user, LocalDate date, List<Map<String, Object>> exercises) {
-
-        // 기존 값 삭제 여부는 정책에 따라 선택
-        // userRecommendedExerciseRepository.deleteByUserAndExerciseDate(user, date);
-
+        Map<String, Map<String, Object>> uniqueExercises = new LinkedHashMap<>();
         for (Map<String, Object> ex : exercises) {
-            UserRecommendedExercise entity = UserRecommendedExercise.builder()
-                    .user(user)
-                    .exerciseDate(date)   // ⬅⬅⬅ 추가됨
-                    .exerciseId((String) ex.get("exerciseId"))
-                    .name((String) ex.get("name"))
-                    .target((String) ex.get("target"))
-                    .build();
-
-            userRecommendedExerciseRepository.save(entity);
+            String exerciseId = (String) ex.get("exerciseId");
+            String dedupKey = exerciseId != null
+                    ? exerciseId
+                    : (String.valueOf(ex.get("name")) + "|" + String.valueOf(ex.get("target")));
+            uniqueExercises.putIfAbsent(dedupKey, ex);
         }
 
-        log.info("💾 AI 운동 추천 {}개 저장 완료 - userId={}, date={}", exercises.size(), user.getUserId(), date);
+        List<UserRecommendedExercise> entities = new ArrayList<>();
+        for (Map<String, Object> ex : uniqueExercises.values()) {
+            String exerciseId = (String) ex.get("exerciseId");
+            if (exerciseId == null || exerciseId.isBlank()) {
+                log.warn("⚠️ exerciseId 가 없어 저장을 건너뜁니다 - userId={}, date={}, data={}",
+                        user.getUserId(), date, ex);
+                continue;
+            }
+
+            boolean alreadyExists = userRecommendedExerciseRepository
+                    .existsByUserAndExerciseDateAndExerciseId(user, date, exerciseId);
+            if (alreadyExists) {
+                log.info("🚫 중복 운동 추천 감지 - userId={}, date={}, exerciseId={}", user.getUserId(), date, exerciseId);
+                continue;
+            }
+
+            entities.add(UserRecommendedExercise.builder()
+                    .user(user)
+                    .exerciseDate(date)
+                    .exerciseId(exerciseId)
+                    .name((String) ex.get("name"))
+                    .target((String) ex.get("target"))
+                    .build());
+        }
+
+        if (!entities.isEmpty()) {
+            userRecommendedExerciseRepository.saveAll(entities);
+        }
+
+        log.info("💾 AI 운동 추천 저장 요청 - userId={}, date={}, 입력={}, 신규 저장={}",
+                user.getUserId(), date, exercises.size(), entities.size());
     }
 
 
