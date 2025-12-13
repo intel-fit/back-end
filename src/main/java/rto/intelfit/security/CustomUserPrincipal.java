@@ -14,8 +14,10 @@ import java.util.Collections;
 @AllArgsConstructor
 public class CustomUserPrincipal implements UserDetails {
 
+
     private Long userPk;          // DB PK
     private String userId;        // business userId
+
     private String name;
     private String email;
     private String password;
@@ -44,7 +46,12 @@ public class CustomUserPrincipal implements UserDetails {
 
     @Override
     public String getUsername() {
-        return userId; // ⭐ userPk 말고 userId 유지 (JWT/로그인 안정성)
+        return String.valueOf(userPk);
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
     }
 
     @Override public boolean isAccountNonExpired() { return true; }

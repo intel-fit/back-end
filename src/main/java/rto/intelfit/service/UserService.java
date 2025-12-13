@@ -48,64 +48,64 @@ public class UserService {
     private static final int TEMP_PASSWORD_LENGTH = 6;
     private static final int TEMP_PASSWORD_EXPIRE_MINUTES = 30;
 
-//    @Transactional
-//    public void createTestUserIfNotExists() {
-//
-//        String testUserId = "testuser";
-//        String testEmail = "test@example.com";
-//
-//        // 이미 있으면 AI 서버 동기화만 보장
-//        if (userRepository.existsByUserId(testUserId)) {
-//            User existing = userRepository.findByUserId(testUserId).get();
-//            log.info("✔ 테스트 유저 이미 존재: {} → AI 서버와 동기화만 수행", testUserId);
-//
-//            aiServerService.createUserOnAI(existing);
-//            return;
-//        }
-//
-//        // 비밀번호 암호화
-//        String encodedPassword = passwordEncoder.encode("Test1234!");
-//
-//        User testUser = User.builder()
-//                .userId(testUserId)
-//                .name("테스트 유저")
-//                .email(testEmail)
-//                .emailVerified(true)
-//                .password(encodedPassword)
-//
-//                // 필수 정보 기본값 설정
-//                .birthDate(LocalDate.of(1990, 1, 1))
-//                .gender(User.Gender.M)
-//                .height(170)
-//                .weight(60)
-//                .weightGoal(60)
-//                .healthGoal(User.HealthGoal.MAINTENANCE)
-//                .experienceLevel(User.ExperienceLevel.BEGINNER)
-//                .workoutDaysPerWeek("3-4일")
-//
-//                // 약관 동의 ..
-//                .agreePrivacy(true)
-//                .agreeTerms(true)
-//                .agreedAt(LocalDateTime.now())
-//
-//                // 기타 정보
-//                .fitnessConcerns("테스트 계정")
-//                .membershipType(User.MembershipType.PREMIUM)
-//                .build();
-//
-//        // DB 저장
-//        User saved = userRepository.save(testUser);
-//
-//        log.info("🎉 테스트 유저 자동 생성 완료: {}", testUserId);
-//
-//        // AI 서버 동기화
-//        try {
-//            aiServerService.createUserOnAI(saved);
-//            log.info("🤖 AI 서버 테스트 유저 동기화 완료");
-//        } catch (Exception e) {
-//            log.warn("⚠ AI 테스트 유저 동기화 실패: {}", e.getMessage());
-//        }
-//    }
+    @Transactional
+    public void createTestUserIfNotExists() {
+
+        String testUserId = "testuser";
+        String testEmail = "test@example.com";
+
+        // 이미 있으면 AI 서버 동기화만 보장
+        if (userRepository.existsByUserId(testUserId)) {
+            User existing = userRepository.findByUserId(testUserId).get();
+            log.info("✔ 테스트 유저 이미 존재: {} → AI 서버와 동기화만 수행", testUserId);
+
+            aiServerService.createUserOnAI(existing);
+            return;
+        }
+
+        // 비밀번호 암호화
+        String encodedPassword = passwordEncoder.encode("Test1234!");
+
+        User testUser = User.builder()
+                .userId(testUserId)
+                .name("테스트 유저")
+                .email(testEmail)
+                .emailVerified(true)
+                .password(encodedPassword)
+
+                // 필수 정보 기본값 설정
+                .birthDate(LocalDate.of(1990, 1, 1))
+                .gender(User.Gender.M)
+                .height(170)
+                .weight(60)
+                .weightGoal(60)
+                .healthGoal(User.HealthGoal.MAINTENANCE)
+                .experienceLevel(User.ExperienceLevel.BEGINNER)
+                .workoutDaysPerWeek("3-4일")
+
+                // 약관 동의 ..
+                .agreePrivacy(true)
+                .agreeTerms(true)
+                .agreedAt(LocalDateTime.now())
+
+                // 기타 정보
+                .fitnessConcerns("테스트 계정")
+                .membershipType(User.MembershipType.PREMIUM)
+                .build();
+
+        // DB 저장
+        User saved = userRepository.save(testUser);
+
+        log.info("🎉 테스트 유저 자동 생성 완료: {}", testUserId);
+
+        // AI 서버 동기화
+        try {
+            aiServerService.createUserOnAI(saved);
+            log.info("🤖 AI 서버 테스트 유저 동기화 완료");
+        } catch (Exception e) {
+            log.warn("⚠ AI 테스트 유저 동기화 실패: {}", e.getMessage());
+        }
+    }
 
 
 
@@ -203,7 +203,8 @@ public class UserService {
         user.setWeightGoal(dto.getWeightGoal());
         user.setHealthGoal(dto.getHealthGoal());
         user.setWorkoutDaysPerWeek(dto.getWorkoutDaysPerWeek());
-        user.setBirthDate(dto.getBirthDate());
+
+
         user.setIsOnboarded(true);
 
         userRepository.save(user);
@@ -305,9 +306,9 @@ public class UserService {
         user.updateLastLoginAt();
         userRepository.save(user);
 
-        // JWT 토큰 생성
-        String accessToken = jwtUtil.generateAccessToken(user.getUserId(), user.getId());
-        String refreshToken = jwtUtil.generateRefreshToken(user.getUserId(), user.getId());
+        String accessToken = jwtUtil.generateAccessToken(user.getId());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getId());
+
 
         log.info("로그인 성공 - 사용자 ID: {}, 사용자명: {}", user.getUserId(), user.getName());
 
@@ -341,8 +342,9 @@ public class UserService {
         // Access Token을 블랙리스트에 추가
         jwtUtil.blacklistToken(accessToken);
 
-        // Refresh Token 삭제
-        jwtUtil.deleteRefreshToken(userId);
+        Long userPk = jwtUtil.getUserPkFromToken(accessToken);
+        jwtUtil.deleteRefreshToken(userPk);
+
 
         log.info("로그아웃 완료 - 사용자 ID: {}", userId);
 
@@ -376,7 +378,7 @@ public class UserService {
         }
 
         // 새로운 Access Token 생성
-        String newAccessToken = jwtUtil.generateAccessToken(userId, userPk);
+        String newAccessToken = jwtUtil.generateAccessToken(userPk);
 
         log.info("토큰 재발급 완료 - 사용자 ID: {}", userId);
 
@@ -537,8 +539,9 @@ public class UserService {
     }
 
     public User findByPrincipal(CustomUserPrincipal principal) {
-        return userRepository.findByUserId(principal.getUserId())
+        return userRepository.findById(principal.getUserPk())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
+
 
 }
