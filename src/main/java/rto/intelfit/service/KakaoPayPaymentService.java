@@ -365,7 +365,12 @@ public class KakaoPayPaymentService {
     }
 
     private void forceLogout(String userId) {
-        jwtUtil.deleteRefreshToken(userId);
+        userRepository.findByUserId(userId)
+                .map(User::getId)
+                .ifPresentOrElse(
+                        jwtUtil::deleteRefreshToken,
+                        () -> log.warn("강제 로그아웃 처리 중 사용자 PK를 찾지 못했습니다. userId={}", userId)
+                );
         jwtUtil.forceLogoutUser(userId);
     }
 }

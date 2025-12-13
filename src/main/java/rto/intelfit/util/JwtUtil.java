@@ -39,41 +39,39 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
     }
 
-    // Access Token 생성
-    public String generateAccessToken(String userId, Long userPk) {
-        Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + accessTokenExpiration);
 
+    public String generateAccessToken(Long userPk) {
         return Jwts.builder()
-                .setSubject(userId)
-                .claim("userPk", userPk)
+                .setSubject(String.valueOf(userPk))
                 .claim("tokenType", "access")
-                .setIssuedAt(now)
-                .setExpiration(expiryDate)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + accessTokenExpiration))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    // Refresh Token 생성 및 Redis 저장
-    public String generateRefreshToken(String userId, Long userPk) {
-        Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + refreshTokenExpiration);
 
-        String refreshToken = Jwts.builder()
-                .setSubject(userId)
-                .claim("userPk", userPk)
+
+
+    public String generateRefreshToken(Long userPk) {
+        String token = Jwts.builder()
+                .setSubject(String.valueOf(userPk))
                 .claim("tokenType", "refresh")
-                .setIssuedAt(now)
-                .setExpiration(expiryDate)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + refreshTokenExpiration))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
 
-        // Redis에 Refresh Token 저장
-        String key = REFRESH_TOKEN_PREFIX + userId;
-        redisTemplate.opsForValue().set(key, refreshToken, refreshTokenExpiration, TimeUnit.MILLISECONDS);
+        redisTemplate.opsForValue().set(
+                REFRESH_TOKEN_PREFIX + userPk,
+                token,
+                refreshTokenExpiration,
+                TimeUnit.MILLISECONDS
+        );
 
-        return refreshToken;
+        return token;
     }
+
 
     // 토큰에서 사용자 ID 추출
     public String getUserIdFromToken(String token) {
@@ -81,11 +79,10 @@ public class JwtUtil {
         return claims.getSubject();
     }
 
-    // 토큰에서 사용자 PK 추출
     public Long getUserPkFromToken(String token) {
-        Claims claims = parseToken(token);
-        return claims.get("userPk", Long.class);
+        return Long.valueOf(parseToken(token).getSubject());
     }
+
 
     // 토큰 파싱
     private Claims parseToken(String token) {
@@ -168,11 +165,10 @@ public class JwtUtil {
         return redisTemplate.hasKey(key);
     }
 
-    // Refresh Token 삭제 (로그아웃 시)
-    public void deleteRefreshToken(String userId) {
-        String key = REFRESH_TOKEN_PREFIX + userId;
-        redisTemplate.delete(key);
+    public void deleteRefreshToken(Long userPk) {
+        redisTemplate.delete(REFRESH_TOKEN_PREFIX + userPk);
     }
+
 
     // 특정 사용자 강제 로그아웃 (모든 토큰 거부)
     public void forceLogoutUser(String userId) {

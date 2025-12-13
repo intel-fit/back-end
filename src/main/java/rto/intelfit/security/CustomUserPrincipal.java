@@ -14,7 +14,7 @@ import java.util.Collections;
 @AllArgsConstructor
 public class CustomUserPrincipal implements UserDetails {
 
-    private Long userPk;          // DB PK
+    private Long userPk;          // DB PK 
     private String userId;        // business userId
     private String name;
     private String email;

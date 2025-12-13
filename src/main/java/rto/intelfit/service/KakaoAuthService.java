@@ -17,6 +17,7 @@ import rto.intelfit.repository.*;
 import rto.intelfit.util.JwtUtil;
 
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -105,9 +106,9 @@ public class KakaoAuthService {
         user.updateLastLoginAt();
         userRepository.save(user);
 
-        // 5. JWT 발급
-        String accessToken = jwtUtil.generateAccessToken(user.getUserId(), user.getId());
-        String refreshToken = jwtUtil.generateRefreshToken(user.getUserId(), user.getId());
+        String accessToken = jwtUtil.generateAccessToken(user.getId());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getId());
+
 
         return KakaoAuthDto.LoginResponse.builder()
                 .accessToken(accessToken)
@@ -138,7 +139,9 @@ public class KakaoAuthService {
 
         // 2. 서비스 토큰 정리
         user.clearKakaoToken();
-        jwtUtil.deleteRefreshToken(userId);
+        jwtUtil.deleteRefreshToken(user.getId());
+        userRepository.delete(user);
+
         userRepository.save(user);
 
         return KakaoAuthDto.MessageResponse.of("로그아웃 되었습니다.");
@@ -171,8 +174,9 @@ public class KakaoAuthService {
             }
         }
 
-        // 2. 토큰 정리
-        jwtUtil.deleteRefreshToken(user.getUserId());
+        jwtUtil.deleteRefreshToken(user.getId());
+        userRepository.delete(user);
+
 
         // ✅ 3. 유저만 삭제 (DB가 전부 CASCADE)
         userRepository.delete(user);
@@ -232,7 +236,8 @@ public class KakaoAuthService {
     }
 
     private User createKakaoUser(KakaoAuthDto.KakaoUserInfo userInfo) {
-        String uniqueUserId = "kakao_" + userInfo.getId();
+        String uniqueUserId = UUID.randomUUID().toString();
+
 
         return userRepository.save(User.builder()
                 .userId(uniqueUserId)
