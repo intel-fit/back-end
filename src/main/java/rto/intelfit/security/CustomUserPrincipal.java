@@ -14,7 +14,7 @@ import java.util.Collections;
 @AllArgsConstructor
 public class CustomUserPrincipal implements UserDetails {
 
-    private Long id;
+    private Long userPk;
     private String userId;
     private String name;
     private String email;
@@ -45,7 +45,7 @@ public class CustomUserPrincipal implements UserDetails {
 
     @Override
     public String getUsername() {
-        return userId;
+        return String.valueOf(userPk);
     }
 
     @Override
