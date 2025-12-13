@@ -32,9 +32,12 @@ public class CustomUserPrincipal implements UserDetails {
         );
     }
 
-    // ✅ 이거 없어서 터진 거임
     public Long getId() {
         return userPk;
+    }
+
+    public String getUserId() {
+        return userId;
     }
 
     @Override
@@ -44,11 +47,30 @@ public class CustomUserPrincipal implements UserDetails {
 
     @Override
     public String getUsername() {
+<<<<<<< HEAD
         return userId; // ⭐ userPk 말고 userId 유지 (JWT/로그인 안정성)
+=======
+        return userId;
     }
 
-    @Override public boolean isAccountNonExpired() { return true; }
-    @Override public boolean isAccountNonLocked() { return true; }
-    @Override public boolean isCredentialsNonExpired() { return true; }
-    @Override public boolean isEnabled() { return emailVerified; }
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+>>>>>>> 239c4a2 (D)
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return emailVerified;
+    }
 }
