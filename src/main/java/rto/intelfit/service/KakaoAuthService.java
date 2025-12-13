@@ -11,6 +11,8 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import rto.intelfit.domain.User;
 import rto.intelfit.dto.KakaoAuthDto;
+import rto.intelfit.exception.BusinessException;
+import rto.intelfit.exception.ErrorCode;
 import rto.intelfit.repository.*;
 import rto.intelfit.util.JwtUtil;
 
@@ -145,50 +147,40 @@ public class KakaoAuthService {
 
 
     @Transactional
-    public KakaoAuthDto.MessageResponse unlink(String userId) {
+    public KakaoAuthDto.MessageResponse withdrawKakaoUser(String userId) {
+
         User user = userRepository.findByUserId(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-        // 1. 카카오 unlink API
+        if (user.getLoginType() != User.SocialProvider.KAKAO) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        // 1. 카카오 unlink
         if (user.getKakaoAccessToken() != null) {
             try {
                 HttpHeaders headers = new HttpHeaders();
                 headers.setBearerAuth(user.getKakaoAccessToken());
-                HttpEntity<Void> request = new HttpEntity<>(headers);
-                restTemplate.postForEntity(KAKAO_UNLINK_URL, request, Map.class);
-                log.info("카카오 연결 끊기 성공 - userId: {}", userId);
+                restTemplate.postForEntity(
+                        KAKAO_UNLINK_URL,
+                        new HttpEntity<>(headers),
+                        Map.class
+                );
             } catch (Exception e) {
                 log.warn("카카오 unlink 실패 (무시): {}", e.getMessage());
             }
         }
 
-        // 2. 서비스 토큰 제거
+        // 2. 토큰 정리
         jwtUtil.deleteRefreshToken(user.getUserId());
 
-        // 3. 🔥 연관 데이터 삭제 (필수)
-        deleteAllUserData(user);
-
-        // 4. 사용자 삭제
+        // ✅ 3. 유저만 삭제 (DB가 전부 CASCADE)
         userRepository.delete(user);
 
         return KakaoAuthDto.MessageResponse.of("카카오 회원 탈퇴가 완료되었습니다.");
     }
 
 
-    private void deleteAllUserData(User user) {
-        inBodyRepository.deleteAllByUser(user);
-        userFoodPreferenceRepository.deleteAllByUser(user);
-        dailyNutritionGoalRepository.deleteAllByUser(user);
-        mealRepository.deleteAllByUser(user);
-        recommendedMealPlanRepository.deleteAllByUser(user);
-        exerciseRepository.deleteAllByUser(user);
-        recommendedExercisePlanRepository.deleteAllByUser(user);
-        userBadgeRepository.deleteAllByUser(user);
-
-        paymentHistoryRepository.deleteAllByUser_Id(user.getId());
-        subscriptionRepository.deleteAllByUserId(user.getUserId());
-        aiChatMessageRepository.deleteAllByUser_UserId(user.getUserId());
-    }
 
 
 
