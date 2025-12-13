@@ -143,7 +143,6 @@ public class UserService {
                 .password(encodedPassword)
                 .birthDate(request.getBirthDate())
                 .emailVerified(true) // 인증코드 확인 완료
-                // 초기 피트니스 정보 추가
                 .gender(request.getGender())
                 .height(request.getHeight())
                 .weight(request.getWeight())
@@ -195,7 +194,6 @@ public class UserService {
         if (Boolean.TRUE.equals(user.getIsOnboarded())) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "이미 온보딩이 완료된 사용자입니다");
         }
-
         user.setBirthDate(dto.getBirthDate());
         user.setAgreePrivacy(dto.getAgreePrivacy());
         user.setAgreeTerms(dto.getAgreeTerms());
