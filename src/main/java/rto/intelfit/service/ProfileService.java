@@ -20,6 +20,7 @@ import rto.intelfit.util.JwtUtil;
 @Transactional(readOnly = true)
 public class ProfileService {
 
+    private final KakaoAuthService kakaoAuthService; //lee
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
@@ -93,10 +94,26 @@ public class ProfileService {
                                                           ProfileDto.AccountDeleteRequest request) {
         User user = findUserByPrincipal(userPrincipal);
 
-        // 비밀번호 확인
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new BusinessException(ErrorCode.INVALID_LOGIN_CREDENTIALS, "비밀번호가 올바르지 않습니다");
+        // LOCAL 회원만 비밀번호 검증 lee
+        if (user.getLoginType() == LoginType.LOCAL) {
+            if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+                throw new BusinessException(
+                        ErrorCode.INVALID_LOGIN_CREDENTIALS,
+                        "비밀번호가 올바르지 않습니다"
+                );
+            }
         }
+        //lee
+        // 카카오 회원이면 카카오 unlink 먼저 수행
+        if (user.getLoginType() == LoginType.KAKAO) {
+            try {
+                kakaoAuthService.unlinkKakaoUser(user.getSocialId());
+                log.info("카카오 unlink 성공 - userId={}", user.getUserId());
+            } catch (Exception e) {
+                log.warn("카카오 unlink 실패 (탈퇴는 계속 진행) - userId={}", user.getUserId(), e);
+            }
+        }
+
 
         // 사용자의 모든 토큰 무효화
         jwtUtil.deleteRefreshToken(user.getUserId());

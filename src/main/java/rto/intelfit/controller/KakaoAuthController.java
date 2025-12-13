@@ -57,6 +57,13 @@ public class KakaoAuthController {
         KakaoAuthDto.LoginResponse loginResponse =
                 kakaoAuthService.login(new KakaoAuthDto.LoginRequest(code));
 
+        log.info(
+                "카카오 로그인 callback - userId={}, isNewUser={}, isOnboarded={}",
+                loginResponse.getUserId(),
+                loginResponse.isNewUser(),
+                loginResponse.isOnboarded()
+        );
+
         String deepLink = "intelfit://auth/kakao"
                 + "?accessToken=" + URLEncoder.encode(loginResponse.getAccessToken(), UTF_8)
                 + "&refreshToken=" + URLEncoder.encode(loginResponse.getRefreshToken(), UTF_8)
@@ -90,13 +97,13 @@ public class KakaoAuthController {
     /**
      * 카카오 연결 끊기 (회원 탈퇴)
      */
-    @DeleteMapping("/unlink")
-    public ResponseEntity<KakaoAuthDto.MessageResponse> unlink(
-            @AuthenticationPrincipal UserDetails userDetails) {
+    //@DeleteMapping("/unlink")
+    //public ResponseEntity<KakaoAuthDto.MessageResponse> unlink(
+     //       @AuthenticationPrincipal UserDetails userDetails) {
 
-        log.info("카카오 회원탈퇴 - userId: {}", userDetails.getUsername());
-        return ResponseEntity.ok(kakaoAuthService.unlink(userDetails.getUsername()));
-    }
+     //   log.info("카카오 회원탈퇴 - userId: {}", userDetails.getUsername());
+     //   return ResponseEntity.ok(kakaoAuthService.unlink(userDetails.getUsername()));
+    //}
 
 
 

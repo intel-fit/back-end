@@ -146,7 +146,9 @@ gemini:
 kakao:
   client-id: ${KAKAO_CLIENT_ID:99baee411cc547822f138712b19b032c}
   client-secret: ${KAKAO_CLIENT_SECRET:}
+  admin-key: ${KAKAO_ADMIN_KEY}
   redirect-uri: https://www.intelfits.com/api/auth/kakao/callback
+
 
 kakaopay:
   cid: ${KAKAOPAY_CID:TC0ONETIME}

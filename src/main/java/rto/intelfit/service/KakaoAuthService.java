@@ -35,6 +35,9 @@ public class KakaoAuthService {
     @Value("${kakao.redirect-uri}")
     private String redirectUri;
 
+    @Value("${kakao.admin-key}") //lee
+    private String adminKey; //lee
+
     private static final String KAKAO_TOKEN_URL = "https://kauth.kakao.com/oauth/token";
     private static final String KAKAO_USER_INFO_URL = "https://kapi.kakao.com/v2/user/me";
     private static final String KAKAO_LOGOUT_URL = "https://kapi.kakao.com/v1/user/logout";
@@ -153,6 +156,34 @@ public class KakaoAuthService {
 
         return KakaoAuthDto.MessageResponse.of("회원 탈퇴가 완료되었습니다.");
     }
+
+    /**
+     * 카카오 연결 끊기 (Admin Key 방식 - 회원 탈퇴용)
+     */
+    public void unlinkKakaoUser(String socialId) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "KakaoAK " + adminKey);
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("target_id_type", "user_id");
+        params.add("target_id", socialId);
+
+        HttpEntity<MultiValueMap<String, String>> request =
+                new HttpEntity<>(params, headers);
+
+        try {
+            restTemplate.postForEntity(
+                    KAKAO_UNLINK_URL,
+                    request,
+                    String.class
+            );
+            log.info("카카오 Admin unlink 성공 - socialId={}", socialId);
+        } catch (Exception e) {
+            log.warn("카카오 Admin unlink 실패 (탈퇴는 계속 진행) - socialId={}", socialId, e);
+        }
+    }
+
 
     // ==================== Private Methods ====================
 

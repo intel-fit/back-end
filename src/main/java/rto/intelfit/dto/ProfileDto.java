@@ -211,8 +211,9 @@ public class ProfileDto {
     public static class AccountDeleteRequest {
 
         @Schema(description = "비밀번호 확인", example = "password123!")
-        @NotBlank(message = "비밀번호를 입력해주세요")
+        @Schema(description = "비밀번호 (LOCAL 회원만 필요)", example = "password123!") //lee
         private String password;
+
 
         @Schema(description = "탈퇴 사유", example = "서비스 불만족")
         @Size(max = 500, message = "탈퇴 사유는 500자 이내로 입력해주세요")
