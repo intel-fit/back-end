@@ -7,7 +7,6 @@ import org.springframework.transaction.annotation.Transactional;
 import rto.intelfit.domain.DailyProgress;
 import rto.intelfit.domain.Meal;
 import rto.intelfit.domain.User;
-import rto.intelfit.domain.ExerciseGoal;
 import rto.intelfit.dto.DailyProgressDto;
 import rto.intelfit.repository.*;
 
@@ -15,8 +14,6 @@ import java.math.BigDecimal;
 import java.time.*;
 import java.time.temporal.TemporalAdjusters;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -26,12 +23,8 @@ import java.util.stream.Collectors;
 public class DailyProgressService {
 
     private final DailyProgressRepository dailyProgressRepository;
-    private final WorkoutPlanDetailRepository workoutPlanDetailRepository;
     private final FitnessExerciseCategorySaveRepository saveRepository;
     private final MealRepository mealRepository;
-
-    // ✅ 추가
-    private final ExerciseGoalRepository exerciseGoalRepository;
 
     @Transactional
     public DailyProgressDto calculateTodayProgress(User user) {
@@ -42,7 +35,7 @@ public class DailyProgressService {
     @Transactional
     public DailyProgressDto calculateProgressByDate(User user, LocalDate date) {
 
-        // ✅ 1) DailyProgress를 락 걸고 가져오기 (없으면 생성)
+        // 1) DailyProgress를 락 걸고 가져오기 (없으면 생성)
         DailyProgress progress =
                 dailyProgressRepository.findByUserIdAndDateForUpdate(user.getId(), date)
                         .orElseGet(() -> {
@@ -55,36 +48,10 @@ public class DailyProgressService {
                             return p;
                         });
 
-        // ✅ 2) 하루 누적 운동 시간(초) - 다른 서비스에서 최신값으로 유지된다고 가정
-        long totalExerciseSeconds = progress.getTotalExerciseSeconds();
+        // 2) 종목 기반 운동 달성률 계산 (1/n 방식)
+        double exerciseRate = calculateExerciseRateBySession(user, date);
 
-        // ✅ 3) 운동목표가 있을 때만 목표시간 기반으로 rate 계산
-        double exerciseRate = 0.0;
-
-        Optional<ExerciseGoal> optionalGoal = exerciseGoalRepository.findByUser(user);
-        if (optionalGoal.isPresent()) {
-
-            long targetSeconds = parseTargetSeconds(optionalGoal.get());
-
-            if (targetSeconds > 0) {
-                // rate = min(100, total / target * 100), 소수 1자리
-                exerciseRate = Math.min(
-                        100.0,
-                        Math.round((totalExerciseSeconds * 1000.0) / targetSeconds) / 10.0
-                );
-            } else {
-                // 목표는 있는데 파싱이 실패했거나 목표가 0이면 0%
-                exerciseRate = 0.0;
-                log.warn("ExerciseGoal durationPerSession 파싱 실패 또는 목표시간 0 - userId={}, durationPerSession={}",
-                        user.getUserId(), optionalGoal.get().getDurationPerSession());
-            }
-
-        } else {
-            // 운동 목표 자체가 없으면 계산 안 함(0%)
-            exerciseRate = 0.0;
-        }
-
-        // ✅ 4) 해당 날짜 섭취 칼로리 합산 (기존 그대로)
+        // 3) 해당 날짜 섭취 칼로리 합산
         BigDecimal totalCalories = mealRepository
                 .findByUserAndMealDateOrderByMealTypeAsc(user, date)
                 .stream()
@@ -92,14 +59,14 @@ public class DailyProgressService {
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // ✅ 5) 업데이트 후 저장
+        // 4) 업데이트 후 저장
         progress.setExerciseRate(exerciseRate);
         progress.setTotalCalorie(totalCalories.doubleValue());
 
         dailyProgressRepository.save(progress);
 
-        log.info("DailyProgress 저장 - userId: {}, date: {}, totalSeconds: {}, rate: {}%, kcal: {}",
-                user.getUserId(), date, totalExerciseSeconds, exerciseRate, totalCalories);
+        log.info("DailyProgress 저장 - userId: {}, date: {}, exerciseRate: {}%, kcal: {}",
+                user.getUserId(), date, exerciseRate, totalCalories);
 
         return DailyProgressDto.builder()
                 .date(date)
@@ -109,26 +76,29 @@ public class DailyProgressService {
     }
 
     /**
-     * durationPerSession 문자열에서 목표 시간을 "초"로 변환
-     * 예: "30분 이상" -> 1800
-     * 예: "1시간 이상" -> 3600
+     * 종목 기반 운동 달성률 계산
+     * - 하루에 n개의 운동 종목(세션)이 있으면, 각 종목 완료 시 1/n(%)씩 증가
+     * - 한 세션의 모든 세트가 completed=true일 때 해당 세션이 완료된 것으로 간주
+     * - 추천운동 + 사용자 추가 운동 모두 포함
      */
-    private long parseTargetSeconds(ExerciseGoal goal) {
-        String raw = goal.getDurationPerSession();
-        if (raw == null) return 0L;
+    private double calculateExerciseRateBySession(User user, LocalDate date) {
+        // 전체 세션(종목) 수
+        long totalSessions = saveRepository.countTotalSessionsByDate(user, date);
+        
+        if (totalSessions == 0) {
+            return 0.0;
+        }
 
-        // 숫자 추출
-        Matcher m = Pattern.compile("(\\d+)").matcher(raw);
-        if (!m.find()) return 0L;
+        // 완료된 세션(종목) 수
+        long completedSessions = saveRepository.countCompletedSessionsByDate(user, date);
 
-        long n = Long.parseLong(m.group(1));
+        // 달성률 계산: (완료된 종목 / 전체 종목) * 100, 소수점 1자리
+        double rate = Math.round((completedSessions * 1000.0) / totalSessions) / 10.0;
+        
+        log.info("운동 달성률 계산 - userId: {}, date: {}, 완료: {}/{} 종목, rate: {}%",
+                user.getUserId(), date, completedSessions, totalSessions, rate);
 
-        // 단위 판별
-        if (raw.contains("시간")) return n * 3600L;
-        if (raw.contains("분")) return n * 60L;
-
-        // 단위가 없으면 기본 분으로 처리(원하면 0으로 처리해도 됨)
-        return n * 60L;
+        return Math.min(100.0, rate);
     }
 
     public DailyProgressDto getProgressByDate(User user, LocalDate date) {

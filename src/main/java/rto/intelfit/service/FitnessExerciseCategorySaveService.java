@@ -366,9 +366,9 @@ public FitnessExerciseCategorySaveDto.ToggleResponse toggleSessionCompletion(Str
     saveRepository.saveAll(sessionRecords);
 
     User user = sessionRecords.get(0).getUser();
-    LocalDate date = sessionRecords.get(0).getWorkoutDate().toLocalDate();
+    LocalDate date = sessionRecords.get(0).getDate();  // date 필드 사용
 
-    // ✅ 달성률 재계산 복구
+    // ✅ 종목 기반 달성률 재계산
     dailyProgressService.recalculateProgress(user, date);
 
     return FitnessExerciseCategorySaveDto.ToggleResponse.builder()
