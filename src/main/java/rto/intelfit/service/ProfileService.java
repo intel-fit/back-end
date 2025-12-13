@@ -103,7 +103,9 @@ public class ProfileService {
             throw new BusinessException(ErrorCode.INVALID_LOGIN_CREDENTIALS);
         }
 
-        jwtUtil.deleteRefreshToken(user.getUserId());
+        jwtUtil.deleteRefreshToken(user.getId());
+        userRepository.delete(user);
+
 
         // ✅ 유저만 삭제
         userRepository.delete(user);
@@ -117,10 +119,11 @@ public class ProfileService {
 
 
 
-    private User findUserByPrincipal(CustomUserPrincipal userPrincipal) {
-        return userRepository.findByUserId(userPrincipal.getUserId())
+    private User findUserByPrincipal(CustomUserPrincipal principal) {
+        return userRepository.findById(principal.getUserPk())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
+
 
     private void updateUserFields(User user, ProfileDto.ProfileUpdateRequest request) {
         if (StringUtils.hasText(request.getName())) {
