@@ -11,7 +11,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import rto.intelfit.domain.User;
 import rto.intelfit.dto.KakaoAuthDto;
-import rto.intelfit.repository.UserRepository;
+import rto.intelfit.repository.*;
 import rto.intelfit.util.JwtUtil;
 
 import java.util.Map;
@@ -26,6 +26,7 @@ public class KakaoAuthService {
     private final JwtUtil jwtUtil;
     private final RestTemplate restTemplate;
 
+
     @Value("${kakao.client-id}")
     private String clientId;
 
@@ -39,6 +40,20 @@ public class KakaoAuthService {
     private static final String KAKAO_USER_INFO_URL = "https://kapi.kakao.com/v2/user/me";
     private static final String KAKAO_LOGOUT_URL = "https://kapi.kakao.com/v1/user/logout";
     private static final String KAKAO_UNLINK_URL = "https://kapi.kakao.com/v1/user/unlink";
+
+
+    private final InBodyRepository inBodyRepository;
+    private final UserFoodPreferenceRepository userFoodPreferenceRepository;
+    private final DailyNutritionGoalRepository dailyNutritionGoalRepository;
+    private final MealRepository mealRepository;
+    private final RecommendedMealPlanRepository recommendedMealPlanRepository;
+    private final ExerciseRepository exerciseRepository;
+    private final RecommendedExercisePlanRepository recommendedExercisePlanRepository;
+    private final UserBadgeRepository userBadgeRepository;
+    private final PaymentHistoryRepository paymentHistoryRepository;
+    private final SubscriptionRepository subscriptionRepository;
+    private final AIChatMessageRepository aiChatMessageRepository;
+
 
     /**
      * 카카오 로그인 URL 반환
@@ -126,14 +141,15 @@ public class KakaoAuthService {
 
         return KakaoAuthDto.MessageResponse.of("로그아웃 되었습니다.");
     }
-    /**
-     * 카카오 연결 끊기 (회원 탈퇴)
-     */
+
+
+
+    @Transactional
     public KakaoAuthDto.MessageResponse unlink(String userId) {
         User user = userRepository.findByUserId(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-        // 카카오 연결 끊기 API 호출
+        // 1. 카카오 unlink API
         if (user.getKakaoAccessToken() != null) {
             try {
                 HttpHeaders headers = new HttpHeaders();
@@ -142,17 +158,41 @@ public class KakaoAuthService {
                 restTemplate.postForEntity(KAKAO_UNLINK_URL, request, Map.class);
                 log.info("카카오 연결 끊기 성공 - userId: {}", userId);
             } catch (Exception e) {
-                log.warn("카카오 연결 끊기 실패 (무시): {}", e.getMessage());
+                log.warn("카카오 unlink 실패 (무시): {}", e.getMessage());
             }
         }
 
-        // 토큰 및 회원 삭제
-        jwtUtil.deleteRefreshToken(userId);
-        userRepository.delete(user);
-        log.info("카카오 사용자 탈퇴 완료 - userId: {}", userId);
+        // 2. 서비스 토큰 제거
+        jwtUtil.deleteRefreshToken(user.getUserId());
 
-        return KakaoAuthDto.MessageResponse.of("회원 탈퇴가 완료되었습니다.");
+        // 3. 🔥 연관 데이터 삭제 (필수)
+        deleteAllUserData(user);
+
+        // 4. 사용자 삭제
+        userRepository.delete(user);
+
+        return KakaoAuthDto.MessageResponse.of("카카오 회원 탈퇴가 완료되었습니다.");
     }
+
+
+    private void deleteAllUserData(User user) {
+        inBodyRepository.deleteAllByUser(user);
+        userFoodPreferenceRepository.deleteAllByUser(user);
+        dailyNutritionGoalRepository.deleteAllByUser(user);
+        mealRepository.deleteAllByUser(user);
+        recommendedMealPlanRepository.deleteAllByUser(user);
+        exerciseRepository.deleteAllByUser(user);
+        recommendedExercisePlanRepository.deleteAllByUser(user);
+        userBadgeRepository.deleteAllByUser(user);
+
+        paymentHistoryRepository.deleteAllByUser_Id(user.getId());
+        subscriptionRepository.deleteAllByUserId(user.getUserId());
+        aiChatMessageRepository.deleteAllByUser_UserId(user.getUserId());
+    }
+
+
+
+
 
     // ==================== Private Methods ====================
 

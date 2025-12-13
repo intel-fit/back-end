@@ -89,69 +89,54 @@ public class ProfileService {
     }
 
     @Transactional
-    public ProfileDto.AccountDeleteResponse deleteAccount(CustomUserPrincipal userPrincipal,
-                                                          ProfileDto.AccountDeleteRequest request) {
+    public ProfileDto.AccountDeleteResponse deleteAccount(
+            CustomUserPrincipal userPrincipal,
+            ProfileDto.AccountDeleteRequest request) {
+
         User user = findUserByPrincipal(userPrincipal);
 
-        // 비밀번호 확인
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new BusinessException(ErrorCode.INVALID_LOGIN_CREDENTIALS, "비밀번호가 올바르지 않습니다");
+        // 🔥 소셜 로그인 차단
+        if (user.isSocialUser()) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "소셜 로그인 계정은 소셜 탈퇴를 이용해주세요."
+            );
         }
 
-        // 사용자의 모든 토큰 무효화
+        // 기존 로직 그대로
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_LOGIN_CREDENTIALS,
+                    "비밀번호가 올바르지 않습니다"
+            );
+        }
+
         jwtUtil.deleteRefreshToken(user.getUserId());
-
-        // User와 연관된 모든 데이터를 명시적으로 삭제 (FK 제약 조건 문제 해결)
-        log.info("회원 탈퇴 시작 - 사용자 ID: {}, 연관 데이터 삭제 시작", user.getUserId());
-
-        // 1. InBody 레코드 삭제
-        inBodyRepository.deleteAllByUser(user);
-        log.debug("InBody 레코드 삭제 완료");
-
-        // 2. 음식 선호도 삭제
-        userFoodPreferenceRepository.deleteAllByUser(user);
-        log.debug("음식 선호도 삭제 완료");
-
-        // 3. 영양 목표 삭제
-        dailyNutritionGoalRepository.deleteAllByUser(user);
-        log.debug("영양 목표 삭제 완료");
-
-        // 4. 식사 기록 삭제
-        mealRepository.deleteAllByUser(user);
-        log.debug("식사 기록 삭제 완료");
-
-        // 5. 추천 식단 삭제
-        recommendedMealPlanRepository.deleteAllByUser(user);
-        log.debug("추천 식단 삭제 완료");
-
-        // 6. 운동 기록 삭제
-        exerciseRepository.deleteAllByUser(user);
-        log.debug("운동 기록 삭제 완료");
-
-        // 7. 추천 운동 플랜 삭제
-        recommendedExercisePlanRepository.deleteAllByUser(user);
-        log.debug("추천 운동 플랜 삭제 완료");
-
-        // 8. 사용자 뱃지 삭제
-        userBadgeRepository.deleteAllByUser(user);
-        log.debug("사용자 뱃지 삭제 완료");
-
-        paymentHistoryRepository.deleteAllByUser_Id(user.getId());
-        subscriptionRepository.deleteAllByUserId(user.getUserId());
-        aiChatMessageRepository.deleteAllByUser_UserId(user.getUserId());
-
-
-        // 9. 마지막으로 사용자 삭제
+        deleteAllUserData(user);
         userRepository.delete(user);
-
-        log.info("회원 탈퇴 완료 - 사용자 ID: {}, 탈퇴 사유: {}",
-                user.getUserId(), request.getReason());
 
         return ProfileDto.AccountDeleteResponse.builder()
                 .success(true)
                 .message("회원 탈퇴가 완료되었습니다")
                 .build();
     }
+
+    private void deleteAllUserData(User user) {
+        inBodyRepository.deleteAllByUser(user);
+        userFoodPreferenceRepository.deleteAllByUser(user);
+        dailyNutritionGoalRepository.deleteAllByUser(user);
+        mealRepository.deleteAllByUser(user);
+        recommendedMealPlanRepository.deleteAllByUser(user);
+        exerciseRepository.deleteAllByUser(user);
+        recommendedExercisePlanRepository.deleteAllByUser(user);
+        userBadgeRepository.deleteAllByUser(user);
+
+        paymentHistoryRepository.deleteAllByUser_Id(user.getId());
+        subscriptionRepository.deleteAllByUserId(user.getUserId());
+        aiChatMessageRepository.deleteAllByUser_UserId(user.getUserId());
+    }
+
+
 
     private User findUserByPrincipal(CustomUserPrincipal userPrincipal) {
         return userRepository.findByUserId(userPrincipal.getUserId())
