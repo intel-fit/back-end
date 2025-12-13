@@ -32,7 +32,7 @@ public interface FitnessExerciseCategorySaveRepository extends JpaRepository<Fit
      * - 같은 sessionId를 가진 세트들은 하나의 세션(종목)으로 간주
      */
     @Query("SELECT COUNT(DISTINCT f.sessionId) FROM FitnessExerciseCategorySave f " +
-           "WHERE f.user = :user AND DATE(f.workoutDate) = :date")
+           "WHERE f.user = :user AND f.date = :date")
     long countTotalSessionsByDate(@Param("user") User user, @Param("date") LocalDate date);
 
     /**
@@ -40,10 +40,10 @@ public interface FitnessExerciseCategorySaveRepository extends JpaRepository<Fit
      * - 한 세션의 모든 세트가 completed=true일 때만 완료된 세션으로 간주
      */
     @Query("SELECT COUNT(DISTINCT f.sessionId) FROM FitnessExerciseCategorySave f " +
-           "WHERE f.user = :user AND DATE(f.workoutDate) = :date " +
+           "WHERE f.user = :user AND f.date = :date " +
            "AND f.sessionId NOT IN (" +
            "    SELECT DISTINCT f2.sessionId FROM FitnessExerciseCategorySave f2 " +
-           "    WHERE f2.user = :user AND DATE(f2.workoutDate) = :date " +
+           "    WHERE f2.user = :user AND f2.date = :date " +
            "    AND f2.completed = false" +
            ")")
     long countCompletedSessionsByDate(@Param("user") User user, @Param("date") LocalDate date);
