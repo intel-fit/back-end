@@ -95,24 +95,17 @@ public class ProfileService {
 
         User user = findUserByPrincipal(userPrincipal);
 
-        // 🔥 소셜 로그인 차단
         if (user.isSocialUser()) {
-            throw new BusinessException(
-                    ErrorCode.INVALID_REQUEST,
-                    "소셜 로그인 계정은 소셜 탈퇴를 이용해주세요."
-            );
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
 
-        // 기존 로직 그대로
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new BusinessException(
-                    ErrorCode.INVALID_LOGIN_CREDENTIALS,
-                    "비밀번호가 올바르지 않습니다"
-            );
+            throw new BusinessException(ErrorCode.INVALID_LOGIN_CREDENTIALS);
         }
 
         jwtUtil.deleteRefreshToken(user.getUserId());
-        deleteAllUserData(user);
+
+        // ✅ 유저만 삭제
         userRepository.delete(user);
 
         return ProfileDto.AccountDeleteResponse.builder()
@@ -121,20 +114,6 @@ public class ProfileService {
                 .build();
     }
 
-    private void deleteAllUserData(User user) {
-        inBodyRepository.deleteAllByUser(user);
-        userFoodPreferenceRepository.deleteAllByUser(user);
-        dailyNutritionGoalRepository.deleteAllByUser(user);
-        mealRepository.deleteAllByUser(user);
-        recommendedMealPlanRepository.deleteAllByUser(user);
-        exerciseRepository.deleteAllByUser(user);
-        recommendedExercisePlanRepository.deleteAllByUser(user);
-        userBadgeRepository.deleteAllByUser(user);
-
-        paymentHistoryRepository.deleteAllByUser_Id(user.getId());
-        subscriptionRepository.deleteAllByUserId(user.getUserId());
-        aiChatMessageRepository.deleteAllByUser_UserId(user.getUserId());
-    }
 
 
 

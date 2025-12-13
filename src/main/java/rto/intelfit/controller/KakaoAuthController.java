@@ -87,15 +87,13 @@ public class KakaoAuthController {
         return ResponseEntity.ok(kakaoAuthService.logout(userDetails.getUsername()));
     }
 
-    /**
-     * 카카오 연결 끊기 (회원 탈퇴)
-     */
     @DeleteMapping("/unlink")
     public ResponseEntity<KakaoAuthDto.MessageResponse> unlink(
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        log.info("카카오 회원탈퇴 - userId: {}", userDetails.getUsername());
-        return ResponseEntity.ok(kakaoAuthService.unlink(userDetails.getUsername()));
+        return ResponseEntity.ok(
+                kakaoAuthService.withdrawKakaoUser(userDetails.getUsername())
+        );
     }
 
 
