@@ -66,6 +66,13 @@ public class ProfileDto {
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
         private LocalDateTime createdAt;
 
+        @Schema(description = "로그인 타입", example = "KAKAO")
+        private User.SocialProvider loginType;
+
+        @Schema(description = "소셜 로그인 여부", example = "true")
+        private boolean socialLogin;
+
+
         public static ProfileResponse from(User user) {
             return ProfileResponse.builder()
                     .id(user.getId())
@@ -82,6 +89,8 @@ public class ProfileDto {
                     .weightGoal(user.getWeightGoal())
                     .lastLoginAt(user.getLastLoginAt())
                     .createdAt(user.getCreatedAt())
+                    .loginType(user.getLoginType())
+                    .socialLogin(user.isSocialUser())
                     .build();
         }
     }
