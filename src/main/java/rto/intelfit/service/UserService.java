@@ -202,8 +202,6 @@ public class UserService {
         user.setWeightGoal(dto.getWeightGoal());
         user.setHealthGoal(dto.getHealthGoal());
         user.setWorkoutDaysPerWeek(dto.getWorkoutDaysPerWeek());
-        user.setExperienceLevel(dto.getExperienceLevel());
-        user.setFitnessConcerns(dto.getFitnessConcerns());
         user.setBirthDate(dto.getBirthDate());
         user.setIsOnboarded(true);
 
