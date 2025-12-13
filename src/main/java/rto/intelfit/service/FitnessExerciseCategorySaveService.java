@@ -130,13 +130,10 @@ public class FitnessExerciseCategorySaveService {
         User user = first.getUser();
         String externalId = first.getExternalId();
 
-        // 🔥 기준 날짜는 무조건 "오늘"
-        LocalDate progressDate = LocalDate.now();
+        // 🔥 운동이 저장된 날짜 기준으로 차감 (date 필드 사용)
+        LocalDate progressDate = first.getDate();
 
-        ExerciseGoal goal =
-                exerciseGoalRepository.findByUser(user).orElse(null);
-
-        if (goal != null && first.isSaved()) {
+        if (first.isSaved() && progressDate != null) {
 
             long sessionSeconds = first.getExerciseSeconds();
 
@@ -154,8 +151,11 @@ public class FitnessExerciseCategorySaveService {
                         Math.max(0L, updatedSeconds)
                 );
 
-                log.info("✔ DailyProgress 차감 userId={}, date={}, remainingSeconds={}",
-                        user.getId(), progressDate, progress.getTotalExerciseSeconds());
+                // 🔥 달성률도 재계산
+                dailyProgressService.recalculateProgress(user, progressDate);
+
+                log.info("✔ DailyProgress 차감 userId={}, date={}, 차감={}초, 남은시간={}초",
+                        user.getId(), progressDate, sessionSeconds, progress.getTotalExerciseSeconds());
             }
         }
 
