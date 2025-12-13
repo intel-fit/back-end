@@ -28,7 +28,7 @@ public class TempMealController {
         Long id = tempMealService.generateDailyPaid(principal, request);
         return ResponseEntity.ok("TEMP Daily 생성 완료. tempBundleId=" + id);
     }
-
+//
 
     @PostMapping("/weekly")
     public ResponseEntity<?> generateWeekly(
