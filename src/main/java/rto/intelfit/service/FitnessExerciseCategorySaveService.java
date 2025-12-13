@@ -135,7 +135,7 @@ public String addWorkoutSession(FitnessExerciseCategorySaveDto.CreateRequest req
 
     long sessionSeconds = request.getSeconds();
     double met = resolveMet(request.getCategory());
-
+//
     List<FitnessExerciseCategorySave> entities =
             request.getSets().stream()
                     .map(set -> FitnessExerciseCategorySave.builder()
