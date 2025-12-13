@@ -48,98 +48,36 @@ public class TempMealService {
     // -----------------------------------------------------------
     // 1) TEMP 생성 (AI 기반 주간 식단)
     // -----------------------------------------------------------
-    public Long generateWeeklyTempPlans(CustomUserPrincipal principal) {
+    @Transactional
+    public Long generateWeeklyTempPlans(
+            CustomUserPrincipal principal,
+            TempMealDto.WeeklyRequest request
+    ) {
 
         User user = userRepository.findByUserId(principal.getUserId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // ==== 무료/유료 분기 ====
+        int mealsPerDay = request.getMealsPerDay();
+
+        // 기존 FREE 제한 로직 유지
         if (user.getMembershipType() == User.MembershipType.FREE) {
-
             resetWeeklyTokensIfNeeded(user);
-
-            if (user.getMealRecommendTokens() <= 0) {
-                throw new BusinessException(ErrorCode.NO_MEAL_TOKENS,
-                        "무료 식단 추천 토큰이 부족합니다.");
-            }
-
-            // 기존 temp 삭제
-            bundleRepo.findByUser(user).ifPresent(bundleRepo::delete);
-
-            // 새 bundle 생성
-            TempMealBundle bundle = bundleRepo.save(
-                    TempMealBundle.builder().user(user).build()
-            );
-
-            // 하루치만 생성
-            RecommendedMealPlan daily =
-                    aiServerService.requestDailyRecommendedMealPlanWithoutSave(principal);
-
-            TempMealPlan savedPlan = planRepo.save(
-                    TempMealPlan.builder()
-                            .tempBundle(bundle)
-                            .dayIndex(1)
-                            .totalCalories(daily.getTotalCalories())
-                            .totalCarbs(daily.getTotalCarbs())
-                            .totalProtein(daily.getTotalProtein())
-                            .totalFat(daily.getTotalFat())
-                            .build()
-            );
-
-            // Meal, Food 저장
-            for (RecommendedMeal rm : daily.getRecommendedMeals()) {
-
-                TempMeal tm = mealRepo.save(
-                        TempMeal.builder()
-                                .tempMealPlan(savedPlan)
-                                .mealType(rm.getMealType())
-                                .totalCalories(rm.getTotalCalories())
-                                .totalCarbs(rm.getTotalCarbs())
-                                .totalProtein(rm.getTotalProtein())
-                                .totalFat(rm.getTotalFat())
-                                .build()
-                );
-
-                rm.getRecommendedFoods().forEach(rf ->
-                        foodRepo.save(
-                                TempMealFood.builder()
-                                        .tempMeal(tm)
-                                        .foodName(rf.getFoodName())
-                                        .servingSize(rf.getServingSize())
-                                        .calories(rf.getCalories())
-                                        .carbs(rf.getCarbs())
-                                        .protein(rf.getProtein())
-                                        .fat(rf.getFat())
-                                        .build()
-                        )
-                );
-            }
-
-            // 무료 토큰 감소
-            user.setMealRecommendTokens(user.getMealRecommendTokens() - 1);
-
-            return bundle.getId();
+            if (user.getMealRecommendTokens() <= 0)
+                throw new BusinessException(ErrorCode.NO_MEAL_TOKENS);
         }
 
-        // ==== 유료 유저 → 기존 7일 생성 ====
-
-        // 기존 temp 삭제
+        // 기존 temp 삭제 후 생성
         bundleRepo.findByUser(user).ifPresent(bundleRepo::delete);
+        TempMealBundle bundle = bundleRepo.save(TempMealBundle.builder().user(user).build());
 
-        // 새 temp bundle 생성
-        TempMealBundle bundle = bundleRepo.save(
-                TempMealBundle.builder().user(user).build()
-        );
-
-        // AI 일주일 식단 가져오기 (DB 미저장)
+        // AI 7일치 생성 (끼니수 반영)
         List<RecommendedMealPlan> weekly =
-                aiServerService.requestWeeklyRecommendedMealPlansWithoutSave(principal);
+                aiServerService.requestWeeklyMealWithMealsPerDay(principal, mealsPerDay);
 
         int index = 1;
 
         for (RecommendedMealPlan plan : weekly) {
 
-            // 하루 Plan 저장
             TempMealPlan tempPlan = planRepo.save(
                     TempMealPlan.builder()
                             .tempBundle(bundle)
@@ -151,7 +89,6 @@ public class TempMealService {
                             .build()
             );
 
-            // 식사 저장
             for (RecommendedMeal rm : plan.getRecommendedMeals()) {
 
                 TempMeal tempMeal = mealRepo.save(
@@ -165,7 +102,6 @@ public class TempMealService {
                                 .build()
                 );
 
-                // 음식 저장
                 for (RecommendedFood rf : rm.getRecommendedFoods()) {
                     foodRepo.save(
                             TempMealFood.builder()
@@ -182,8 +118,40 @@ public class TempMealService {
             }
         }
 
+        if (user.getMembershipType() == User.MembershipType.FREE) {
+            user.setMealRecommendTokens(user.getMealRecommendTokens() - 1);
+        }
+
         return bundle.getId();
     }
+
+
+
+
+    @Transactional
+    public TempMealDto.PlanResponse generateDailyPaid(
+            CustomUserPrincipal principal,
+            TempMealDto.DailyRequest request
+    ) {
+
+        User user = userRepository.findByUserId(principal.getUserId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 무료는 하루치만 받으려면 토큰 차감
+        if (user.getMembershipType() == User.MembershipType.FREE) {
+            resetWeeklyTokensIfNeeded(user);
+            if (user.getMealRecommendTokens() <= 0)
+                throw new BusinessException(ErrorCode.NO_MEAL_TOKENS);
+            user.setMealRecommendTokens(user.getMealRecommendTokens() - 1);
+        }
+
+        // 끼니수 포함하여 AI 호출 (save 안함)
+        RecommendedMealPlan plan =
+                aiServerService.requestDailyMealWithMealsPerDay(principal, request.getMealsPerDay());
+
+        return TempMealDto.PlanResponse.fromRecommendedPlan(plan);
+    }
+
 
     // ==== 무료 토큰 자동 리셋 (7일마다) ====
     private void resetWeeklyTokensIfNeeded(User user) {

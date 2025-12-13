@@ -12,6 +12,8 @@ import rto.intelfit.exception.ErrorCode;
 import rto.intelfit.repository.*;
 import rto.intelfit.security.CustomUserPrincipal;
 import java.time.LocalDateTime;
+import rto.intelfit.repository.UserRecommendedExerciseRepository;
+import rto.intelfit.domain.UserRecommendedExercise;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -43,6 +45,7 @@ public class ExerciseRecommendationService {
     private final DailyNutritionGoalRepository dailyNutritionGoalRepository;
     private final ExerciseRepository exerciseRepository;
     private final AIServerClient aiServerClient;  // ✅ AIServerClient 사용
+    private final UserRecommendedExerciseRepository userRecommendedExerciseRepository;
 
     /**
      * ✅ AI 기반 맞춤 운동 추천 생성 (AI 서버 호출)
@@ -103,7 +106,8 @@ public class ExerciseRecommendationService {
         String focus = (String) aiResponse.getOrDefault("focus", null);
         Map<String, Object> metrics = (Map<String, Object>) aiResponse.getOrDefault("metrics", Map.of());
         List<Map<String, Object>> exercises = (List<Map<String, Object>>) aiResponse.getOrDefault("exercises", List.of());
-
+// 📌 AI 반환 운동종목을 DB에 저장
+        saveAiRecommendedExercises(user, exercises);
         return RecommendedExerciseDto.DailyRecommendationResponse.builder()
                 .success(true)
                 .message("일일 운동 추천이 생성되었습니다")
@@ -112,6 +116,27 @@ public class ExerciseRecommendationService {
                 .exercises(exercises)
                 .build();
     }
+
+    @Transactional
+    public void saveAiRecommendedExercises(User user, List<Map<String, Object>> exercises) {
+
+        // 같은 유저의 기존 추천 목록 삭제 (원하면 유지도 가능)
+        // userRecommendedExerciseRepository.deleteByUser(user);
+
+        for (Map<String, Object> ex : exercises) {
+            UserRecommendedExercise entity = UserRecommendedExercise.builder()
+                    .user(user)
+                    .exerciseId((String) ex.get("exerciseId"))
+                    .name((String) ex.get("name"))
+                    .target((String) ex.get("target"))
+                    .build();
+
+            userRecommendedExerciseRepository.save(entity);
+        }
+
+        log.info("💾 AI 운동 추천 {}개 저장 완료 - userId={}", exercises.size(), user.getUserId());
+    }
+
     /**
      * FREE / PREMIUM 정책 + 토큰 초기화 + 토큰 차감
      */
@@ -628,6 +653,14 @@ public class ExerciseRecommendationService {
                 .plans(planSummaries)
                 .totalCount(planSummaries.size())
                 .build();
+    }
+
+    public List<UserRecommendedExercise> getRecommendedExercises(CustomUserPrincipal principal) {
+
+        User user = userRepository.findByUserId(principal.getUserId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        return userRecommendedExerciseRepository.findByUserOrderByCreatedAtDesc(user);
     }
 
     /**

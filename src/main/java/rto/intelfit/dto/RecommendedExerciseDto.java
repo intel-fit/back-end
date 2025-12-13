@@ -58,6 +58,21 @@ public class RecommendedExerciseDto {
         private List<String> likeMuscles;
 
     }
+    @Getter @Setter @Builder @AllArgsConstructor @NoArgsConstructor
+    public static class ExerciseSimpleResponse {
+        private String exerciseId;
+        private String name;
+        private String target;
+
+        public static ExerciseSimpleResponse from(UserRecommendedExercise e) {
+            return ExerciseSimpleResponse.builder()
+                    .exerciseId(e.getExerciseId())
+                    .name(e.getName())
+                    .target(e.getTarget())
+                    .build();
+        }
+    }
+
 
     @Getter
     @Setter

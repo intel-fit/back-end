@@ -21,14 +21,24 @@ public class TempMealController {
 
     private final TempMealService tempMealService;
 
-    // 1) AI 추천 기반 TEMP 생성
+    @PostMapping("/daily")
+    public ResponseEntity<?> generateDailyPaid(
+            @AuthenticationPrincipal CustomUserPrincipal principal,
+            @RequestBody TempMealDto.DailyRequest request
+    ) {
+        return ResponseEntity.ok(
+                tempMealService.generateDailyPaid(principal, request)
+        );
+    }
     @PostMapping("/weekly")
     public ResponseEntity<?> generateWeekly(
-            @AuthenticationPrincipal CustomUserPrincipal principal
+            @AuthenticationPrincipal CustomUserPrincipal principal,
+            @RequestBody TempMealDto.WeeklyRequest request
     ) {
-        Long id = tempMealService.generateWeeklyTempPlans(principal);
+        Long id = tempMealService.generateWeeklyTempPlans(principal, request);
         return ResponseEntity.ok("TEMP Weekly 생성 완료. tempBundleId=" + id);
     }
+
 
 
     // 2) TEMP 조회

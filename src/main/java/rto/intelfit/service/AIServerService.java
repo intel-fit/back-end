@@ -346,6 +346,151 @@ public class AIServerService {
         return preferenceService.getDislikedFoods(user);
     }
 
+    @Transactional(noRollbackFor = HttpClientErrorException.class)
+    public RecommendedMealPlan requestDailyMealWithMealsPerDay(
+            CustomUserPrincipal principal,
+            int mealsPerDay
+    ) {
+        User user = userRepository.findByUserId(principal.getUserId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        return fetchDailyMealPlanWithMealsPerDay(user, mealsPerDay);
+    }
+    private RecommendedMealPlan fetchDailyMealPlanWithMealsPerDay(User user, int mealsPerDay) {
+
+        String goalParam = mapGoalForRecommender(user.getHealthGoal());
+
+        UriComponentsBuilder ub = UriComponentsBuilder
+                .fromHttpUrl(aiServerUrl + "/recommend/recommend_daily_meal")
+                .queryParam("user_id", user.getUserId())
+                .queryParam("goal", goalParam)
+                .queryParam("meals_per_day", mealsPerDay); // ← 핵심
+
+        // 비선호 음식 반영
+        List<String> disliked = preferenceService.getDislikedFoods(user);
+        if (disliked != null)
+            disliked.forEach(f -> ub.queryParam("excluded_foods", f));
+
+        Map<String, Object> body = restTemplate.exchange(
+                ub.toUriString(),
+                HttpMethod.POST,
+                new HttpEntity<>(jsonHeaders()),
+                Map.class
+        ).getBody();
+
+        return convertBodyToPlan(user, body);
+    }
+    public List<RecommendedMealPlan> requestWeeklyMealWithMealsPerDay(
+            CustomUserPrincipal principal,
+            int mealsPerDay
+    ) {
+        User user = userRepository.findByUserId(principal.getUserId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        List<RecommendedMealPlan> weekly = new ArrayList<>();
+
+        for (int day = 1; day <= 7; day++) {
+            RecommendedMealPlan daily =
+                    fetchDailyMealPlanWithMealsPerDay(user, mealsPerDay);
+
+            daily.setUser(user);
+            daily.setBundleDay(day);
+            daily.setPlanDate(LocalDate.now().plusDays(day - 1));
+            daily.setIsSaved(false);
+
+            if (daily.getRecommendedMeals() != null)
+                daily.getRecommendedMeals().forEach(m -> m.setRecommendedMealPlan(daily));
+
+            weekly.add(daily);
+        }
+
+        return weekly;
+    }
+    private RecommendedMealPlan convertBodyToPlan(User user, Map<String, Object> body) {
+
+        BigDecimal targetDailyCalories = toBD(body.get("target_daily_calories"));
+        BigDecimal targetProtein       = toBD(body.get("target_protein"));
+        BigDecimal targetFat           = toBD(body.get("target_fat"));
+        BigDecimal targetCarbs         = toBD(body.get("target_carbs"));
+        String comment                 = str(body.get("comment"));
+
+        Map<String, Object> aiPlan = safeMap(body.get("ai_meal_plan"));
+        BigDecimal totalKcalFromPlan = toBD(aiPlan.get("total_kcal"));
+        if (totalKcalFromPlan == null || BigDecimal.ZERO.compareTo(totalKcalFromPlan) == 0) {
+            totalKcalFromPlan = targetDailyCalories;
+        }
+
+        List<Map<String, Object>> meals = safeListMap(aiPlan.get("meals"));
+
+        RecommendedMealPlan plan = RecommendedMealPlan.builder()
+                .user(user)
+                .planName("AI Daily Plan")
+                .description("AI 서버에서 생성한 하루 식단")
+                .totalCalories(totalKcalFromPlan)
+                .totalCarbs(targetCarbs)
+                .totalProtein(targetProtein)
+                .totalFat(targetFat)
+                .recommendationReason(
+                        (comment == null || comment.isBlank())
+                                ? "사용자 프로필과 목표 기반 자동 생성"
+                                : comment
+                )
+                .isSaved(false)
+                .build();
+
+        for (Map<String, Object> m : meals) {
+            String typeRaw = str(m.get("meal_type"));
+
+            RecommendedMeal rm = RecommendedMeal.builder()
+                    .mealType(mapMealTypeGuess(typeRaw))
+                    .build();
+
+            BigDecimal mealCalories = BigDecimal.ZERO;
+            BigDecimal mealCarbs    = BigDecimal.ZERO;
+            BigDecimal mealProtein  = BigDecimal.ZERO;
+            BigDecimal mealFat      = BigDecimal.ZERO;
+
+            List<Map<String, Object>> foods = safeListMap(m.get("foods"));
+            for (Map<String, Object> f : foods) {
+
+                String foodName = str(f.get("name"));
+                BigDecimal amountG = toBD(f.get("amount_g"));
+                if (amountG == null || BigDecimal.ZERO.compareTo(amountG) == 0) {
+                    amountG = new BigDecimal("100");
+                }
+
+                BigDecimal calories = toBD(f.get("calories"));
+                BigDecimal protein  = toBD(f.get("protein"));
+                BigDecimal fat      = toBD(f.get("fat"));
+                BigDecimal carbs    = toBD(f.get("carb"));
+
+                mealCalories = mealCalories.add(calories);
+                mealProtein  = mealProtein.add(protein);
+                mealFat      = mealFat.add(fat);
+                mealCarbs    = mealCarbs.add(carbs);
+
+                rm.addRecommendedFood(
+                        RecommendedFood.builder()
+                                .foodName(foodName)
+                                .servingSize(amountG)
+                                .calories(calories)
+                                .carbs(carbs)
+                                .protein(protein)
+                                .fat(fat)
+                                .build()
+                );
+            }
+
+            rm.setTotalCalories(mealCalories);
+            rm.setTotalProtein(mealProtein);
+            rm.setTotalFat(mealFat);
+            rm.setTotalCarbs(mealCarbs);
+
+            plan.addRecommendedMeal(rm);
+        }
+
+        return plan;
+    }
 
     public List<RecommendedMealPlan> requestWeeklyRecommendedMealPlansWithoutSave(CustomUserPrincipal principal) {
 

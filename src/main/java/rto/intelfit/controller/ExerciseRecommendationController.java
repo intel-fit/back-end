@@ -16,6 +16,9 @@ import rto.intelfit.service.ExerciseRecommendationService;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
+import rto.intelfit.dto.RecommendedExerciseDto;
+import rto.intelfit.domain.UserRecommendedExercise; // 필요하면
+import java.util.List;
 
 import java.time.LocalDate;
 
@@ -63,6 +66,9 @@ public class ExerciseRecommendationController {
     /**
      * AI 기반 맞춤 운동 추천 생성
      */
+
+
+
     @PostMapping("/generate")
     @Operation(summary = "AI 운동 추천 생성", 
                description = "사용자의 건강 정보, 목표, 식단 데이터를 기반으로 AI가 맞춤 운동을 추천합니다")
@@ -78,6 +84,23 @@ public class ExerciseRecommendationController {
 
         RecommendedExerciseDto.GenerateRecommendationResponse response =
                 exerciseRecommendationService.generateRecommendation(userPrincipal, targetDate);
+
+        return ResponseEntity.ok(response);
+    }
+
+    //추천된 운동 조회
+        @GetMapping("/recommended-exercises")
+    @Operation(summary = "AI 추천 운동 종목 조회", description = "최근 AI 운동 추천에서 생성된 운동 목록을 조회합니다.")
+    public ResponseEntity<List<RecommendedExerciseDto.ExerciseSimpleResponse>> getAiRecommendedExercises(
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+
+        List<UserRecommendedExercise> list =
+                exerciseRecommendationService.getRecommendedExercises(principal);
+
+        List<RecommendedExerciseDto.ExerciseSimpleResponse> response =
+                list.stream()
+                        .map(RecommendedExerciseDto.ExerciseSimpleResponse::from)
+                        .toList();
 
         return ResponseEntity.ok(response);
     }
