@@ -6,12 +6,21 @@ server:
       force: true
       enabled: true
 
+  # ⭐ 추가: Tomcat의 요청 타임아웃 (300초)
+  tomcat:
+    connection-timeout: 300000
+
 spring:
   config:
     activate:
       on-profile: default
   application:
     name: intelfit
+
+  # ⭐ 추가: Spring MVC async 요청 타임아웃 (300초)
+  mvc:
+    async:
+      request-timeout: 300000
 
   datasource:
     url: jdbc:mysql://localhost:3306/intelfit?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
@@ -45,7 +54,6 @@ spring:
           max-idle: 8
           min-idle: 0
 
-  # 이메일 설정
   mail:
     host: smtp.naver.com
     port: 587
@@ -62,7 +70,6 @@ spring:
           connectiontimeout: 5000
         debug: false
 
-  # 파일 업로드 설정 (AI 이미지 분석용)
   servlet:
     multipart:
       enabled: true
@@ -95,7 +102,6 @@ logging:
     rto.intelfit.util.JwtUtil: DEBUG
     org.springframework.mail: DEBUG
 
-# JWT 설정
 jwt:
   secret: mySecretKeyForJwtTokenGenerationAndValidation1234567890
   access-token-expiration: 3600000
@@ -108,9 +114,10 @@ ai:
     api-key: ${AI_SERVER_API_KEY:dummy}
     timeout:
       connect: 5000
-      read: 30000
 
-# 앱 설정
+      # ⭐ 변경: AI read timeout 30초 → 300초
+      read: 300000
+
 app:
   name: IntelFit
 

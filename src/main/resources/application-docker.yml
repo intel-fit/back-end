@@ -6,13 +6,22 @@ server:
       force: true
       enabled: true
 
+  # ⭐⭐⭐ Tomcat 타임아웃 추가
+  tomcat:
+    connection-timeout: 300000
+
 spring:
+  mvc:
+    async:
+      # ⭐⭐⭐ Spring MVC 요청 타임아웃 추가
+      request-timeout: 300000
+
   config:
     activate:
       on-profile: docker
+
   application:
     name: intelfit
-
 
   datasource:
     url: jdbc:mysql://mysql:3306/intelfit?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&autoReconnect=true
@@ -39,8 +48,8 @@ spring:
         format_sql: true
         show_sql: true
 
-    open-in-view: false
-    database-platform: org.hibernate.dialect.MySQLDialect
+  open-in-view: false
+  database-platform: org.hibernate.dialect.MySQLDialect
 
   data:
     redis:
@@ -54,7 +63,6 @@ spring:
           max-idle: 8
           min-idle: 0
 
-  # 이메일 설정
   mail:
     host: ${SPRING_MAIL_HOST:smtp.naver.com}
     port: ${SPRING_MAIL_PORT:587}
@@ -71,7 +79,6 @@ spring:
           connectiontimeout: 5000
         debug: false
 
-  # 파일 업로드 설정
   servlet:
     multipart:
       enabled: true
@@ -117,16 +124,15 @@ jwt:
   access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:3600000}
   refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:604800000}
 
-# AI 서버 설정
+# ⭐⭐⭐ AI 서버 타임아웃 크게 늘림
 ai:
   server:
     url: ${AI_SERVER_URL:http://43.200.40.140:8000}
     api-key: ${AI_SERVER_API_KEY:dummy}
     timeout:
-      connect: 5000
-      read: 30000
+      connect: 10000
+      read: 300000       # 300초로 변경 (중요!)
 
-# 앱 설정
 app:
   name: IntelFit
 
