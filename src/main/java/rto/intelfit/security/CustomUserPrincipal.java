@@ -14,8 +14,8 @@ import java.util.Collections;
 @AllArgsConstructor
 public class CustomUserPrincipal implements UserDetails {
 
-    private Long id;
-    private String userId;
+    private Long userPk;          // DB PK
+    private String userId;        // business userId
     private String name;
     private String email;
     private String password;
@@ -32,39 +32,23 @@ public class CustomUserPrincipal implements UserDetails {
         );
     }
 
+    // ✅ 이거 없어서 터진 거임
+    public Long getId() {
+        return userPk;
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // 기본적으로 USER 권한을 부여 (필요에 따라 역할 기반으로 확장 가능)
         return Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"));
     }
 
     @Override
-    public String getPassword() {
-        return password;
-    }
-
-    @Override
     public String getUsername() {
-        return userId;
+        return userId; // ⭐ userPk 말고 userId 유지 (JWT/로그인 안정성)
     }
 
-    @Override
-    public boolean isAccountNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isAccountNonLocked() {
-        return true;
-    }
-
-    @Override
-    public boolean isCredentialsNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isEnabled() {
-        return emailVerified; // 이메일 인증이 완료된 계정만 활성화
-    }
+    @Override public boolean isAccountNonExpired() { return true; }
+    @Override public boolean isAccountNonLocked() { return true; }
+    @Override public boolean isCredentialsNonExpired() { return true; }
+    @Override public boolean isEnabled() { return emailVerified; }
 }
