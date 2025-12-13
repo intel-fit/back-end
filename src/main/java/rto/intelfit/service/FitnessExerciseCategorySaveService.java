@@ -151,11 +151,26 @@ public class FitnessExerciseCategorySaveService {
                         Math.max(0L, updatedSeconds)
                 );
 
-                // 🔥 달성률도 재계산
-                dailyProgressService.recalculateProgress(user, progressDate);
+                // 🔥 달성률 직접 재계산 (recalculateProgress 호출하면 다시 조회해서 덮어씀)
+                ExerciseGoal goal = exerciseGoalRepository.findByUser(user).orElse(null);
+                if (goal != null) {
+                    long requiredSeconds = parseDurationToSeconds(goal.getDurationPerSession());
+                    if (requiredSeconds > 0) {
+                        double rate = Math.min(
+                                ((double) progress.getTotalExerciseSeconds() / requiredSeconds) * 100.0,
+                                100.0
+                        );
+                        progress.setExerciseRate(rate);
+                    }
+                } else {
+                    progress.setExerciseRate(0.0);
+                }
 
-                log.info("✔ DailyProgress 차감 userId={}, date={}, 차감={}초, 남은시간={}초",
-                        user.getId(), progressDate, sessionSeconds, progress.getTotalExerciseSeconds());
+                dailyProgressRepository.save(progress);
+
+                log.info("✔ DailyProgress 차감 userId={}, date={}, 차감={}초, 남은시간={}초, 달성률={}%",
+                        user.getId(), progressDate, sessionSeconds, 
+                        progress.getTotalExerciseSeconds(), progress.getExerciseRate());
             }
         }
 
