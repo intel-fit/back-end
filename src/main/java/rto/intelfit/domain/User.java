@@ -36,7 +36,7 @@ public class User {
     @Builder.Default
     private Boolean emailVerified = false;
 
-    @Column(name = "birth_date", nullable = false)
+    @Column(name = "birth_date")
     private LocalDate birthDate;
 
     @Column(name = "password", nullable = false, length = 255)

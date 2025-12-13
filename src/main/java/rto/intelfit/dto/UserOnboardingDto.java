@@ -4,6 +4,8 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 import rto.intelfit.domain.User;
 
+import java.time.LocalDate;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -17,6 +19,9 @@ public class UserOnboardingDto {
     @NotNull
     @Min(100) @Max(250)
     private Integer height;
+
+    @NotNull
+    private LocalDate birthDate;
 
     @NotNull
     @Min(30) @Max(200)

@@ -204,7 +204,7 @@ public class UserService {
         user.setWorkoutDaysPerWeek(dto.getWorkoutDaysPerWeek());
         user.setExperienceLevel(dto.getExperienceLevel());
         user.setFitnessConcerns(dto.getFitnessConcerns());
-
+        user.setBirthDate(dto.getBirthDate());
         user.setIsOnboarded(true);
 
         userRepository.save(user);
