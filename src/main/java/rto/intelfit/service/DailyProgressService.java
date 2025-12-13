@@ -33,6 +33,7 @@ public class DailyProgressService {
     @Transactional
     public DailyProgressDto calculateTodayProgress(User user) {
         LocalDate today = LocalDate.now();
+        log.info("🔍 calculateTodayProgress 호출 - userId={}, today={}", user.getUserId(), today);
         return calculateProgressByDate(user, today);
     }
 
@@ -43,6 +44,7 @@ public class DailyProgressService {
         DailyProgress progress =
                 dailyProgressRepository.findByUserIdAndDateForUpdate(user.getId(), date)
                         .orElseGet(() -> {
+                            log.info("🆕 DailyProgress 새로 생성 - userId={}, date={}", user.getUserId(), date);
                             DailyProgress p = new DailyProgress();
                             p.setUser(user);
                             p.setDate(date);
@@ -51,6 +53,9 @@ public class DailyProgressService {
                             p.setTotalExerciseSeconds(0L);
                             return p;
                         });
+
+        log.info("📊 DailyProgress 조회됨 - userId={}, date={}, totalSeconds={}, exerciseRate={}",
+                user.getUserId(), date, progress.getTotalExerciseSeconds(), progress.getExerciseRate());
 
         // 2) 하루 누적 운동 시간(초)
         long totalExerciseSeconds = progress.getTotalExerciseSeconds();
