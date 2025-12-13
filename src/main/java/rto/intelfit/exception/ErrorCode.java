@@ -15,6 +15,11 @@ public enum ErrorCode {
     USER_NOT_FOUND_BY_EMAIL(HttpStatus.NOT_FOUND, "USER_006", "해당 이메일로 등록된 사용자를 찾을 수 없습니다"),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_007", "사용자를 찾을 수 없습니다"),
     USER_ALREADY_DELETED(HttpStatus.BAD_REQUEST, "USER_008", "이미 탈퇴한 회원입니다"),
+    INVALID_REQUEST(
+            HttpStatus.BAD_REQUEST,
+            "USER_009",
+            "잘못된 요청입니다"
+    ),
 
     // ==================== 인증 관련 에러 ====================
     INVALID_VERIFICATION_CODE(HttpStatus.BAD_REQUEST, "AUTH_001", "인증코드가 올바르지 않습니다"),
