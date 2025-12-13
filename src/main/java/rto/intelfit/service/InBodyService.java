@@ -155,6 +155,18 @@ public class InBodyService {
     }
 
     /**
+     * 전체 인바디 기록(히스토리) 조회
+     */
+    public List<InBodyDto.InBodyHistoryEntry> getInBodyHistory(CustomUserPrincipal userPrincipal) {
+        User user = findUserByPrincipal(userPrincipal);
+        List<InBody> inBodies = inBodyRepository.findByUserOrderByMeasurementDateDesc(user);
+        log.info("인바디 전체 기록 조회 - 사용자 ID: {}, 총 {}건", user.getUserId(), inBodies.size());
+        return inBodies.stream()
+                .map(InBodyDto.InBodyHistoryEntry::from)
+                .toList();
+    }
+
+    /**
      * 특정 인바디 기록 상세 조회
      */
     public InBodyDto.InBodyDetailResponse getInBodyById(CustomUserPrincipal userPrincipal, Long inBodyId) {

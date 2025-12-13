@@ -161,6 +161,22 @@ public class InBodyController {
     }
 
     /**
+     * 4-1. 전체 인바디 기록 히스토리 조회
+     */
+    @Operation(summary = "전체 인바디 기록 히스토리 조회",
+            description = "로그인한 사용자의 전체 인바디 기록을 반환합니다")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "전체 인바디 기록 조회 성공"),
+            @ApiResponse(responseCode = "401", description = "인증이 필요합니다")
+    })
+    @GetMapping("/history")
+    public ResponseEntity<List<InBodyDto.InBodyHistoryEntry>> getInBodyHistory(
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
+        log.info("전체 인바디 기록 조회 요청 - 사용자 ID: {}", userPrincipal.getUserId());
+        return ResponseEntity.ok(inBodyService.getInBodyHistory(userPrincipal));
+    }
+
+    /**
      * 5. 특정 인바디 기록 상세 조회
      */
     @Operation(summary = "특정 인바디 기록 조회",
