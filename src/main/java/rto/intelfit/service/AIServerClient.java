@@ -20,7 +20,7 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.HashMap;
-
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -221,6 +221,45 @@ public class AIServerClient {
         return getRequest(url);
     }
 
+    public String analyzeInBodyComment(String userId,
+                                       LocalDate startDate,
+                                       LocalDate endDate,
+                                       List<Map<String, Object>> records) {
+        String url = aiServerUrl + "/inbody/comment/analyze";
+        Map<String, Object> payload = buildInBodyCommentPayload(userId, startDate, endDate, records);
+        return postPlainText(url, payload);
+    }
+
+    /**
+     * 인바디 기간 분석을 트리거한다.
+     * GET /inbody/analytics/period/{user_id}?start_date=...&end_date=...
+     */
+    public String requestInBodyPeriodAnalysis(String userId,
+                                              LocalDate startDate,
+                                              LocalDate endDate) {
+        if (userId == null || startDate == null || endDate == null) {
+            throw new IllegalArgumentException("userId, startDate, endDate are required");
+        }
+
+        String url = aiServerUrl + "/inbody/analytics/period/" + userId
+                + "?start_date=" + startDate
+                + "&end_date=" + endDate;
+
+        try {
+            log.info("AI 서버 인바디 기간 분석 GET 요청 - {}", url);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    null,
+                    String.class
+            );
+            return response.getBody();
+        } catch (RestClientException e) {
+            log.error("AI 서버 인바디 기간 분석 요청 실패: {}", e.getMessage());
+            throw new RuntimeException("AI 서버 인바디 분석 호출 실패: " + e.getMessage(), e);
+        }
+    }
+
     // ========================================
     // 5️⃣ 코치 API
     // ========================================
@@ -245,6 +284,21 @@ public class AIServerClient {
     // ========================================
     // 🔧 헬퍼 메서드
     // ========================================
+
+    private Map<String, Object> buildInBodyCommentPayload(String userId,
+                                                          LocalDate startDate,
+                                                          LocalDate endDate,
+                                                          List<Map<String, Object>> inBodyRecords) {
+        if (inBodyRecords == null || inBodyRecords.isEmpty()) {
+            log.warn("AI 인바디 코멘트 요청에 전달할 인바디 데이터가 없습니다 - userId={}", userId);
+        }
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("user_id", userId);
+        payload.put("start_date", startDate);
+        payload.put("end_date", endDate);
+        payload.put("records", inBodyRecords);
+        return payload;
+    }
 
     private Map<String, Object> getRequest(String url) {
         try {
@@ -281,6 +335,26 @@ public class AIServerClient {
             return response.getBody();
         } catch (RestClientException e) {
             log.error("AI 서버 POST 요청 실패: {} - {}", url, e.getMessage());
+            throw new RuntimeException("AI 서버 호출 실패: " + e.getMessage(), e);
+        }
+    }
+
+    private String postPlainText(String url, Map<String, Object> body) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+
+        try {
+            log.debug("AI 서버 POST(Text) 요청: {} - Body: {}", url, body);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    requestEntity,
+                    String.class
+            );
+            return response.getBody();
+        } catch (RestClientException e) {
+            log.error("AI 서버 POST(Text) 요청 실패: {} - {}", url, e.getMessage());
             throw new RuntimeException("AI 서버 호출 실패: " + e.getMessage(), e);
         }
     }

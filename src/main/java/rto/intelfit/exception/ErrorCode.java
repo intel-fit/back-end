@@ -135,6 +135,9 @@ public enum ErrorCode {
 
     // ==================== 결제 관련 에러 ====================
     PAYMENT_NOT_APPROVED(HttpStatus.BAD_REQUEST, "PAYMENT_001", "결제가 완료되지 않았습니다"),
+    SUBSCRIPTION_NOT_FOUND(HttpStatus.NOT_FOUND, "SUBSCRIPTION_001", "구독 정보를 찾을 수 없습니다"),
+    SUBSCRIPTION_ALREADY_CANCELLED(HttpStatus.BAD_REQUEST, "SUBSCRIPTION_002", "이미 취소된 구독입니다"),
+    SUBSCRIPTION_CANCEL_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "SUBSCRIPTION_003", "해당 구독은 취소할 수 없습니다"),
 
     // ==================== 추천 운동 관련 에러 ====================
     RECOMMENDED_EXERCISE_PLAN_NOT_FOUND(HttpStatus.NOT_FOUND, "REC_EXERCISE_001", "추천 운동 플랜을 찾을 수 없습니다"),

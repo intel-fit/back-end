@@ -241,25 +241,72 @@ public class InBodyDto {
                     .skeletalMuscleMass(inBody.getSkeletalMuscleMass())
                     .bodyFatPercentage(inBody.getBodyFatPercentage())
                     .bmi(inBody.getBmi())
-                    .score(calculateSimpleScore(inBody))
+                    .score(calculateHistoryScore(inBody))
                     .achievementBadge(inBody.getAchievementBadge())
                     .build();
         }
+    }
 
-        private static Integer calculateSimpleScore(InBody inBody) {
-            int score = 70;
-            if (inBody.getBmi() != null) {
-                BigDecimal bmi = inBody.getBmi();
-                if (bmi.compareTo(BigDecimal.valueOf(18.5)) >= 0 &&
-                        bmi.compareTo(BigDecimal.valueOf(23)) < 0) {
-                    score += 15;
-                }
-            }
-            if (inBody.getSkeletalMuscleMass() != null) {
+    // ==================== 전체 기록 응답 ====================
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "인바디 전체 기록 히스토리 항목")
+    public static class InBodyHistoryEntry {
+
+        @Schema(description = "인바디 기록 ID", example = "100")
+        private Long id;
+
+        @Schema(description = "측정 날짜", example = "2024-03-25")
+        @JsonFormat(pattern = "yyyy-MM-dd")
+        private LocalDate measurementDate;
+
+        @Schema(description = "체중 (kg)", example = "58.8")
+        private BigDecimal weight;
+
+        @Schema(description = "골격근량 (kg)", example = "22.9")
+        private BigDecimal skeletalMuscleMass;
+
+        @Schema(description = "체지방량 (kg)", example = "17.3")
+        private BigDecimal bodyFatMass;
+
+        @Schema(description = "체지방률 (%)", example = "29.4")
+        private BigDecimal bodyFatPercentage;
+
+        @Schema(description = "BMI", example = "22.4")
+        private BigDecimal bmi;
+
+        @Schema(description = "인바디 점수", example = "74")
+        private Integer score;
+
+        public static InBodyHistoryEntry from(InBody inBody) {
+            return InBodyHistoryEntry.builder()
+                    .id(inBody.getId())
+                    .measurementDate(inBody.getMeasurementDate())
+                    .weight(inBody.getWeight())
+                    .skeletalMuscleMass(inBody.getSkeletalMuscleMass())
+                    .bodyFatMass(inBody.getBodyFatMass())
+                    .bodyFatPercentage(inBody.getBodyFatPercentage())
+                    .bmi(inBody.getBmi())
+                    .score(calculateHistoryScore(inBody))
+                    .build();
+        }
+    }
+
+    private static int calculateHistoryScore(InBody inBody) {
+        int score = 70;
+        if (inBody.getBmi() != null) {
+            BigDecimal bmi = inBody.getBmi();
+            if (bmi.compareTo(BigDecimal.valueOf(18.5)) >= 0 &&
+                    bmi.compareTo(BigDecimal.valueOf(23)) < 0) {
                 score += 15;
             }
-            return Math.min(100, score);
         }
+        if (inBody.getSkeletalMuscleMass() != null) {
+            score += 15;
+        }
+        return Math.min(100, score);
     }
 
     // ==================== 상세 응답 (화면 맞춤) ====================

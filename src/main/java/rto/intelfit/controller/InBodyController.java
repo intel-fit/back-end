@@ -89,6 +89,33 @@ public class InBodyController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/comment/daily/weight")
+    @Operation(summary = "일일 체중 코멘트",
+            description = "AI 서버에서 생성한 체중 관련 코멘트를 반환합니다")
+    public ResponseEntity<String> getDailyWeightComment(
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
+        String comment = inBodyService.getDailyWeightComment(userPrincipal);
+        return ResponseEntity.ok(comment);
+    }
+
+    @GetMapping("/comment/daily/fat")
+    @Operation(summary = "일일 체지방 코멘트",
+            description = "AI 서버에서 생성한 체지방 관련 코멘트를 반환합니다")
+    public ResponseEntity<String> getDailyFatComment(
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
+        String comment = inBodyService.getDailyFatComment(userPrincipal);
+        return ResponseEntity.ok(comment);
+    }
+
+    @GetMapping("/comment/daily/muscle")
+    @Operation(summary = "일일 근육 코멘트",
+            description = "AI 서버에서 생성한 근육 관련 코멘트를 반환합니다")
+    public ResponseEntity<String> getDailyMuscleComment(
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
+        String comment = inBodyService.getDailyMuscleComment(userPrincipal);
+        return ResponseEntity.ok(comment);
+    }
+
     /**
      * 3. 인바디 정보 수정
      */
@@ -131,6 +158,22 @@ public class InBodyController {
 
         List<InBodyDto.InBodySummaryResponse> response = inBodyService.getInBodyList(userPrincipal);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 4-1. 전체 인바디 기록 히스토리 조회
+     */
+    @Operation(summary = "전체 인바디 기록 히스토리 조회",
+            description = "로그인한 사용자의 전체 인바디 기록을 반환합니다")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "전체 인바디 기록 조회 성공"),
+            @ApiResponse(responseCode = "401", description = "인증이 필요합니다")
+    })
+    @GetMapping("/history")
+    public ResponseEntity<List<InBodyDto.InBodyHistoryEntry>> getInBodyHistory(
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
+        log.info("전체 인바디 기록 조회 요청 - 사용자 ID: {}", userPrincipal.getUserId());
+        return ResponseEntity.ok(inBodyService.getInBodyHistory(userPrincipal));
     }
 
     /**
