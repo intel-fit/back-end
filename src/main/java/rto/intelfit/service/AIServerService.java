@@ -146,6 +146,35 @@ public class AIServerService {
             throw new RuntimeException(e);
         }
     }
+
+    @Transactional
+    public void deleteUserOnAI(User user) {
+        if (user == null) {
+            return;
+        }
+        String endpoint = aiServerUrl + "/user/" + user.getUserId() + "/purge?confirm=true";
+
+        try {
+            if (log.isDebugEnabled()) {
+                log.debug("AI user purge endpoint: {}", endpoint);
+            }
+
+            ResponseEntity<Void> res = restTemplate.exchange(
+                    endpoint,
+                    HttpMethod.DELETE,
+                    new HttpEntity<>(jsonHeaders()),
+                    Void.class
+            );
+            log.info("AI user delete sync: status={}", res.getStatusCode());
+        } catch (HttpClientErrorException e) {
+            log.warn("AI user delete sync 4xx/5xx: status={}, body={}",
+                    e.getStatusCode(), e.getResponseBodyAsString(), e);
+            throw e;
+        } catch (Exception e) {
+            log.error("AI user delete sync failed: {}", e.getMessage(), e);
+            throw new RuntimeException(e);
+        }
+    }
     //1.5 ai 서버로 피드백 전송
     public void sendExerciseFeedback(ExerciseFeedbackDto.Request request) {
         String url = aiServerUrl + "/exercise/feedback";
