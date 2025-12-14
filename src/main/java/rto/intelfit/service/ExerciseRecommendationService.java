@@ -14,6 +14,8 @@ import rto.intelfit.security.CustomUserPrincipal;
 import java.time.LocalDateTime;
 import rto.intelfit.repository.UserRecommendedExerciseRepository;
 import rto.intelfit.domain.UserRecommendedExercise;
+import rto.intelfit.dto.WeeklyRecommendedExerciseSaveDto;
+import rto.intelfit.dto.TempExerciseSummaryDto;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -46,6 +48,7 @@ public class ExerciseRecommendationService {
     private final ExerciseRepository exerciseRepository;
     private final AIServerClient aiServerClient;  // ✅ AIServerClient 사용
     private final UserRecommendedExerciseRepository userRecommendedExerciseRepository;
+    private final TempExerciseSummaryRepository tempExerciseSummaryRepository;
 
     /**
      * ✅ AI 기반 맞춤 운동 추천 생성 (AI 서버 호출)
@@ -60,11 +63,15 @@ public class ExerciseRecommendationService {
         // ✅ FREE / PREMIUM + 토큰 / 일일 초기화 로직
         handleWorkoutRecommendToken(user);
         // 1) 최신 인바디 조회 (없으면 예외)
+        // ⬅⬅⬅ 인바디 없으면 null 반환하도록 변경
         InBody latestInBody = inBodyRepository.findTopByUserOrderByMeasurementDateDesc(user)
-                .orElseThrow(() -> new BusinessException(
-                        ErrorCode.INBODY_NOT_FOUND,
-                        "AI 운동 추천을 위해 인바디 정보가 필요합니다. 먼저 인바디를 등록해주세요.")
-                );
+                .orElse(null);
+
+// 인바디 없으면 빈 프로필로 처리
+        Map<String, Object> inbodyProfile = (latestInBody != null)
+                ? buildInbodyProfile(latestInBody, user)
+                : buildEmptyInbodyProfile();
+
 
         int age = calculateAge(user);
         String sex = mapSex(user.getGender());               // "male" / "female"
@@ -77,7 +84,7 @@ public class ExerciseRecommendationService {
         int weightKg = user.getWeight() != null ? user.getWeight() : 70;
 
         // 2) 인바디 정규화 → inbody 파라미터 조립
-        Map<String, Object> inbodyProfile = buildInbodyProfile(latestInBody, user);
+
 
         // 3) AI 서버로 보낼 payload 구성
         Map<String, Object> payload = new HashMap<>();
@@ -106,26 +113,132 @@ public class ExerciseRecommendationService {
         String focus = (String) aiResponse.getOrDefault("focus", null);
         Map<String, Object> metrics = (Map<String, Object>) aiResponse.getOrDefault("metrics", Map.of());
         List<Map<String, Object>> exercises = (List<Map<String, Object>>) aiResponse.getOrDefault("exercises", List.of());
-// 📌 AI 반환 운동종목을 DB에 저장
-        saveAiRecommendedExercises(user, exercises);
+        double expectedDuration = 0;
+        double expectedKcal = 0;
+
+        if (metrics != null) {
+            Object durObj = metrics.get("total_duration_min");
+            Object kcalObj = metrics.get("total_kcal");
+
+            expectedDuration = durObj instanceof Number ? ((Number) durObj).doubleValue() : 0;
+            expectedKcal = kcalObj instanceof Number ? ((Number) kcalObj).doubleValue() : 0;
+        }
+        // ⬅⬅⬅ 여기 추가 : 오늘 날짜로 저장
+        saveAiRecommendedExercises(user, LocalDate.now(), exercises);
         return RecommendedExerciseDto.DailyRecommendationResponse.builder()
                 .success(true)
                 .message("일일 운동 추천이 생성되었습니다")
                 .focus(focus)
                 .metrics(metrics)
                 .exercises(exercises)
+                .expectedDurationMin(expectedDuration)
+                .expectedKcal(expectedKcal)
                 .build();
     }
 
-    @Transactional
-    public void saveAiRecommendedExercises(User user, List<Map<String, Object>> exercises) {
+    @Transactional(readOnly = true)
+    public TempExerciseSummaryDto getTempSummary(String userId, LocalDate date) {
 
-        // 같은 유저의 기존 추천 목록 삭제 (원하면 유지도 가능)
-        // userRecommendedExerciseRepository.deleteByUser(user);
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        TempExerciseSummary summary = tempExerciseSummaryRepository
+                .findByUserAndDate(user, date)
+                .orElse(null);
+
+        if (summary == null) {
+            return null;
+        }
+
+        return TempExerciseSummaryDto.builder()
+                .date(summary.getDate().toString())
+                .focus(summary.getFocus())
+                .durationMin(summary.getDurationMin())
+                .kcal(summary.getKcal())
+                .exerciseCount(summary.getExerciseCount())
+                .title(summary.getTitle())
+                .build();
+    }
+
+
+
+    @Transactional
+    public void saveWeeklyRecommendations(String userId, WeeklyRecommendedExerciseSaveDto dto) {
+
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        for (WeeklyRecommendedExerciseSaveDto.DayExercise day : dto.getDays()) {
+
+            LocalDate date = LocalDate.parse(day.getDate());
+
+            // 기존 데이터 삭제 (정책)
+            userRecommendedExerciseRepository.deleteByUserAndExerciseDate(user, date);
+
+            for (WeeklyRecommendedExerciseSaveDto.ExerciseItem ex : day.getExercises()) {
+
+                UserRecommendedExercise entity = UserRecommendedExercise.builder()
+                        .user(user)
+                        .exerciseDate(date)
+                        .exerciseId(ex.getExerciseId())
+                        .name(ex.getName())
+                        .target(ex.getTarget())
+                        .build();
+
+                userRecommendedExerciseRepository.save(entity);
+            }
+
+            log.info("📌 [{}] 날짜에 {}개 운동 저장 완료 (user={})",
+                    date, day.getExercises().size(), userId);
+        }
+    }
+
+    private Map<String, Object> buildEmptyInbodyProfile() {
+        Map<String, Object> empty = new HashMap<>();
+
+        empty.put("arms", Map.of(
+                "muscle_score", 0,
+                "fat_score", 0
+        ));
+        empty.put("chest", Map.of(
+                "muscle_score", 0,
+                "fat_score", 0
+        ));
+        empty.put("back", Map.of(
+                "muscle_score", 0,
+                "fat_score", 0
+        ));
+        empty.put("shoulders", Map.of(
+                "muscle_score", 0,
+                "fat_score", 0
+        ));
+        empty.put("legs", Map.of(
+                "muscle_score", 0,
+                "fat_score", 0
+        ));
+        empty.put("glutes", Map.of(
+                "muscle_score", 0,
+                "fat_score", 0
+        ));
+        empty.put("core", Map.of(
+                "muscle_score", 0,
+                "fat_score", 0
+        ));
+
+        return empty;
+    }
+
+
+    @Transactional
+    public void saveAiRecommendedExercises(User user, LocalDate date, List<Map<String, Object>> exercises) {
+
+        // 기존 값 삭제 여부는 정책에 따라 선택
+        // userRecommendedExerciseRepository.deleteByUserAndExerciseDate(user, date);
 
         for (Map<String, Object> ex : exercises) {
             UserRecommendedExercise entity = UserRecommendedExercise.builder()
                     .user(user)
+                    .exerciseDate(date)   // ⬅⬅⬅ 추가됨
                     .exerciseId((String) ex.get("exerciseId"))
                     .name((String) ex.get("name"))
                     .target((String) ex.get("target"))
@@ -134,8 +247,9 @@ public class ExerciseRecommendationService {
             userRecommendedExerciseRepository.save(entity);
         }
 
-        log.info("💾 AI 운동 추천 {}개 저장 완료 - userId={}", exercises.size(), user.getUserId());
+        log.info("💾 AI 운동 추천 {}개 저장 완료 - userId={}, date={}", exercises.size(), user.getUserId(), date);
     }
+
 
     /**
      * FREE / PREMIUM 정책 + 토큰 초기화 + 토큰 차감
@@ -370,6 +484,27 @@ public class ExerciseRecommendationService {
                 .plan(RecommendedExerciseDto.ExercisePlanDetailResponse.from(savedPlan))
                 .build();
     }
+
+    public Map<LocalDate, List<RecommendedExerciseDto.ExerciseSimpleResponse>>
+    getGroupedRecommendedExercises(CustomUserPrincipal principal) {
+
+        User user = userRepository.findByUserId(principal.getUserId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        List<UserRecommendedExercise> list =
+                userRecommendedExerciseRepository.findByUserOrderByExerciseDateAscCreatedAtAsc(user);
+
+        // 날짜별 그룹핑
+        return list.stream()
+                .collect(Collectors.groupingBy(
+                        UserRecommendedExercise::getExerciseDate,
+                        Collectors.mapping(
+                                RecommendedExerciseDto.ExerciseSimpleResponse::from,
+                                Collectors.toList()
+                        )
+                ));
+    }
+
 
     /**
      * ✅ AI 응답을 RecommendedExercisePlan 엔티티로 변환

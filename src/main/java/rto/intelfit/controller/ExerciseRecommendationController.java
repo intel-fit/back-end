@@ -13,12 +13,17 @@ import rto.intelfit.dto.RecommendedExerciseDto;
 import rto.intelfit.security.CustomUserPrincipal;
 import rto.intelfit.service.ExerciseRecommendationService;
 // import 추가
+import rto.intelfit.dto.WeeklyRecommendedExerciseSaveDto;
+
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import rto.intelfit.dto.RecommendedExerciseDto;
 import rto.intelfit.domain.UserRecommendedExercise; // 필요하면
 import java.util.List;
+import rto.intelfit.service.TempExerciseSummaryService;
+import rto.intelfit.dto.TempExerciseSummaryDto;
+import java.util.Map;
 
 import java.time.LocalDate;
 
@@ -38,6 +43,7 @@ import java.time.LocalDate;
 public class ExerciseRecommendationController {
 
     private final ExerciseRecommendationService exerciseRecommendationService;
+    private final TempExerciseSummaryService tempExerciseSummaryService;
 
     // ===========================
     // 🔹 일일 운동 추천 API 추가
@@ -63,6 +69,48 @@ public class ExerciseRecommendationController {
 
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/temp")
+    @Operation(summary = "TEMP 홈요약 조회",
+            description = "특정 날짜 기준으로 TEMP 운동 요약 정보를 조회합니다.")
+    public ResponseEntity<?> getTempSummary(
+            @AuthenticationPrincipal CustomUserPrincipal principal,
+            @RequestParam(required = false)
+            @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date
+    ) {
+
+        LocalDate targetDate = (date != null) ? date : LocalDate.now();
+
+        log.info("📤 TEMP Summary 조회 요청 user={}, date={}",
+                principal.getUserId(), targetDate);
+
+        TempExerciseSummaryDto summary =
+                tempExerciseSummaryService.getTempSummary(principal.getUserId(), targetDate);
+
+        return ResponseEntity.ok(summary != null ? summary : Map.of());
+    }
+
+
+    @PostMapping("/weekly/save")
+    @Operation(summary = "7일 AI 추천 운동 저장",
+            description = "프론트가 AI 7일 추천값을 전달하면 날짜별 추천 운동을 DB에 저장합니다.")
+    public ResponseEntity<?> saveWeeklyRecommendations(
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal,
+            @RequestBody WeeklyRecommendedExerciseSaveDto dto
+    ) {
+
+        log.info("📥 7일 추천 운동 저장 요청 - user={}, days={}",
+                userPrincipal.getUserId(),
+                dto.getDays().size());
+
+        exerciseRecommendationService.saveWeeklyRecommendations(userPrincipal.getUserId(), dto);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "7일 추천 운동 저장 완료"
+        ));
+    }
+
     /**
      * AI 기반 맞춤 운동 추천 생성
      */
@@ -90,20 +138,17 @@ public class ExerciseRecommendationController {
 
     //추천된 운동 조회
         @GetMapping("/recommended-exercises")
-    @Operation(summary = "AI 추천 운동 종목 조회", description = "최근 AI 운동 추천에서 생성된 운동 목록을 조회합니다.")
-    public ResponseEntity<List<RecommendedExerciseDto.ExerciseSimpleResponse>> getAiRecommendedExercises(
+    @Operation(summary = "날짜별 AI 추천 운동 조회",
+            description = "AI 추천 운동을 exercise_date 기준으로 묶어서 반환합니다.")
+    public ResponseEntity<?> getAiRecommendedExercises(
             @AuthenticationPrincipal CustomUserPrincipal principal) {
 
-        List<UserRecommendedExercise> list =
-                exerciseRecommendationService.getRecommendedExercises(principal);
-
-        List<RecommendedExerciseDto.ExerciseSimpleResponse> response =
-                list.stream()
-                        .map(RecommendedExerciseDto.ExerciseSimpleResponse::from)
-                        .toList();
+        Map<LocalDate, List<RecommendedExerciseDto.ExerciseSimpleResponse>> response =
+                exerciseRecommendationService.getGroupedRecommendedExercises(principal);
 
         return ResponseEntity.ok(response);
     }
+
 
     /**
      * 식단 연동 운동 추천 생성
@@ -145,7 +190,7 @@ public class ExerciseRecommendationController {
     /**
      * 특정 추천 플랜 상세 조회
      */
-    @GetMapping("/{planId}")
+    @GetMapping("/{planId:\\d+}")
     @Operation(summary = "추천 플랜 상세 조회", 
                description = "특정 추천 운동 플랜의 상세 정보를 조회합니다")
     public ResponseEntity<RecommendedExerciseDto.ExercisePlanDetailResponse> getPlanDetail(
@@ -218,4 +263,23 @@ public class ExerciseRecommendationController {
 
         return ResponseEntity.ok(response);
     }
+    @PostMapping("/temp")
+    @Operation(summary = "홈화면 TEMP 운동요약 저장",
+            description = "프론트가 AI 응답을 파싱하여 요약값만 TEMP 테이블에 저장합니다.")
+    public ResponseEntity<?> saveTempSummary(
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal,
+            @RequestBody TempExerciseSummaryDto dto
+    ) {
+
+        log.info("📥 TEMP Summary 저장 요청 user={}, date={}",
+                userPrincipal.getUserId(), dto.getDate());
+
+        tempExerciseSummaryService.saveOrUpdateTempSummary(userPrincipal.getUserId(), dto);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "TEMP summary 저장 완료"
+        ));
+    }
+
 }

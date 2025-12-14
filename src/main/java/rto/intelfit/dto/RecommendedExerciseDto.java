@@ -96,6 +96,9 @@ public class RecommendedExerciseDto {
 
         @Schema(description = "운동 리스트 (AI 서버 raw 구조 그대로 전달)")
         private List<Map<String, Object>> exercises;
+        // ⭐ 프론트용 명시적 필드 추가
+        private double expectedDurationMin;
+        private double expectedKcal;
     }
     @Data
     @Builder
