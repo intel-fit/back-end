@@ -209,7 +209,6 @@ public class KakaoPayPaymentService {
         PlanInfo plan = resolvePlan(session.planCode());
         upsertKakaoSubscription(user.getUserId(), session.tid(), plan);
         membershipService.syncMembership(user.getUserId());
-        forceLogout(user.getUserId());
 
         paymentSessionStore.remove(request.getOrderId());
 
@@ -362,10 +361,5 @@ public class KakaoPayPaymentService {
     }
 
     private record PlanInfo(String planCode, String itemName, Integer amount, Integer taxFreeAmount, int durationDays) {
-    }
-
-    private void forceLogout(String userId) {
-        jwtUtil.deleteRefreshToken(userId);
-        jwtUtil.forceLogoutUser(userId);
     }
 }

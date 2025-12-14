@@ -185,7 +185,6 @@ public class StripeService {
 
         upsertSubscription(stripeSub, userId, session.getCustomer(), planInfo);
         recordStripePayment(userId, invoiceLikeOrderId(session.getId(), stripeSub.getId()), session.getCustomer(), amountFromSubscription(stripeSub), planInfo.planCode(), PaymentHistory.PaymentStatus.READY);
-        forceLogout(userId);
     }
 
     @Transactional
@@ -203,7 +202,6 @@ public class StripeService {
 
         upsertSubscription(stripeSub, userId, stripeSub.getCustomer(), planInfo);
         recordStripePayment(userId, invoice.getId(), stripeSub.getCustomer(), invoice.getAmountPaid(), planInfo.planCode(), PaymentHistory.PaymentStatus.APPROVED);
-        forceLogout(userId);
     }
 
     @Transactional
@@ -352,11 +350,6 @@ public class StripeService {
         if (!StringUtils.hasText(priceId)) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "Stripe price id 설정을 확인하세요: " + configKey);
         }
-    }
-
-    private void forceLogout(String userId) {
-        jwtUtil.deleteRefreshToken(userId);
-        jwtUtil.forceLogoutUser(userId);
     }
 
     private LocalDateTime toKST(Long timestamp) {

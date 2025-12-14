@@ -297,9 +297,6 @@ public class UserService {
             throw new BusinessException(ErrorCode.INVALID_LOGIN_CREDENTIALS);
         }
 
-        // 강제 로그아웃 플래그 해제
-        jwtUtil.clearForceLogout(user.getUserId());
-
         // 마지막 로그인 시간 업데이트
         user.updateLastLoginAt();
         userRepository.save(user);
