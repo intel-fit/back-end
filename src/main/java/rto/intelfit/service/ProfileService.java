@@ -10,7 +10,7 @@ import rto.intelfit.domain.User;
 import rto.intelfit.dto.ProfileDto;
 import rto.intelfit.exception.BusinessException;
 import rto.intelfit.exception.ErrorCode;
-import rto.intelfit.repository.*;
+import rto.intelfit.repository.UserRepository;
 import rto.intelfit.security.CustomUserPrincipal;
 import rto.intelfit.util.JwtUtil;
 
@@ -23,17 +23,7 @@ public class ProfileService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
-    private final InBodyRepository inBodyRepository;
-    private final UserFoodPreferenceRepository userFoodPreferenceRepository;
-    private final DailyNutritionGoalRepository dailyNutritionGoalRepository;
-    private final MealRepository mealRepository;
-    private final RecommendedMealPlanRepository recommendedMealPlanRepository;
-    private final ExerciseRepository exerciseRepository;
-    private final RecommendedExercisePlanRepository recommendedExercisePlanRepository;
-    private final UserBadgeRepository userBadgeRepository;
-    private final PaymentHistoryRepository paymentHistoryRepository;
-    private final SubscriptionRepository subscriptionRepository;
-    private final AIChatMessageRepository aiChatMessageRepository;
+    private final UserCleanupService userCleanupService;
 
 
     public ProfileDto.ProfileResponse getProfile(CustomUserPrincipal userPrincipal) {
@@ -106,7 +96,7 @@ public class ProfileService {
         jwtUtil.deleteRefreshToken(user.getUserId());
 
         // 연결된 데이터 선삭제 (FK 제약 해소)
-        cleanupUserData(user);
+        userCleanupService.cleanup(user);
 
         // ✅ 유저만 삭제
         userRepository.delete(user);
@@ -147,19 +137,5 @@ public class ProfileService {
         if (request.getWeightGoal() != null) {
             user.setWeightGoal(request.getWeightGoal());
         }
-    }
-
-    private void cleanupUserData(User user) {
-        inBodyRepository.deleteAllByUser(user);
-        userFoodPreferenceRepository.deleteAllByUser(user);
-        dailyNutritionGoalRepository.deleteAllByUser(user);
-        mealRepository.deleteAllByUser(user);
-        recommendedMealPlanRepository.deleteAllByUser(user);
-        exerciseRepository.deleteAllByUser(user);
-        recommendedExercisePlanRepository.deleteAllByUser(user);
-        userBadgeRepository.deleteAllByUser(user);
-        paymentHistoryRepository.deleteAllByUser_Id(user.getId());
-        subscriptionRepository.deleteAllByUserId(user.getUserId());
-        aiChatMessageRepository.deleteAllByUser_UserId(user.getUserId());
     }
 }

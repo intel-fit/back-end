@@ -22,4 +22,6 @@ public interface WorkoutPlanDetailRepository extends JpaRepository<WorkoutPlanDe
             "WHERE w.user.id = :userId AND w.dayOfWeek = :dayOfWeek")
     int countPlannedSetsByDay(@Param("userId") Long userId,
                               @Param("dayOfWeek") String dayOfWeek);
+
+    void deleteAllByUser_Id(Long userId);
 }

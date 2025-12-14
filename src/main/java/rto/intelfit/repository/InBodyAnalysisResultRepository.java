@@ -9,4 +9,6 @@ import java.util.Optional;
 public interface InBodyAnalysisResultRepository extends JpaRepository<InBodyAnalysisResult, Long> {
 
     Optional<InBodyAnalysisResult> findTopByUserOrderByCreatedAtDesc(User user);
+
+    void deleteAllByUser(User user);
 }

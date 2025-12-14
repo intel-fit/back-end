@@ -8,4 +8,6 @@ import java.util.Optional;
 
 public interface TempBundleRepo extends JpaRepository<TempMealBundle, Long> {
     Optional<TempMealBundle> findByUser(User user);
+
+    void deleteAllByUser(User user);
 }
