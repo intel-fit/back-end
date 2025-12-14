@@ -68,7 +68,15 @@ public class UserCleanupService {
 
         userFoodPreferenceRepository.deleteAllByUser(user);
         dailyNutritionGoalRepository.deleteAllByUser(user);
+
+        long mealCountBefore = mealRepository.countByUser(user);
+        if (mealCountBefore > 0) {
+            log.info("탈퇴 사용자 식단 기록 {}건 삭제 예정 - userId: {}", mealCountBefore, loginId);
+        }
         mealRepository.deleteAllByUser(user);
+        long mealCountAfter = mealRepository.countByUser(user);
+        log.info("탈퇴 사용자 식단 삭제 결과 - userId: {}, 잔여 {}건", loginId, mealCountAfter);
+
         recommendedMealPlanRepository.deleteAllByUser(user);
         tempBundleRepo.deleteAllByUser(user);
 

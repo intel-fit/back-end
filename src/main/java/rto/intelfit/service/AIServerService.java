@@ -108,6 +108,10 @@ public class AIServerService {
     public void createUserOnAI(User user) {
         String endpoint = aiServerUrl + "/user/create";
 
+        // 이전 가입 시 생성된 AI 서버 데이터가 남아있을 수 있으므로
+        // 가입 직후에는 같은 userId에 대한 데이터를 먼저 정리한다.
+        deleteUserOnAI(user.getUserId());
+
         AIUserCreateRequest payload = AIUserCreateRequest.builder()
                 .id(user.getUserId())
                 .name(user.getName())
@@ -155,8 +159,19 @@ public class AIServerService {
      * DELETE /user/{user_id}/purge?confirm=true
      */
     public void deleteUserOnAI(User user) {
+        if (user == null) {
+            return;
+        }
+        deleteUserOnAI(user.getUserId());
+    }
+
+    public void deleteUserOnAI(String userId) {
+        if (userId == null || userId.isBlank()) {
+            log.warn("AI 서버 사용자 삭제 실패 - userId가 비어있습니다");
+            return;
+        }
         // DELETE /user/{user_id}/purge?confirm=true
-        String endpoint = aiServerUrl + "/user/" + user.getUserId() + "/purge?confirm=true";
+        String endpoint = aiServerUrl + "/user/" + userId + "/purge?confirm=true";
 
         try {
             ResponseEntity<String> res = restTemplate.exchange(
@@ -166,19 +181,19 @@ public class AIServerService {
                     String.class
             );
 
-            log.info("AI 서버 사용자 삭제 완료 - userId={}, status={}", user.getUserId(), res.getStatusCode());
+            log.info("AI 서버 사용자 삭제 완료 - userId={}, status={}", userId, res.getStatusCode());
             
         } catch (HttpClientErrorException e) {
             // 404는 이미 없는 경우이므로 무시
             if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
-                log.info("AI 서버에 사용자가 이미 존재하지 않음 - userId={}", user.getUserId());
+                log.info("AI 서버에 사용자가 이미 존재하지 않음 - userId={}", userId);
                 return;
             }
             log.warn("AI 서버 사용자 삭제 실패 (4xx/5xx) - userId={}, status={}, body={}",
-                    user.getUserId(), e.getStatusCode(), e.getResponseBodyAsString());
+                    userId, e.getStatusCode(), e.getResponseBodyAsString());
             // 메인 탈퇴 트랜잭션을 롤백하지 않기 위해 예외를 던지지 않음
         } catch (Exception e) {
-            log.warn("AI 서버 사용자 삭제 실패 - userId={}, error={}", user.getUserId(), e.getMessage());
+            log.warn("AI 서버 사용자 삭제 실패 - userId={}, error={}", userId, e.getMessage());
             // 메인 탈퇴 트랜잭션을 롤백하지 않기 위해 예외를 던지지 않음
         }
     }
