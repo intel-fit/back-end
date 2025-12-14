@@ -205,7 +205,32 @@ public class UserService {
         user.setBirthDate(dto.getBirthDate());
         user.setIsOnboarded(true);
 
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
+        if (hasEssentialProfileForAi(savedUser)) {
+            Runnable syncTask = () -> {
+                try {
+                    aiServerService.createUserOnAI(savedUser);
+                    log.info("온보딩 완료 - AI 서버 동기화 성공 userId={}", savedUser.getUserId());
+                } catch (Exception ex) {
+                    log.warn("온보딩 완료 - AI 서버 동기화 실패 userId={}, reason={}",
+                            savedUser.getUserId(), ex.getMessage(), ex);
+                }
+            };
+
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        syncTask.run();
+                    }
+                });
+            } else {
+                syncTask.run();
+            }
+        } else {
+            log.warn("온보딩 완료 - AI 동기화 생략 (필수 정보 부족) userId={}", savedUser.getUserId());
+        }
     }
 
 
@@ -537,4 +562,10 @@ public class UserService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
 
+    private boolean hasEssentialProfileForAi(User user) {
+        return user.getBirthDate() != null
+                && user.getGender() != null
+                && user.getHeight() != null
+                && user.getWeight() != null;
+    }
 }
