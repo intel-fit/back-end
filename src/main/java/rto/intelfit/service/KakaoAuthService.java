@@ -13,7 +13,7 @@ import rto.intelfit.domain.User;
 import rto.intelfit.dto.KakaoAuthDto;
 import rto.intelfit.exception.BusinessException;
 import rto.intelfit.exception.ErrorCode;
-import rto.intelfit.repository.*;
+import rto.intelfit.repository.UserRepository;
 import rto.intelfit.util.JwtUtil;
 
 import java.util.Map;
@@ -44,17 +44,7 @@ public class KakaoAuthService {
     private static final String KAKAO_UNLINK_URL = "https://kapi.kakao.com/v1/user/unlink";
 
 
-    private final InBodyRepository inBodyRepository;
-    private final UserFoodPreferenceRepository userFoodPreferenceRepository;
-    private final DailyNutritionGoalRepository dailyNutritionGoalRepository;
-    private final MealRepository mealRepository;
-    private final RecommendedMealPlanRepository recommendedMealPlanRepository;
-    private final ExerciseRepository exerciseRepository;
-    private final RecommendedExercisePlanRepository recommendedExercisePlanRepository;
-    private final UserBadgeRepository userBadgeRepository;
-    private final PaymentHistoryRepository paymentHistoryRepository;
-    private final SubscriptionRepository subscriptionRepository;
-    private final AIChatMessageRepository aiChatMessageRepository;
+    private final UserCleanupService userCleanupService;
 
 
     /**
@@ -175,7 +165,8 @@ public class KakaoAuthService {
         // 2. 토큰 정리
         jwtUtil.deleteRefreshToken(user.getUserId());
 
-        // ✅ 3. 유저만 삭제 (DB가 전부 CASCADE)
+        // 3. 모든 연관 데이터 정리 후 유저 삭제
+        userCleanupService.cleanup(user);
         userRepository.delete(user);
 
         return KakaoAuthDto.MessageResponse.of("카카오 회원 탈퇴가 완료되었습니다.");

@@ -50,4 +50,6 @@ public interface FitnessExerciseCategorySaveRepository extends JpaRepository<Fit
     List<FitnessExerciseCategorySave> findByUserIdAndIsSavedFalse(Long userId);
     List<FitnessExerciseCategorySave> findByUserIdAndIsSavedTrueOrderBySaveTitleAsc(Long userId);
 
+    void deleteAllByUser(User user);
+
 }

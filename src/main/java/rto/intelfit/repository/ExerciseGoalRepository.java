@@ -8,4 +8,6 @@ import java.util.Optional;
 
 public interface ExerciseGoalRepository extends JpaRepository<ExerciseGoal, Long> {
     Optional<ExerciseGoal> findByUser(User user);
+
+    void deleteAllByUser(User user);
 }

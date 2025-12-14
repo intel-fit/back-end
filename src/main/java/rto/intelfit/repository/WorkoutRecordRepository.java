@@ -27,4 +27,6 @@ public interface WorkoutRecordRepository extends JpaRepository<WorkoutRecord, Lo
             "WHERE r.user.id = :userId AND r.workoutDate = :date")
     int sumSetsCompletedByUserAndDate(@Param("userId") Long userId,
                                       @Param("date") LocalDate date);
+
+    void deleteAllByUser_Id(Long userId);
 }

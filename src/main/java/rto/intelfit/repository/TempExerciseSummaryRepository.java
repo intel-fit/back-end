@@ -12,4 +12,6 @@ public interface TempExerciseSummaryRepository
 
     Optional<TempExerciseSummary> findByUserAndDate(User user, LocalDate date);
 
+    void deleteAllByUser(User user);
+
 }

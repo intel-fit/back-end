@@ -19,6 +19,8 @@ public interface DailyProgressRepository extends JpaRepository<DailyProgress, Lo
 
     List<DailyProgress> findByUserIdAndDateBetween(Long userId, LocalDate start, LocalDate end);
 
+    void deleteAllByUser_Id(Long userId);
+
     // --------------------------------------------------
     // 🔥 핵심 추가: INSERT 중복 방지용 PESSIMISTIC LOCK
     // --------------------------------------------------
