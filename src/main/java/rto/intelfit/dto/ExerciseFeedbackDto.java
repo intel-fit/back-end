@@ -18,10 +18,8 @@ public class ExerciseFeedbackDto {
         private Double weight;
         private Integer reps;
         private Integer sets;
-        private List<Map<String, Object>> warmup;
-
-        private Double intensity;      // 🔥 운동 단위 intensity
-        private String feedback;       // 🔥 운동 단위 feedback
+        private List<String> warmup;     // 문자열 리스트
+        private List<String> feedback;   // 문자열 리스트
     }
 
     @Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor
@@ -29,7 +27,12 @@ public class ExerciseFeedbackDto {
         private String user_id;
         private String session_name;
         private Integer duration_min;      // null
-        private List<Item> items;          // intensity/feedback 포함
+
+
+        private Integer intensity;   // 세션 intensity
+        private String feedback;    // 세션 feedback
+
+        private List<Item> items;         // intensity/feedback 포함
     }
 
 }

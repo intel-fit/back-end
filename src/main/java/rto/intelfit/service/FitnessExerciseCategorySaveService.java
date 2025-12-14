@@ -526,54 +526,42 @@ public FitnessExerciseCategorySaveDto.SaveResponse saveUnsavedWorkoutsAndSendFee
 
 
 
-
-
-private ExerciseFeedbackDto.Request buildExerciseFeedbackRequest(
+    private ExerciseFeedbackDto.Request buildExerciseFeedbackRequest(
             Long userId,
             String saveTitle,
             List<FitnessExerciseCategorySave> records,
             List<Double> intensityList,
             List<String> feedbackList
     ) {
-        // 운동 단위로 그룹핑 (sessionId + exerciseName 단위)
+
+        // 운동 단위로 그룹핑 (sessionId + exerciseName)
         Map<String, List<FitnessExerciseCategorySave>> byExercise =
-                records.stream().collect(Collectors.groupingBy(r ->
-                        r.getSessionId() + "::" + r.getExerciseName()
-                ));
+                records.stream()
+                        .collect(Collectors.groupingBy(r -> r.getSessionId() + "::" + r.getExerciseName()));
 
         List<String> exerciseKeys = byExercise.keySet().stream().toList();
-
         List<ExerciseFeedbackDto.Item> items = new ArrayList<>();
 
         for (int i = 0; i < exerciseKeys.size(); i++) {
-
             String key = exerciseKeys.get(i);
             List<FitnessExerciseCategorySave> setList = byExercise.get(key);
 
-            // setNumber 순서대로 정렬
             setList.sort(Comparator.comparingInt(s -> s.getSetNumber() != null ? s.getSetNumber() : 0));
 
             FitnessExerciseCategorySave last = setList.get(setList.size() - 1);
 
-            // warmup = 마지막 세트 제외
-            List<Map<String, Object>> warmup =
+            // ✔ warmup 문자열 리스트로 변환
+            List<String> warmupList =
                     setList.stream()
                             .filter(s -> !s.getId().equals(last.getId()))
-                            .map(s -> {
-                                Map<String, Object> m = new HashMap<>();
-                                m.put("weight", s.getWeight());
-                                m.put("reps", s.getReps());
-                                return m;
-                            })
+                            .map(s -> s.getWeight() + "kg x " + s.getReps())
                             .collect(Collectors.toList());
 
-
-            // 🔥 intensityList[i], feedbackList[i] 매칭
-            Double intensity = (intensityList != null && intensityList.size() > i)
-                    ? intensityList.get(i) : null;
-
-            String feedback = (feedbackList != null && feedbackList.size() > i)
-                    ? feedbackList.get(i) : "neutral";
+            // ✔ 운동별 feedback → List<String>
+            List<String> exerciseFeedback =
+                    (feedbackList != null && feedbackList.size() > i)
+                            ? List.of(feedbackList.get(i))
+                            : List.of();
 
             items.add(
                     ExerciseFeedbackDto.Item.builder()
@@ -582,20 +570,54 @@ private ExerciseFeedbackDto.Request buildExerciseFeedbackRequest(
                             .weight(last.getWeight())
                             .reps(last.getReps())
                             .sets(setList.size())
-                            .warmup(warmup)
-                            .intensity(intensity)    // 🔥 여기 붙음
-                            .feedback(feedback)      // 🔥 여기 붙음
+                            .warmup(warmupList)
+                            .feedback(exerciseFeedback)  // ✔ 리스트로 전달
                             .build()
             );
         }
 
+        // ✔ 세션 intensity 계산 → int 변환
+        Integer sessionIntensity = null;
+        if (intensityList != null && !intensityList.isEmpty()) {
+            double avg = intensityList.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+            sessionIntensity = (int) Math.round(scaleToOneToFive(avg));  // int로 변환
+        }
+
+        // ✔ 세션 전체 feedback 단일 string
+        String sessionFeedback =
+                (feedbackList != null && !feedbackList.isEmpty())
+                        ? feedbackList.get(0)
+                        : "neutral";
+
         return ExerciseFeedbackDto.Request.builder()
-                .user_id(String.valueOf(userId))  // 실제로는 user.userId 문자열 사용 가능
+                .user_id(String.valueOf(userId))
                 .session_name(saveTitle)
                 .duration_min(null)
+                .intensity(sessionIntensity)   // ✔ int
+                .feedback(sessionFeedback)     // ✔ session feedback
                 .items(items)
                 .build();
     }
+
+    private Double calculateSessionIntensity(List<Double> intensityList) {
+
+        if (intensityList == null || intensityList.isEmpty()) {
+            return null;
+        }
+
+        double avg = intensityList.stream()
+                .mapToDouble(Double::doubleValue)
+                .average()
+                .orElse(0.0);
+
+        return scaleToOneToFive(avg);
+    }
+
+    private double scaleToOneToFive(double rawIntensity) {
+        double scaled = 1 + (rawIntensity / 100.0) * 4.0;
+        return Math.max(1.0, Math.min(5.0, scaled));
+    }
+
     private static final Map<String, List<String>> BODY_PART_MAP = Map.of(
             "가슴", List.of("가슴", "흉근", "대흉근"),
             "등", List.of("등", "광배근", "승모근", "척추기립근"),

@@ -15,7 +15,7 @@ import rto.intelfit.exception.BusinessException;
 import rto.intelfit.exception.ErrorCode;
 import rto.intelfit.repository.TempExerciseSummaryRepository;
 import rto.intelfit.repository.UserRepository;
-
+import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -59,6 +59,10 @@ public class TempExerciseSummaryService {
         repository.save(created);
         log.info("➕ TEMP summary created. user={}, date={}", userId, date);
     }
+
+
+
+
     @Transactional(readOnly = true)
     public TempExerciseSummaryDto getTempSummary(String userId, LocalDate date) {
         User user = userRepository.findByUserId(userId)
@@ -79,6 +83,32 @@ public class TempExerciseSummaryService {
                 .exerciseCount(entity.getExerciseCount())
                 .title(entity.getTitle())
                 .build();
+    }
+
+
+    public int deleteTempSummariesInRange(String userId, LocalDate startDate, LocalDate endDate) {
+
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        List<TempExerciseSummary> summaries =
+                repository.findByUserAndDateBetween(user, startDate, endDate);
+
+        if (summaries.isEmpty()) {
+            log.info("🗑 삭제 대상 TEMP Summary 없음 user={}, start={}, end={}",
+                    userId, startDate, endDate);
+            return 0;
+        }
+
+        int count = summaries.size();
+
+        // 필요에 따라 deleteAllInBatch 로 바꿔도 됨
+        repository.deleteAll(summaries);
+
+        log.info("🗑 TEMP Summary {}개 삭제 완료 user={}, start={}, end={}",
+                count, userId, startDate, endDate);
+
+        return count;
     }
 
 }

@@ -149,6 +149,44 @@ public class ExerciseRecommendationController {
         return ResponseEntity.ok(response);
     }
 
+    @DeleteMapping("/temp")
+    @Operation(
+            summary = "TEMP 홈요약 범위 삭제",
+            description = "startDate ~ endDate 범위에 해당하는 TEMP 운동 요약을 모두 삭제합니다."
+    )
+    public ResponseEntity<?> deleteTempSummariesInRange(
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal,
+            @RequestParam("startDate")
+            @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+            @RequestParam("endDate")
+            @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate
+    ) {
+
+        if (endDate.isBefore(startDate)) {
+            throw new rto.intelfit.exception.BusinessException(
+                    rto.intelfit.exception.ErrorCode.INVALID_INPUT_VALUE,
+                    "endDate는 startDate보다 앞설 수 없습니다."
+            );
+        }
+
+        int deletedCount = tempExerciseSummaryService.deleteTempSummariesInRange(
+                userPrincipal.getUserId(),
+                startDate,
+                endDate
+        );
+
+        log.info("🗑 TEMP Summary 삭제 완료 user={}, start={}, end={}, deleted={}",
+                userPrincipal.getUserId(), startDate, endDate, deletedCount);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "deletedCount", deletedCount,
+                "startDate", startDate,
+                "endDate", endDate
+        ));
+    }
+
+
 
     /**
      * 식단 연동 운동 추천 생성
