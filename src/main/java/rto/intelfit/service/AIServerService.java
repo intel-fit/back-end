@@ -199,8 +199,26 @@ public class AIServerService {
             //  → AI 서버 장애 때문에 메인 트랜잭션(운동 저장)이 롤백되면 안 되기 때문.
         }
     }
+    //식단추천시, 제미나이 응답 파싱 헬퍼
+    private String cleanLLMJson(String raw) {
+        if (raw == null) return raw;
 
+        String cleaned = raw;
 
+        // ```json ``` 제거
+        cleaned = cleaned.replaceAll("```json", "")
+                .replaceAll("```", "")
+                .trim();
+
+        // trailing commas 제거
+        cleaned = cleaned.replaceAll(",\\s*}", "}");
+        cleaned = cleaned.replaceAll(",\\s*]", "]");
+
+        // 숫자 뒤에 여분 . 제거
+        cleaned = cleaned.replaceAll("(\\d+)\\.(\\s*[}\\],])", "$1$2");
+
+        return cleaned;
+    }
     // -----------------------------
     // 2) 음식 이미지 분석
     // -----------------------------
@@ -401,12 +419,26 @@ public class AIServerService {
         if (disliked != null)
             disliked.forEach(f -> ub.queryParam("excluded_foods", f));
 
-        Map<String, Object> body = restTemplate.exchange(
+        ResponseEntity<String> response = restTemplate.exchange(
                 ub.toUriString(),
                 HttpMethod.POST,
                 new HttpEntity<>(jsonHeaders()),
-                Map.class
-        ).getBody();
+                String.class
+        );
+
+        String cleanedJson = cleanLLMJson(response.getBody());
+
+        Map<String, Object> body;
+        try {
+            body = objectMapper.readValue(cleanedJson, Map.class);
+        } catch (JsonProcessingException e) {
+            log.error("LLM JSON 파싱 실패 - raw={}, cleaned={}", response.getBody(), cleanedJson, e);
+
+            // fallback 기본 식단 리턴 (서비스 죽지 않도록)
+            return createSampleRecommendedMealPlan(user);
+        }
+
+
 
         return convertBodyToPlan(user, body);
     }

@@ -11,6 +11,7 @@ public class TempMealDto {
     @Getter @Setter
     public static class DailyRequest {
         private int mealsPerDay;
+
     }
 
     @Getter @Setter
