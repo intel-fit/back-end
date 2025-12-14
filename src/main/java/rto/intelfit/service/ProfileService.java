@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 import rto.intelfit.domain.User;
 import rto.intelfit.dto.ProfileDto;
@@ -24,6 +26,7 @@ public class ProfileService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final UserCleanupService userCleanupService;
+    private final AIServerService aiServerService;
 
 
     public ProfileDto.ProfileResponse getProfile(CustomUserPrincipal userPrincipal) {
@@ -101,6 +104,8 @@ public class ProfileService {
         // ✅ 유저만 삭제
         userRepository.delete(user);
 
+        scheduleAiUserDeletion(user);
+
         return ProfileDto.AccountDeleteResponse.builder()
                 .success(true)
                 .message("회원 탈퇴가 완료되었습니다")
@@ -137,5 +142,29 @@ public class ProfileService {
         if (request.getWeightGoal() != null) {
             user.setWeightGoal(request.getWeightGoal());
         }
+    }
+
+    private void scheduleAiUserDeletion(User user) {
+        final User deletedUser = user;
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            try {
+                aiServerService.deleteUserOnAI(deletedUser);
+                log.info("AI 서버 사용자 삭제 완료 - userId: {}", deletedUser.getUserId());
+            } catch (Exception ex) {
+                log.warn("AI 서버 사용자 삭제 실패 - userId={}, reason={}", deletedUser.getUserId(), ex.getMessage(), ex);
+            }
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                try {
+                    aiServerService.deleteUserOnAI(deletedUser);
+                    log.info("AI 서버 사용자 삭제 완료 - userId: {}", deletedUser.getUserId());
+                } catch (Exception ex) {
+                    log.warn("AI 서버 사용자 삭제 실패 - userId={}, reason={}", deletedUser.getUserId(), ex.getMessage(), ex);
+                }
+            }
+        });
     }
 }

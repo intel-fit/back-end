@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
@@ -27,6 +29,7 @@ public class KakaoAuthService {
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
     private final RestTemplate restTemplate;
+    private final AIServerService aiServerService;
 
 
     @Value("${kakao.client-id}")
@@ -94,6 +97,18 @@ public class KakaoAuthService {
         user.updateKakaoAccessToken(kakaoToken.getAccessToken());
         user.updateLastLoginAt();
         userRepository.save(user);
+
+        if (isNewUser) {
+            final User syncedUser = user;
+            runAfterCommitOrNow(() -> {
+                try {
+                    aiServerService.createUserOnAI(syncedUser);
+                    log.info("AI 서버 사용자 동기화 완료 - userId: {}", syncedUser.getUserId());
+                } catch (Exception ex) {
+                    log.warn("AI 서버 사용자 동기화 실패 - userId={}, reason={}", syncedUser.getUserId(), ex.getMessage(), ex);
+                }
+            });
+        }
 
         // 5. JWT 발급
         String accessToken = jwtUtil.generateAccessToken(user.getUserId(), user.getId());
@@ -169,6 +184,16 @@ public class KakaoAuthService {
         userCleanupService.cleanup(user);
         userRepository.delete(user);
 
+        final User deletedUser = user;
+        runAfterCommitOrNow(() -> {
+            try {
+                aiServerService.deleteUserOnAI(deletedUser);
+                log.info("AI 서버 사용자 삭제 완료 - userId: {}", deletedUser.getUserId());
+            } catch (Exception ex) {
+                log.warn("AI 서버 사용자 삭제 실패 - userId={}, reason={}", deletedUser.getUserId(), ex.getMessage(), ex);
+            }
+        });
+
         return KakaoAuthDto.MessageResponse.of("카카오 회원 탈퇴가 완료되었습니다.");
     }
 
@@ -240,5 +265,18 @@ public class KakaoAuthService {
                 .agreePrivacy(true)
                 .agreeTerms(true)
                 .build());
+    }
+
+    private void runAfterCommitOrNow(Runnable task) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            task.run();
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                task.run();
+            }
+        });
     }
 }
