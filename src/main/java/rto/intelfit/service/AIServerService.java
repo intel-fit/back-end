@@ -162,7 +162,7 @@ public class AIServerService {
             ResponseEntity<Void> res = restTemplate.exchange(
                     endpoint,
                     HttpMethod.DELETE,
-                    new HttpEntity<>(jsonHeaders()),
+                    new HttpEntity<>(null, jsonHeaders()),
                     Void.class
             );
             log.info("AI user delete sync: status={}", res.getStatusCode());

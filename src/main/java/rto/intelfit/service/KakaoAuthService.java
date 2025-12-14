@@ -98,16 +98,12 @@ public class KakaoAuthService {
         user.updateLastLoginAt();
         userRepository.save(user);
 
-        if (isNewUser) {
-            final User syncedUser = user;
-            runAfterCommitOrNow(() -> {
-                try {
-                    aiServerService.createUserOnAI(syncedUser);
-                    log.info("AI 서버 사용자 동기화 완료 - userId: {}", syncedUser.getUserId());
-                } catch (Exception ex) {
-                    log.warn("AI 서버 사용자 동기화 실패 - userId={}, reason={}", syncedUser.getUserId(), ex.getMessage(), ex);
-                }
-            });
+        if (Boolean.TRUE.equals(user.getIsOnboarded()) && hasEssentialProfileForAi(user)) {
+            syncUserWithAI(user);
+        } else if (Boolean.TRUE.equals(user.getIsOnboarded())) {
+            log.warn("카카오 사용자 AI 동기화 보류 - 필수 프로필 정보 누락 userId={}", user.getUserId());
+        } else if (isNewUser) {
+            log.info("신규 카카오 사용자 - 온보딩 완료 후 AI 동기화 예정 userId={}", user.getUserId());
         }
 
         // 5. JWT 발급
@@ -265,6 +261,25 @@ public class KakaoAuthService {
                 .agreePrivacy(true)
                 .agreeTerms(true)
                 .build());
+    }
+
+    private void syncUserWithAI(User user) {
+        final User syncedUser = user;
+        runAfterCommitOrNow(() -> {
+            try {
+                aiServerService.createUserOnAI(syncedUser);
+                log.info("AI 서버 사용자 동기화 완료 - userId: {}", syncedUser.getUserId());
+            } catch (Exception ex) {
+                log.warn("AI 서버 사용자 동기화 실패 - userId={}, reason={}", syncedUser.getUserId(), ex.getMessage(), ex);
+            }
+        });
+    }
+
+    private boolean hasEssentialProfileForAi(User user) {
+        return user.getBirthDate() != null
+                && user.getGender() != null
+                && user.getHeight() != null
+                && user.getWeight() != null;
     }
 
     private void runAfterCommitOrNow(Runnable task) {
