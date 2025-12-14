@@ -36,15 +36,25 @@ public class DailyProgressController {
     }
 
     /** 오늘의 운동 달성률 & 칼로리 */
-    @Operation(summary = "오늘의 운동 달성률과 칼로리 조회")
+    @Operation(summary = "오늘 또는 특정 날짜의 운동 달성률과 칼로리 조회")
     @GetMapping("/today")
     public ResponseEntity<DailyProgressDto> getTodayProgress(
-            @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal,
+            @RequestParam(value = "date", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate date
+    ) {
         User user = resolveUser(userPrincipal);
-        DailyProgressDto progress = dailyProgressService.calculateTodayProgress(user);
+
+        LocalDate targetDate = (date != null) ? date : LocalDate.now();
+
+        DailyProgressDto progress =
+                dailyProgressService.calculateProgressByDate(user, targetDate);
+
         return ResponseEntity.ok(progress);
     }
 
+//
     /** 특정 날짜의 운동 달성률 & 칼로리 */
     @Operation(summary = "특정 날짜의 운동 달성률과 칼로리 조회")
     @GetMapping("/date")

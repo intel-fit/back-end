@@ -54,36 +54,27 @@ public class DailyProgressService {
                             return p;
                         });
 
-        log.info("📊 DailyProgress 조회됨 - userId={}, date={}, totalSeconds={}, exerciseRate={}",
-                user.getUserId(), date, progress.getTotalExerciseSeconds(), progress.getExerciseRate());
-
-        // 2) 하루 누적 운동 시간(초)
         long totalExerciseSeconds = progress.getTotalExerciseSeconds();
 
-        // 3) 시간 기반 운동 달성률 계산
+        // 2) 운동 목표 기반 운동 달성률 계산
         double exerciseRate = 0.0;
-
         Optional<ExerciseGoal> optionalGoal = exerciseGoalRepository.findByUser(user);
         if (optionalGoal.isPresent()) {
             long targetSeconds = parseTargetSeconds(optionalGoal.get());
 
             if (targetSeconds > 0) {
-                // rate = min(100, total / target * 100), 소수 1자리
                 exerciseRate = Math.min(
                         100.0,
                         Math.round((totalExerciseSeconds * 1000.0) / targetSeconds) / 10.0
                 );
             } else {
                 exerciseRate = 0.0;
-                log.warn("ExerciseGoal durationPerSession 파싱 실패 또는 목표시간 0 - userId={}, durationPerSession={}",
-                        user.getUserId(), optionalGoal.get().getDurationPerSession());
             }
         } else {
-            // 운동 목표 자체가 없으면 0%
             exerciseRate = 0.0;
         }
 
-        // 4) 해당 날짜 섭취 칼로리 합산
+        // 3) 해당 날짜 섭취 칼로리 합산
         BigDecimal totalCalories = mealRepository
                 .findByUserAndMealDateOrderByMealTypeAsc(user, date)
                 .stream()
@@ -91,56 +82,61 @@ public class DailyProgressService {
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // 5) 업데이트 후 저장
+        // 4) DailyProgress 업데이트 후 저장
         progress.setExerciseRate(exerciseRate);
         progress.setTotalCalorie(totalCalories.doubleValue());
-
         dailyProgressRepository.save(progress);
 
-        log.info("DailyProgress 저장 - userId: {}, date: {}, totalSeconds: {}, rate: {}%, kcal: {}",
-                user.getUserId(), date, totalExerciseSeconds, exerciseRate, totalCalories);
+        long sec = totalExerciseSeconds;
 
         return DailyProgressDto.builder()
                 .date(date)
                 .exerciseRate(exerciseRate)
                 .totalCalorie(totalCalories.doubleValue())
+                .totalExerciseSeconds(sec)
+                .minutes((int) (sec / 60))
+                .seconds((int) (sec % 60))
                 .build();
     }
 
     /**
-     * durationPerSession 문자열에서 목표 시간을 "초"로 변환
-     * 예: "30분 이상" -> 1800
-     * 예: "1시간 이상" -> 3600
+     * durationPerSession 문자열에서 목표 시간을 초 단위로 변환
      */
     private long parseTargetSeconds(ExerciseGoal goal) {
         String raw = goal.getDurationPerSession();
         if (raw == null) return 0L;
 
-        // 숫자 추출
         Matcher m = Pattern.compile("(\\d+)").matcher(raw);
         if (!m.find()) return 0L;
 
         long n = Long.parseLong(m.group(1));
 
-        // 단위 판별
         if (raw.contains("시간")) return n * 3600L;
         if (raw.contains("분")) return n * 60L;
 
-        // 단위가 없으면 기본 분으로 처리
         return n * 60L;
     }
 
     public DailyProgressDto getProgressByDate(User user, LocalDate date) {
         return dailyProgressRepository.findByUserIdAndDate(user.getId(), date)
-                .map(p -> DailyProgressDto.builder()
-                        .date(p.getDate())
-                        .exerciseRate(p.getExerciseRate())
-                        .totalCalorie(p.getTotalCalorie())
-                        .build())
+                .map(p -> {
+                    long sec = p.getTotalExerciseSeconds();
+                    return DailyProgressDto.builder()
+                            .date(p.getDate())
+                            .exerciseRate(p.getExerciseRate())
+                            .totalCalorie(p.getTotalCalorie())
+                            .totalExerciseSeconds(sec)
+                            .minutes((int)(sec / 60))
+                            .seconds((int)(sec % 60))
+                            .build();
+                })
                 .orElseGet(() -> DailyProgressDto.builder()
                         .date(date)
                         .exerciseRate(0.0)
                         .totalCalorie(0.0)
+                        .totalExerciseSeconds(0)
+                        .minutes(0)
+                        .seconds(0)
                         .build());
     }
 
@@ -174,16 +170,23 @@ public class DailyProgressService {
                 .map(date -> {
                     DailyProgress progress = progressMap.get(date);
                     if (progress != null) {
+                        long sec = progress.getTotalExerciseSeconds();
                         return DailyProgressDto.builder()
                                 .date(progress.getDate())
                                 .exerciseRate(progress.getExerciseRate())
                                 .totalCalorie(progress.getTotalCalorie())
+                                .totalExerciseSeconds(sec)
+                                .minutes((int)(sec / 60))
+                                .seconds((int)(sec % 60))
                                 .build();
                     } else {
                         return DailyProgressDto.builder()
                                 .date(date)
                                 .exerciseRate(0.0)
                                 .totalCalorie(0.0)
+                                .totalExerciseSeconds(0)
+                                .minutes(0)
+                                .seconds(0)
                                 .build();
                     }
                 })
