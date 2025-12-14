@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import rto.intelfit.domain.User;
 
 public class KakaoAuthDto {
 
@@ -29,6 +30,7 @@ public class KakaoAuthDto {
         private String accessToken;
         private String refreshToken;
         private Long userId;
+        private User.MembershipType membershipType;
         private String nickname;
         private String profileImageUrl;
         private boolean isNewUser;

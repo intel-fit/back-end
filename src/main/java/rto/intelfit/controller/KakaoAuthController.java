@@ -67,7 +67,7 @@ public class KakaoAuthController {
                 loginResponse.getProfileImageUrl() != null ? loginResponse.getProfileImageUrl() : "", UTF_8)
                 + "&isNewUser=" + loginResponse.isNewUser()
                 + "&isOnboarded=" + loginResponse.isOnboarded()
-                + "&membershipType=FREE";
+                + "&membershipType=" + loginResponse.getMembershipType().name();
 
         response.sendRedirect(deepLink);
     }

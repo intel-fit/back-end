@@ -105,6 +105,9 @@ public class ProfileService {
 
         jwtUtil.deleteRefreshToken(user.getUserId());
 
+        // 연결된 데이터 선삭제 (FK 제약 해소)
+        cleanupUserData(user);
+
         // ✅ 유저만 삭제
         userRepository.delete(user);
 
@@ -144,5 +147,19 @@ public class ProfileService {
         if (request.getWeightGoal() != null) {
             user.setWeightGoal(request.getWeightGoal());
         }
+    }
+
+    private void cleanupUserData(User user) {
+        inBodyRepository.deleteAllByUser(user);
+        userFoodPreferenceRepository.deleteAllByUser(user);
+        dailyNutritionGoalRepository.deleteAllByUser(user);
+        mealRepository.deleteAllByUser(user);
+        recommendedMealPlanRepository.deleteAllByUser(user);
+        exerciseRepository.deleteAllByUser(user);
+        recommendedExercisePlanRepository.deleteAllByUser(user);
+        userBadgeRepository.deleteAllByUser(user);
+        paymentHistoryRepository.deleteAllByUser_Id(user.getId());
+        subscriptionRepository.deleteAllByUserId(user.getUserId());
+        aiChatMessageRepository.deleteAllByUser_UserId(user.getUserId());
     }
 }

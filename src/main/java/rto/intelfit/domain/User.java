@@ -166,7 +166,8 @@ public class User {
     /* ===================== 편의 메서드 ===================== */
 
     public boolean isSocialUser() {
-        return this.loginType != SocialProvider.LOCAL;
+        // treat null loginType as LOCAL to avoid blocking legacy accounts
+        return this.loginType != null && this.loginType != SocialProvider.LOCAL;
     }
 
     public void updateKakaoAccessToken(String kakaoAccessToken) {

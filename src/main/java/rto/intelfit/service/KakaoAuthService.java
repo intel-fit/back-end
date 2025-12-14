@@ -113,6 +113,7 @@ public class KakaoAuthService {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .userId(user.getId())
+                .membershipType(user.getMembershipType())
                 .nickname(user.getName())
                 .profileImageUrl(user.getProfileImageUrl())
                 .isNewUser(isNewUser)
@@ -250,4 +251,3 @@ public class KakaoAuthService {
                 .build());
     }
 }
-
