@@ -31,7 +31,7 @@ public class UserRecommendedExercise {
      */
     @Column(name = "name", nullable = false, length = 100)
     private String name;
-
+//
     /**
      * 타겟 부위
      */
