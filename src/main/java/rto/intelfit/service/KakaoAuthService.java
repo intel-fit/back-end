@@ -247,8 +247,6 @@ public class KakaoAuthService {
     private User createKakaoUser(KakaoAuthDto.KakaoUserInfo userInfo) {
         String uniqueUserId = "kakao_" + userInfo.getId();
 
-        purgeAiUserIfExists(uniqueUserId);
-
         return userRepository.save(User.builder()
                 .userId(uniqueUserId)
                 .name(userInfo.getNickname() != null ? userInfo.getNickname() : "카카오 사용자")
@@ -263,22 +261,6 @@ public class KakaoAuthService {
                 .agreePrivacy(true)
                 .agreeTerms(true)
                 .build());
-    }
-
-    private void purgeAiUserIfExists(String userId) {
-        if (userId == null || userId.isBlank()) {
-            return;
-        }
-
-        User temp = new User();
-        temp.setUserId(userId);
-
-        try {
-            aiServerService.deleteUserOnAI(temp);
-            log.info("기존 AI 사용자 데이터 초기화 완료 - userId={}", userId);
-        } catch (Exception ex) {
-            log.warn("AI 사용자 초기화 실패 (무시) - userId={}, reason={}", userId, ex.getMessage(), ex);
-        }
     }
 
     private void syncUserWithAI(User user) {
