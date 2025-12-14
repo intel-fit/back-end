@@ -27,6 +27,7 @@ public class KakaoAuthService {
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
     private final RestTemplate restTemplate;
+    private final AIServerService aiServerService;
 
 
     @Value("${kakao.client-id}")
@@ -88,6 +89,16 @@ public class KakaoAuthService {
             user = createKakaoUser(userInfo);
             isNewUser = true;
             log.info("신규 카카오 사용자 생성 - userId: {}", user.getUserId());
+
+            // ✅ AI 서버에 신규 사용자 등록
+            final User savedUser = user;
+            try {
+                aiServerService.createUserOnAI(savedUser);
+                log.info("AI 서버 카카오 사용자 동기화 완료 - userId: {}", savedUser.getUserId());
+            } catch (Exception e) {
+                log.warn("AI 서버 카카오 사용자 동기화 실패 (계속 진행) - userId: {}, error: {}", 
+                        savedUser.getUserId(), e.getMessage());
+            }
         }
 
         // 4. 카카오 토큰 저장 및 로그인 시간 갱신
