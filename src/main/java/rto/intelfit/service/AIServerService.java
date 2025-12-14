@@ -146,6 +146,42 @@ public class AIServerService {
             throw new RuntimeException(e);
         }
     }
+
+    // -----------------------------
+    // 1-1) 회원탈퇴 시 AI 서버 사용자 삭제
+    // -----------------------------
+    /**
+     * AI 서버에 사용자 데이터 완전 삭제 요청
+     * DELETE /user/{user_id}/purge?confirm=true
+     */
+    public void deleteUserOnAI(User user) {
+        // DELETE /user/{user_id}/purge?confirm=true
+        String endpoint = aiServerUrl + "/user/" + user.getUserId() + "/purge?confirm=true";
+
+        try {
+            ResponseEntity<String> res = restTemplate.exchange(
+                    endpoint,
+                    HttpMethod.DELETE,
+                    new HttpEntity<>(jsonHeaders()),
+                    String.class
+            );
+
+            log.info("AI 서버 사용자 삭제 완료 - userId={}, status={}", user.getUserId(), res.getStatusCode());
+            
+        } catch (HttpClientErrorException e) {
+            // 404는 이미 없는 경우이므로 무시
+            if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
+                log.info("AI 서버에 사용자가 이미 존재하지 않음 - userId={}", user.getUserId());
+                return;
+            }
+            log.warn("AI 서버 사용자 삭제 실패 (4xx/5xx) - userId={}, status={}, body={}",
+                    user.getUserId(), e.getStatusCode(), e.getResponseBodyAsString());
+            // 메인 탈퇴 트랜잭션을 롤백하지 않기 위해 예외를 던지지 않음
+        } catch (Exception e) {
+            log.warn("AI 서버 사용자 삭제 실패 - userId={}, error={}", user.getUserId(), e.getMessage());
+            // 메인 탈퇴 트랜잭션을 롤백하지 않기 위해 예외를 던지지 않음
+        }
+    }
     //1.5 ai 서버로 피드백 전송
     public void sendExerciseFeedback(ExerciseFeedbackDto.Request request) {
         String url = aiServerUrl + "/exercise/feedback";

@@ -32,6 +32,7 @@ public class UserCleanupService {
     private final PaymentHistoryRepository paymentHistoryRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final AIChatMessageRepository aiChatMessageRepository;
+    private final AIServerService aiServerService;
 
     /**
      * Removes all entities that reference the given user to avoid FK violations during deletion.
@@ -42,6 +43,14 @@ public class UserCleanupService {
         String loginId = user.getUserId();
 
         log.info("회원 데이터 정리 시작 - userId: {}", loginId);
+
+        // ✅ AI 서버 사용자 데이터 삭제 (가장 먼저 호출)
+        try {
+            aiServerService.deleteUserOnAI(user);
+            log.info("AI 서버 사용자 데이터 삭제 완료 - userId: {}", loginId);
+        } catch (Exception e) {
+            log.warn("AI 서버 사용자 삭제 실패 (계속 진행) - userId: {}, error: {}", loginId, e.getMessage());
+        }
 
         workoutRecordRepository.deleteAllByUser_Id(userSeq);
         dailyProgressRepository.deleteAllByUser_Id(userSeq);
