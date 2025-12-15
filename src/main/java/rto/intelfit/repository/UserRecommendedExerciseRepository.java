@@ -15,6 +15,10 @@ public interface UserRecommendedExerciseRepository extends JpaRepository<UserRec
     List<UserRecommendedExercise> findByUserOrderByExerciseDateAscCreatedAtAsc(User user);
 
     List<UserRecommendedExercise> findByUserAndExerciseDateOrderByCreatedAtAsc(User user, LocalDate date);
-
+    int deleteByUserAndExerciseDateBetween(
+            User user,
+            LocalDate startDate,
+            LocalDate endDate
+    );
     void deleteAllByUser(User user);
 }

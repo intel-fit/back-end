@@ -25,12 +25,12 @@ public class UserFoodPreference {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
-    // JSON 문자열 형태로 저장
+    // 개별 사용자 선호 음식 저장
     @Column(columnDefinition = "TEXT", nullable = true)
-    private String preferredFoods;     // 예: ["치킨","연어"]
-
+    private String preferredFoods;
+    // 개별 사용자 비선호 음식 저장
     @Column(columnDefinition = "TEXT", nullable = true)
-    private String dislikedFoods;      // 예: ["돼지고기","튀김"]
+    private String dislikedFoods;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

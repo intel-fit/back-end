@@ -176,29 +176,31 @@ public class AIServerService {
         }
     }
     //1.5 ai 서버로 피드백 전송
+// 1.5 AI 서버로 운동 피드백 전송 (헤더 통일 버전)
     public void sendExerciseFeedback(ExerciseFeedbackDto.Request request) {
         String url = aiServerUrl + "/exercise/feedback";
 
         try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
             HttpEntity<ExerciseFeedbackDto.Request> entity =
-                    new HttpEntity<>(request, headers);
+                    new HttpEntity<>(request, jsonHeaders());
 
             ResponseEntity<String> response =
                     restTemplate.postForEntity(url, entity, String.class);
 
             log.info("✅ AI 운동 피드백 전송 완료 userId={}, sessionName={}, status={}",
-                    request.getUser_id(), request.getSession_name(), response.getStatusCode());
+                    request.getUser_id(),
+                    request.getSession_name(),
+                    response.getStatusCode());
 
         } catch (Exception e) {
             log.warn("⚠️ AI 운동 피드백 전송 실패 userId={}, sessionName={}",
-                    request.getUser_id(), request.getSession_name(), e);
-            // 여기서 예외를 다시 던지지 않는 이유:
-            //  → AI 서버 장애 때문에 메인 트랜잭션(운동 저장)이 롤백되면 안 되기 때문.
+                    request.getUser_id(),
+                    request.getSession_name(),
+                    e);
+            // AI 서버 장애로 인해 메인 트랜잭션이 영향을 받지 않도록 예외 전파하지 않음
         }
     }
+
     //식단추천시, 제미나이 응답 파싱 헬퍼
     private String cleanLLMJson(String raw) {
         if (raw == null) return raw;

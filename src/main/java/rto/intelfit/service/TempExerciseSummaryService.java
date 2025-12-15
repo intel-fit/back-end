@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import rto.intelfit.repository.UserRecommendedExerciseRepository;
 
 import rto.intelfit.domain.TempExerciseSummary;
 import rto.intelfit.domain.User;
@@ -23,6 +24,7 @@ import java.util.List;
 public class TempExerciseSummaryService {
     private final TempExerciseSummaryRepository repository;
     private final UserRepository userRepository;
+    private final UserRecommendedExerciseRepository userRecommendedExerciseRepository;
 
     public void saveOrUpdateTempSummary(String userId, TempExerciseSummaryDto dto) {
 
@@ -86,29 +88,24 @@ public class TempExerciseSummaryService {
     }
 
 
-    public int deleteTempSummariesInRange(String userId, LocalDate startDate, LocalDate endDate) {
-
+    @Transactional
+    public int deleteTempSummariesInRange(
+            String userId,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
         User user = userRepository.findByUserId(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        List<TempExerciseSummary> summaries =
-                repository.findByUserAndDateBetween(user, startDate, endDate);
+        int deleted =
+                userRecommendedExerciseRepository
+                        .deleteByUserAndExerciseDateBetween(user, startDate, endDate);
 
-        if (summaries.isEmpty()) {
-            log.info("🗑 삭제 대상 TEMP Summary 없음 user={}, start={}, end={}",
-                    userId, startDate, endDate);
-            return 0;
-        }
+        log.info("🗑 TEMP(API) → UserRecommendedExercise 삭제 user={}, start={}, end={}, count={}",
+                userId, startDate, endDate, deleted);
 
-        int count = summaries.size();
-
-        // 필요에 따라 deleteAllInBatch 로 바꿔도 됨
-        repository.deleteAll(summaries);
-
-        log.info("🗑 TEMP Summary {}개 삭제 완료 user={}, start={}, end={}",
-                count, userId, startDate, endDate);
-
-        return count;
+        return deleted;
     }
+
 
 }
