@@ -517,7 +517,7 @@ public FitnessExerciseCategorySaveDto.SaveResponse saveUnsavedWorkoutsAndSendFee
             saveRepository.findByUserIdAndSessionIdIn(userId, response.getSessionIds());
 
     ExerciseFeedbackDto.Request req =
-            buildExerciseFeedbackRequest(userId, saveTitle, records, intensityList, feedbackList);
+            buildExerciseFeedbackRequest(user, saveTitle, records, intensityList, feedbackList);
 
     aiServerService.sendExerciseFeedback(req);
 
@@ -527,7 +527,7 @@ public FitnessExerciseCategorySaveDto.SaveResponse saveUnsavedWorkoutsAndSendFee
 
 
     private ExerciseFeedbackDto.Request buildExerciseFeedbackRequest(
-            Long userId,
+            User user,
             String saveTitle,
             List<FitnessExerciseCategorySave> records,
             List<Double> intensityList,
@@ -590,7 +590,7 @@ public FitnessExerciseCategorySaveDto.SaveResponse saveUnsavedWorkoutsAndSendFee
                         : "neutral";
 
         return ExerciseFeedbackDto.Request.builder()
-                .user_id(String.valueOf(userId))
+                .user_id(user.getUserId())
                 .session_name(saveTitle)
                 .duration_min(null)
                 .intensity(sessionIntensity)   // ✔ int
