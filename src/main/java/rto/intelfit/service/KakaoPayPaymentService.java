@@ -273,13 +273,13 @@ public class KakaoPayPaymentService {
     }
 
     private String selectRedirectUrl(KakaoPayPaymentDto.KakaoPayReadyResponse response) {
-        if (StringUtils.hasText(response.getNextRedirectPcUrl())) {
-            return response.getNextRedirectPcUrl();
+        if (StringUtils.hasText(response.getNextRedirectAppUrl())) {
+            return response.getNextRedirectAppUrl();
         }
         if (StringUtils.hasText(response.getNextRedirectMobileUrl())) {
             return response.getNextRedirectMobileUrl();
         }
-        return response.getNextRedirectAppUrl();
+        return response.getNextRedirectPcUrl();
     }
 
     private <T> T requestToKakaoPay(String url,
