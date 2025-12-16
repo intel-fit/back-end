@@ -175,6 +175,31 @@ public class AIServerService {
             throw new RuntimeException(e);
         }
     }
+
+    public void sendExerciseLog(String userId,
+                                LocalDate date,
+                                double durationMin,
+                                double caloriesBurned,
+                                Integer intensity) {
+
+        String url = aiServerUrl + "/exercise/log";
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("user_id", userId);
+        body.put("date", date.toString());
+        body.put("duration_min", durationMin);
+        body.put("calories_burned", caloriesBurned);
+        body.put("intensity", intensity);
+
+        log.info("📡 AI 서버 /exercise/log 호출: url={}, body={}", url, body);
+
+        try {
+            restTemplate.postForEntity(url, body, Void.class);
+        } catch (Exception e) {
+            log.warn("⚠ AI 서버 /exercise/log 호출 실패 userId={}, date={}, msg={}",
+                    userId, date, e.getMessage());
+        }
+    }
     //1.5 ai 서버로 피드백 전송
 // 1.5 AI 서버로 운동 피드백 전송 (헤더 통일 버전)
     public void sendExerciseFeedback(ExerciseFeedbackDto.Request request) {
