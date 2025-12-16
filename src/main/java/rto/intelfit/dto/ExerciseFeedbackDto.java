@@ -25,7 +25,7 @@ public class ExerciseFeedbackDto {
     @Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor
     public static class Request {
         private String user_id;
-        private String session_name; // a
+        private String session_name; // aa
         private Integer duration_min;      // null
 
 
