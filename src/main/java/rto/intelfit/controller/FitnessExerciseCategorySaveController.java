@@ -121,12 +121,8 @@ public class FitnessExerciseCategorySaveController {
 
         LocalDate date = LocalDate.parse(request.getDate());
 
-        // 🔥 오늘인지 체크 (오늘 아니면 오류)
-        if (!date.equals(LocalDate.now())) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "오늘 날짜의 운동 시간만 저장할 수 있습니다.");
-        }
+        // 🔥 날짜 제약 제거됨 — 어떤 날짜든 저장 가능
 
-        // 🔥 Save + AI 피드백 처리
         FitnessExerciseCategorySaveDto.SaveResponse response =
                 saveService.saveUnsavedWorkoutsAndSendFeedback(
                         request.getUserId(),
@@ -136,9 +132,9 @@ public class FitnessExerciseCategorySaveController {
                         date
                 );
 
-
         return ResponseEntity.ok(response);
     }
+
 
 
 
