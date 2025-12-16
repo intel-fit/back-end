@@ -203,7 +203,11 @@ public String addWorkoutSession(FitnessExerciseCategorySaveDto.CreateRequest req
 
     long sessionSeconds = request.getSeconds();
     double met = resolveMet(request.getCategory());
-//
+
+    // 🔥 가라 kcal 계산 (분 단위 + 보정 계수)
+    double minutes = sessionSeconds / 60.0;
+    double caloriesBurned = met * minutes * 0.8;
+
     List<FitnessExerciseCategorySave> entities =
             request.getSets().stream()
                     .map(set -> FitnessExerciseCategorySave.builder()
@@ -218,7 +222,8 @@ public String addWorkoutSession(FitnessExerciseCategorySaveDto.CreateRequest req
                             .workoutDate(request.getWorkoutDate())
                             .exerciseSeconds(sessionSeconds)
                             .met(met)
-                            .caloriesBurned(sessionSeconds * met)
+                            // ✔ 수정된 가라 칼로리
+                            .caloriesBurned(caloriesBurned)
                             .isSaved(false)
                             .completed(false)
                             .build())
@@ -228,6 +233,7 @@ public String addWorkoutSession(FitnessExerciseCategorySaveDto.CreateRequest req
 
     return sessionId;
 }
+
 
 
 
