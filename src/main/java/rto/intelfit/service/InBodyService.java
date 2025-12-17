@@ -445,9 +445,9 @@ public class InBodyService {
     private InBodyOcrResult buildFallbackOcrResult(User user) {
         InBodyOcrResult result = new InBodyOcrResult();
         result.setMeasurementDate("2025-12-17");
-        result.setGender("F");
-        result.setAge(51);
-        result.setHeight(BigDecimal.valueOf(156.9));
+        result.setGender("M");
+        result.setAge(41);
+        result.setHeight(BigDecimal.valueOf(175.1));
         result.setWeight(BigDecimal.valueOf(59.1));
         result.setBodyFatMass(BigDecimal.valueOf(22.1));
         result.setSkeletalMuscleMass(BigDecimal.valueOf(19.5));
