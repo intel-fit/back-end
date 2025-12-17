@@ -19,7 +19,7 @@ import java.time.LocalDate;
 public class DailyProgress {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY) //a
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
