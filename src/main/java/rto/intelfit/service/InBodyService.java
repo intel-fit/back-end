@@ -436,7 +436,7 @@ public class InBodyService {
         InBodyOcrResult fallbackResult = buildFallbackOcrResult(user);
         return InBodyDto.InBodyOcrUploadResponse.builder()
                 .success(true)
-                .message("OCR 인식 오류로 이전 수치를 제공합니다. 실제 측정값으로 수정해 주세요.")
+                .message("AI 인식 오류로 기본 수치를 제공합니다. 최근 측정값으로 수정해 주세요.")
                 .imageUrl(null)
                 .draftData(fallbackResult)
                 .build();
@@ -444,34 +444,29 @@ public class InBodyService {
 
     private InBodyOcrResult buildFallbackOcrResult(User user) {
         InBodyOcrResult result = new InBodyOcrResult();
-        result.setMeasurementDate(LocalDate.now().toString());
-        result.setGender(user.getGender() != null ? user.getGender().name() : "M");
-        result.setAge(user.getBirthDate() != null ?
-                LocalDate.now().getYear() - user.getBirthDate().getYear() : 30);
-        if (user.getHeight() != null) {
-            result.setHeight(BigDecimal.valueOf(user.getHeight()));
-        } else {
-            result.setHeight(BigDecimal.valueOf(170));
-        }
-        result.setWeight(BigDecimal.valueOf(65.4));
-        result.setBodyFatMass(BigDecimal.valueOf(18.2));
-        result.setSkeletalMuscleMass(BigDecimal.valueOf(28.6));
-        result.setBodyFatPercentage(BigDecimal.valueOf(24.5));
-        result.setLeftArmMuscle(BigDecimal.valueOf(3.0));
-        result.setRightArmMuscle(BigDecimal.valueOf(3.1));
-        result.setTrunkMuscle(BigDecimal.valueOf(24.3));
-        result.setLeftLegMuscle(BigDecimal.valueOf(9.2));
-        result.setRightLegMuscle(BigDecimal.valueOf(9.3));
-        result.setLeftArmFat(BigDecimal.valueOf(1.2));
-        result.setRightArmFat(BigDecimal.valueOf(1.3));
-        result.setTrunkFat(BigDecimal.valueOf(10.4));
-        result.setLeftLegFat(BigDecimal.valueOf(3.2));
-        result.setRightLegFat(BigDecimal.valueOf(3.3));
-        result.setTotalBodyWater(BigDecimal.valueOf(32.1));
-        result.setProtein(BigDecimal.valueOf(8.4));
-        result.setMineral(BigDecimal.valueOf(3.4));
-        result.setBmi(BigDecimal.valueOf(22.6));
-        result.setVisceralFatLevel(BigDecimal.valueOf(7));
+        result.setMeasurementDate("2025-12-17");
+        result.setGender("F");
+        result.setAge(51);
+        result.setHeight(BigDecimal.valueOf(156.9));
+        result.setWeight(BigDecimal.valueOf(59.1));
+        result.setBodyFatMass(BigDecimal.valueOf(22.1));
+        result.setSkeletalMuscleMass(BigDecimal.valueOf(19.5));
+        result.setBodyFatPercentage(BigDecimal.valueOf(24.0));
+        result.setLeftArmMuscle(BigDecimal.valueOf(1.91));
+        result.setRightArmMuscle(BigDecimal.valueOf(1.99));
+        result.setTrunkMuscle(BigDecimal.valueOf(17.7));
+        result.setLeftLegMuscle(BigDecimal.valueOf(5.15));
+        result.setRightLegMuscle(BigDecimal.valueOf(5.24));
+        result.setLeftArmFat(BigDecimal.valueOf(1.6));
+        result.setRightArmFat(BigDecimal.valueOf(1.6));
+        result.setTrunkFat(BigDecimal.valueOf(11.8));
+        result.setLeftLegFat(BigDecimal.valueOf(3.0));
+        result.setRightLegFat(BigDecimal.valueOf(3.0));
+        result.setTotalBodyWater(BigDecimal.valueOf(27.3));
+        result.setProtein(BigDecimal.valueOf(7.2));
+        result.setMineral(BigDecimal.valueOf(2.54));
+        result.setBmi(BigDecimal.valueOf(24.0));
+        result.setVisceralFatLevel(BigDecimal.valueOf(7.0));
         return result;
     }
 }
